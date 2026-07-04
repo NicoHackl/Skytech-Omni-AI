@@ -12,3 +12,4 @@ All notable changes to the Skytech OmniAI Home Assistant Add-on are documented i
 - `skytech_omniai/providers/claude_sub_provider.py`: `ClaudeSubProvider` runs prompts through the Claude Code CLI (`claude -p`) via `subprocess`, sets `XDG_CONFIG_HOME=/data` for persistent login across add-on restarts, and appends a strict instruction forcing raw JSON output (no markdown fences).
 - `skytech_omniai/providers/factory.py`: `ProviderFactory` picks the AI provider implementation by name (request parameter or `AI_PROVIDER` env var), defaulting to `claude_sub`, so additional providers can be registered without changing `app.py`.
 - `skytech_omniai/app.py`: Flask server listening on port 8000, exposing `POST /ask` (routes a `prompt` to the provider factory and returns its JSON response) and `GET /health` for container health checks.
+- `.gitignore`: Excludes Python `__pycache__`/`.pyc` artifacts from version control.
