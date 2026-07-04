@@ -2,7 +2,12 @@ import os
 
 from flask import Flask, jsonify, request
 
+from config_loader import apply_options_to_env, load_options
 from providers.factory import ProviderFactory
+
+# Load the Home Assistant add-on options (/data/options.json) and expose the
+# relevant values as environment variables before the first request arrives.
+apply_options_to_env(load_options())
 
 app = Flask(__name__)
 

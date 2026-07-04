@@ -2,6 +2,18 @@
 
 All notable changes to the Skytech OmniAI Home Assistant Add-on are documented in this file.
 
+## [0.2.0]
+
+### Fixed
+- **Authentication is now actually configurable — the add-on could not be logged in before.** A headless HA add-on cannot run the interactive `claude login` browser flow, and there was no field to enter any credential, so every `/ask` call ran an unauthenticated `claude` CLI and failed.
+  - Added `claude_oauth_token` (password) and `anthropic_api_key` (password) options to `config.yaml`; both optional.
+  - Added `config_loader.py`, which reads the Supervisor-written `/data/options.json` at start-up and maps the options onto `AI_PROVIDER`, `CLAUDE_CODE_OAUTH_TOKEN`, and `ANTHROPIC_API_KEY`. Previously nothing read the add-on options at all, so even the `provider` selection was ignored.
+  - `ClaudeSubProvider` now passes those environment variables into the `claude` subprocess and raises a clear, instructive error when no credential is set.
+  - Replaced the non-functional `XDG_CONFIG_HOME=/data` persistence with `HOME=/data`; the Claude CLI keys its state off `HOME`, not `XDG_CONFIG_HOME`.
+  - Restricted the `provider` schema to the only implemented provider (`list(claude_sub)`); selecting `openai`/`gemini` previously raised "Unknown provider".
+  - Documented the `claude setup-token` set-up flow in `info.md`.
+  - `Dockerfile` now copies `config_loader.py` into the image.
+
 ## [Unreleased]
 
 ### Added

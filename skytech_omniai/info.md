@@ -11,6 +11,39 @@ Das Kern-Feature zum Start ist die Integration des regulären **Claude Pro/Max W
 *   **Persistent Sessions:** Die Login-Session von Claude Code wird im geschützten `/data`-Verzeichnis von Home Assistant gespeichert und bleibt auch nach Add-on-Neustarts erhalten.
 *   **JSON-First:** Alle Provider sind darauf ausgelegt, saubere, strukturierte JSON-Daten ohne störende Markdown-Formatierung an Home Assistant zurückzuliefern.
 
+## 🔑 Einrichtung / Anmeldung
+
+Ein Home-Assistant-Add-on läuft **headless** – der interaktive Browser-Login
+von Claude (`claude login`) ist dort nicht möglich. Stattdessen wird ein
+langlebiges **OAuth-Token** deines Pro/Max-Abos verwendet:
+
+1.  **Token erzeugen** – auf einem Computer, an dem du dich im Browser bei
+    Claude anmelden kannst, Claude Code installieren und ausführen:
+    ```bash
+    npm install -g @anthropic-ai/claude-code
+    claude setup-token
+    ```
+    Der Login öffnet sich im Browser; anschließend wird ein Token ausgegeben.
+2.  **Token eintragen** – im Add-on unter **Konfiguration → `claude_oauth_token`**
+    einfügen und speichern.
+3.  **Add-on neu starten.** Das Token wird beim Start als
+    `CLAUDE_CODE_OAUTH_TOKEN` an die CLI übergeben.
+
+> **Alternative (kostenpflichtig):** Statt des Abos kann unter
+> `anthropic_api_key` ein Anthropic-API-Key hinterlegt werden. Dieser wird
+> metered abgerechnet und nutzt **nicht** das Web-Abo.
+
+Ohne eines der beiden Felder liefert `/ask` eine klare Fehlermeldung mit
+Anleitung.
+
+### API testen
+
+```bash
+curl -X POST http://<HA-IP>:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Gib mir ein JSON mit dem Feld status=ok"}'
+```
+
 ## 📂 Projektstruktur
 
 ```text
