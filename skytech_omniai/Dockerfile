@@ -18,6 +18,7 @@ RUN /opt/venv/bin/pip install --no-cache-dir flask
 
 WORKDIR /app
 COPY app.py ./app.py
+COPY config_loader.py ./config_loader.py
 COPY providers ./providers
 
 EXPOSE 8000
