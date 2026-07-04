@@ -1,0 +1,24 @@
+name: "Skytech OmniAI"
+version: "0.1.0"
+slug: "skytech_omniai"
+description: "Modular AI bridge for Home Assistant - Claude Subscription, OpenAI, Gemini and more"
+url: "https://github.com/NicoHackl/Skytech-Omni-AI"
+arch:
+  - aarch64
+  - amd64
+  - armv7
+  - armhf
+  - i386
+init: false
+startup: application
+boot: auto
+ports:
+  8000/tcp: 8000
+ports_description:
+  8000/tcp: "Skytech OmniAI HTTP API"
+map:
+  - data:rw
+options:
+  provider: "claude_sub"
+schema:
+  provider: "list(claude_sub|openai|gemini)"
