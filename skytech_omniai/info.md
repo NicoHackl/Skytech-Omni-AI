@@ -14,14 +14,18 @@ Das Kern-Feature zum Start ist die Integration des regulären **Claude Pro/Max W
 ## 📂 Projektstruktur
 
 ```text
-Skytech-Omni-AI/            # Repo-Root = Add-on-Root (Home Assistant Add-on Repository)
-├── config.yaml          # Home Assistant Add-on Konfiguration
-├── Dockerfile           # Docker-Umgebung (Node.js, Python, Claude CLI)
-├── CHANGELOG.md         # Protokoll aller Änderungen (automatisch gepflegt)
-├── info.md                 # Diese Projektdokumentation
-├── app.py               # Flask-Webserver (Schnittstelle zu Home Assistant)
-└── providers/
-    ├── __init__.py
-    ├── base_provider.py # Abstraktes Fundament für alle KIs
-    ├── factory.py       # Steuert, welche KI geladen wird
-    └── claude_sub_provider.py # Der Sonderfall: Claude über das Web-Abo
+Skytech-Omni-AI/                    # Repo-Root = Add-on-Repository
+├── repository.yaml                # Manifest, das HA als Add-on-Repo erkennt
+├── CHANGELOG.md                   # Protokoll aller Änderungen (automatisch gepflegt)
+├── README.md
+└── skytech_omniai/                # Das eigentliche Add-on (Unterordner = Pflicht)
+    ├── config.yaml                # Home Assistant Add-on Konfiguration
+    ├── Dockerfile                 # Docker-Umgebung (Node.js, Python, Claude CLI)
+    ├── info.md                    # Diese Projektdokumentation
+    ├── app.py                     # Flask-Webserver (Schnittstelle zu Home Assistant)
+    └── providers/
+        ├── __init__.py
+        ├── base_provider.py       # Abstraktes Fundament für alle KIs
+        ├── factory.py             # Steuert, welche KI geladen wird
+        └── claude_sub_provider.py # Der Sonderfall: Claude über das Web-Abo
+```

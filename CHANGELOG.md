@@ -15,4 +15,9 @@ All notable changes to the Skytech OmniAI Home Assistant Add-on are documented i
 - `.gitignore`: Excludes Python `__pycache__`/`.pyc` artifacts from version control.
 
 ### Fixed
-- Moved `config.yaml`, `Dockerfile`, `app.py`, and `providers/` out of the `skytech_omniai/` subfolder into the repository root. Home Assistant Supervisor rejected the repo as "not a valid add-on repository" because it expected the add-on's `config.yaml` at the repo root (single-add-on repository layout) instead of nested one level deeper.
+- **Corrected the repository layout so Home Assistant accepts it as a valid add-on repository.** A HA add-on *repository* requires a `repository.yaml` (or `.json`) manifest at the root and each add-on in its own subfolder. The previous flat layout (add-on files directly in the root, no `repository.yaml`) was still reported as "not a valid add-on repository".
+  - Added `repository.yaml` at the repo root (`name`, `url`, `maintainer`) so the Supervisor recognizes the repository.
+  - Moved the add-on files (`config.yaml`, `Dockerfile`, `app.py`, `providers/`, `info.md`) back into the `skytech_omniai/` subfolder, which is the required per-add-on directory.
+
+### Changed
+- Earlier (incorrect) attempt: moved the add-on files out of `skytech_omniai/` into the repo root. This was reverted — the real cause of the validation error was the missing `repository.yaml`, not the subfolder depth.
