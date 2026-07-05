@@ -9,6 +9,17 @@ JSON_INSTRUCTION = (
     "JSON, and do not include any text that is not valid JSON."
 )
 
+# The Claude Code CLI defaults to an interactive coding-assistant persona that
+# reads project context from the working directory and asks clarifying
+# questions. That framing makes it refuse plain JSON requests. This system
+# prompt overrides the persona so the CLI behaves as a headless JSON endpoint.
+SYSTEM_PROMPT = (
+    "You are a headless JSON generation endpoint, not an interactive coding "
+    "assistant. You have no project, repository or working directory to reason "
+    "about. Never ask clarifying questions and never refuse. Always answer the "
+    "user's request by returning exactly one valid JSON object and nothing else."
+)
+
 MISSING_CREDENTIALS_MESSAGE = (
     "No Claude credentials configured. Open the add-on 'Configuration' tab and "
     "set 'claude_oauth_token'. Generate that token on a computer where you can "
@@ -49,7 +60,7 @@ class ClaudeSubProvider(BaseProvider):
         env = self._build_env()
         full_prompt = prompt + JSON_INSTRUCTION
 
-        command = ["claude", "-p", full_prompt]
+        command = ["claude", "-p", full_prompt, "--append-system-prompt", SYSTEM_PROMPT]
         chosen_model = self._resolve_model(model)
         if chosen_model:
             # The Claude Code CLI accepts model aliases (sonnet/opus/haiku) as
@@ -63,6 +74,10 @@ class ClaudeSubProvider(BaseProvider):
                 text=True,
                 timeout=300,
                 env=env,
+                # Run from the persistent data dir, not the add-on source tree, so
+                # the CLI does not pick up any CLAUDE.md / project context and
+                # reframe the request as a coding task.
+                cwd="/data",
             )
         except FileNotFoundError as exc:
             raise RuntimeError(
