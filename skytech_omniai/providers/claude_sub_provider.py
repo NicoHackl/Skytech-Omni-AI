@@ -38,13 +38,27 @@ class ClaudeSubProvider(BaseProvider):
             raise RuntimeError(MISSING_CREDENTIALS_MESSAGE)
         return env
 
-    def execute(self, prompt: str) -> dict:
+    def _resolve_model(self, model: str) -> str:
+        """Pick the per-request model, else the add-on-wide OMNIAI_MODEL default."""
+        chosen = (model or "").strip()
+        if not chosen:
+            chosen = os.environ.get("OMNIAI_MODEL", "").strip()
+        return chosen
+
+    def execute(self, prompt: str, model: str = None) -> dict:
         env = self._build_env()
         full_prompt = prompt + JSON_INSTRUCTION
 
+        command = ["claude", "-p", full_prompt]
+        chosen_model = self._resolve_model(model)
+        if chosen_model:
+            # The Claude Code CLI accepts model aliases (sonnet/opus/haiku) as
+            # well as full model IDs via --model.
+            command += ["--model", chosen_model]
+
         try:
             result = subprocess.run(
-                ["claude", "-p", full_prompt],
+                command,
                 capture_output=True,
                 text=True,
                 timeout=300,
