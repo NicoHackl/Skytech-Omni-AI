@@ -1,5 +1,5 @@
 name: "Skytech OmniAI"
-version: "0.3.0"
+version: "0.4.0"
 slug: "skytech_omniai"
 description: "Modular AI bridge for Home Assistant - Claude Subscription, OpenAI, Gemini and more"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
