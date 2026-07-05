@@ -20,10 +20,11 @@ def ask():
         return jsonify({"error": "Missing 'prompt' in request body"}), 400
 
     provider_name = payload.get("provider")
+    model = payload.get("model")
 
     try:
         provider = ProviderFactory.create(provider_name)
-        result = provider.execute(prompt)
+        result = provider.execute(prompt, model=model)
         return jsonify(result)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500

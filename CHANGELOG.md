@@ -2,6 +2,15 @@
 
 All notable changes to the Skytech OmniAI Home Assistant Add-on are documented in this file.
 
+## [0.3.0]
+
+### Added
+- **Per-request model selection.** `POST /ask` now accepts an optional `model` field alongside `prompt` and `provider`. When set, `ClaudeSubProvider` passes it to the Claude CLI via `--model` (accepts aliases `sonnet`/`opus`/`haiku` or full model IDs). Omitting it keeps the CLI default.
+  - `app.py` reads `model` from the payload and forwards it to `provider.execute(prompt, model=...)`.
+  - `BaseProvider.execute` signature extended to `execute(prompt, model=None)`.
+  - `ClaudeSubProvider._resolve_model` prefers the per-request model, then falls back to the add-on-wide default.
+  - New optional `model` add-on option (`config.yaml`), mapped by `config_loader.py` onto the `OMNIAI_MODEL` environment variable as the fallback default.
+
 ## [0.2.0]
 
 ### Fixed

@@ -31,6 +31,12 @@ def apply_options_to_env(options: dict) -> None:
     if provider:
         os.environ["AI_PROVIDER"] = provider
 
+    # Add-on-wide default model. A per-request "model" in the /ask payload wins;
+    # this only applies when the request does not specify one.
+    model = (options.get("model") or "").strip()
+    if model:
+        os.environ["OMNIAI_MODEL"] = model
+
     # Long-lived Claude Pro/Max subscription token. Generate it once on a
     # machine where you can log in with a browser via `claude setup-token`,
     # then paste the result into the add-on configuration.
