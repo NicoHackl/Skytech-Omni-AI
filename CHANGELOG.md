@@ -2,6 +2,26 @@
 
 All notable changes to the Skytech OmniAI Home Assistant Add-on are documented in this file.
 
+## [0.5.0]
+
+### Added
+- **Google Gemini as a second provider.** The add-on is no longer Claude-only; `provider` can now be set to `gemini`, which the `config.yaml` schema previously rejected (`list(claude_sub)`).
+  - `providers/gemini_provider.py`: `GeminiProvider` calls Google's **Interactions API** (`POST https://generativelanguage.googleapis.com/v1beta/interactions`), the primary Gemini interface as of 2026, superseding `generateContent`. The API key is sent as an `x-goog-api-key` header rather than a URL parameter so it cannot leak into logs or proxies, and `store: false` keeps Google from retaining the conversation server-side.
+  - The HTTP call uses `urllib.request` from the standard library — **no new dependencies**. The image is Alpine/musl and builds for `armv7`/`armhf`/`i386`, where the official SDK would drag in `pydantic-core` and a Rust toolchain. `Dockerfile` is unchanged; `COPY providers ./providers` already picks up the new module.
+  - Response text is read from the Interactions step timeline (`steps[].content[].text`, preferring `model_output` steps) with a fallback that scans every step, so a future rename of the step types degrades instead of breaking.
+  - Errors are surfaced in plain German instead of a stack trace: missing key (with a link to Google AI Studio), invalid/unauthorized key (401/403), unknown model (404), exhausted quota (429), overloaded API (503), and network/timeout failures.
+  - New add-on option `gemini_api_key` (password), mapped by `config_loader.py` onto `GEMINI_API_KEY`. `GOOGLE_API_KEY` is accepted as a fallback.
+- **Model registry with the current Gemini models**, selectable per request and add-on-wide: `gemini-flash-latest` (default alias), `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`. Any other `gemini-*` ID is accepted too, so new Google models work without a code change; non-Gemini values (e.g. a leftover `sonnet`) are rejected with a message listing the valid IDs.
+- **`GET /models`** returns the active provider plus the selectable models and default model per provider, so Home Assistant scripts can discover valid values instead of hard-coding them.
+
+### Changed
+- **`model` is now a dropdown instead of a free-text field** (`config.yaml`), shared by both providers: `auto`, the Claude aliases (`sonnet`/`opus`/`haiku`), and the Gemini IDs. It only constrains the add-on-wide default — the `model` field in the `/ask` payload still accepts any string.
+- `JSON_INSTRUCTION` moved from `claude_sub_provider.py` to `base_provider.py`; it is provider-independent and now shared by both providers.
+- `providers/factory.py` registers `gemini`. `DEFAULT_PROVIDER` stays `claude_sub`, so existing installations are unaffected.
+
+### Migration
+- The `model` option previously defaulted to `""`, which is not a valid member of the new `list(...)` schema. After updating, Home Assistant reports the configuration as invalid once — open the add-on configuration, pick `auto` (or the desired model) and save.
+
 ## [0.3.0]
 
 ### Added

@@ -33,8 +33,10 @@ def apply_options_to_env(options: dict) -> None:
 
     # Add-on-wide default model. A per-request "model" in the /ask payload wins;
     # this only applies when the request does not specify one.
+    # "auto" ist der Sentinel-Wert des Dropdowns und bedeutet "kein Modell
+    # erzwingen" - er wird deshalb wie ein leeres Feld behandelt.
     model = (options.get("model") or "").strip()
-    if model:
+    if model and model != "auto":
         os.environ["OMNIAI_MODEL"] = model
 
     # Long-lived Claude Pro/Max subscription token. Generate it once on a
@@ -48,3 +50,9 @@ def apply_options_to_env(options: dict) -> None:
     api_key = (options.get("anthropic_api_key") or "").strip()
     if api_key:
         os.environ["ANTHROPIC_API_KEY"] = api_key
+
+    # Google-AI-Studio-Schlüssel für den Gemini-Provider. Wird unter
+    # https://aistudio.google.com/apikey erzeugt und metered abgerechnet.
+    gemini_api_key = (options.get("gemini_api_key") or "").strip()
+    if gemini_api_key:
+        os.environ["GEMINI_API_KEY"] = gemini_api_key
