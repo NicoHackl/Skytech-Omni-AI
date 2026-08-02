@@ -2,6 +2,14 @@ import json
 import re
 from abc import ABC, abstractmethod
 
+# Wird von jedem Provider an den Nutzer-Prompt angehängt. Provider-unabhängig,
+# weil alle Modelle dazu neigen, JSON in Markdown-Fences zu verpacken.
+JSON_INSTRUCTION = (
+    "\n\nIMPORTANT: Respond with raw JSON only. Do not wrap the response in "
+    "markdown code fences, do not add any explanation before or after the "
+    "JSON, and do not include any text that is not valid JSON."
+)
+
 # Matches a fenced code block, optionally tagged (```json ... ```), capturing
 # the inner body so we can unwrap it before parsing.
 _FENCE_RE = re.compile(r"^```[a-zA-Z0-9]*\s*\n?(.*?)\n?```$", re.DOTALL)

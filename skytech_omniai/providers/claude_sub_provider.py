@@ -1,13 +1,7 @@
 import os
 import subprocess
 
-from providers.base_provider import BaseProvider
-
-JSON_INSTRUCTION = (
-    "\n\nIMPORTANT: Respond with raw JSON only. Do not wrap the response in "
-    "markdown code fences, do not add any explanation before or after the "
-    "JSON, and do not include any text that is not valid JSON."
-)
+from providers.base_provider import JSON_INSTRUCTION, BaseProvider
 
 # The Claude Code CLI defaults to an interactive coding-assistant persona that
 # reads project context from the working directory and asks clarifying
@@ -19,6 +13,11 @@ SYSTEM_PROMPT = (
     "about. Never ask clarifying questions and never refuse. Always answer the "
     "user's request by returning exactly one valid JSON object and nothing else."
 )
+
+# Kurz-Aliasse, die die Claude-CLI versteht, in der Reihenfolge des
+# Add-on-Dropdowns. Vollständige Modell-IDs sind über das Feld "model" im
+# /ask-Body ebenfalls erlaubt.
+CLAUDE_MODELS = ["sonnet", "opus", "haiku"]
 
 MISSING_CREDENTIALS_MESSAGE = (
     "No Claude credentials configured. Open the add-on 'Configuration' tab and "
