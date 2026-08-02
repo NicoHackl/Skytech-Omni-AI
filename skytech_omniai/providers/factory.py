@@ -1,11 +1,13 @@
 import os
 
 from providers.claude_sub_provider import ClaudeSubProvider
+from providers.gemini_provider import GeminiProvider
 
 DEFAULT_PROVIDER = "claude_sub"
 
 _PROVIDERS = {
     "claude_sub": ClaudeSubProvider,
+    "gemini": GeminiProvider,
 }
 
 

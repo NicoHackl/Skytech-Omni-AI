@@ -1,5 +1,5 @@
 name: "Skytech OmniAI"
-version: "0.4.0"
+version: "0.5.0"
 slug: "skytech_omniai"
 description: "Modular AI bridge for Home Assistant - Claude Subscription, OpenAI, Gemini and more"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
@@ -20,11 +20,18 @@ map:
   - data:rw
 options:
   provider: "claude_sub"
-  model: ""
+  # "auto" = kein Modell erzwingen, der jeweilige Provider entscheidet selbst.
+  model: "auto"
   claude_oauth_token: ""
   anthropic_api_key: ""
+  gemini_api_key: ""
 schema:
-  provider: "list(claude_sub)"
-  model: "str?"
+  provider: "list(claude_sub|gemini)"
+  # Gemeinsame Liste für alle Provider: die ersten Einträge gehören zu
+  # "claude_sub", die "gemini-*"-Einträge zu "gemini". Pro Anfrage kann über
+  # das Feld "model" im /ask-Body weiterhin jede beliebige Modell-ID gesetzt
+  # werden - diese Liste bestimmt nur den Add-on-weiten Standard.
+  model: "list(auto|sonnet|opus|haiku|gemini-flash-latest|gemini-3.6-flash|gemini-3.5-flash|gemini-3.5-flash-lite|gemini-3.1-flash-lite|gemini-2.5-pro|gemini-2.5-flash|gemini-2.5-flash-lite)"
   claude_oauth_token: "password?"
   anthropic_api_key: "password?"
+  gemini_api_key: "password?"
