@@ -1,64 +1,129 @@
 # Changelog
 
-All notable changes to the Skytech OmniAI Home Assistant Add-on are documented in this file.
+Alle nennenswerten Änderungen an Skytech OmniAI.
+Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
+Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
-## [0.5.0]
+Kategorien: `Hinzugefügt`, `Geändert`, `Veraltet`, `Entfernt`, `Behoben`, `Sicherheit`.
 
-### Added
-- **Google Gemini as a second provider.** The add-on is no longer Claude-only; `provider` can now be set to `gemini`, which the `config.yaml` schema previously rejected (`list(claude_sub)`).
-  - `providers/gemini_provider.py`: `GeminiProvider` calls Google's **Interactions API** (`POST https://generativelanguage.googleapis.com/v1beta/interactions`), the primary Gemini interface as of 2026, superseding `generateContent`. The API key is sent as an `x-goog-api-key` header rather than a URL parameter so it cannot leak into logs or proxies, and `store: false` keeps Google from retaining the conversation server-side.
-  - The HTTP call uses `urllib.request` from the standard library — **no new dependencies**. The image is Alpine/musl and builds for `armv7`/`armhf`/`i386`, where the official SDK would drag in `pydantic-core` and a Rust toolchain. `Dockerfile` is unchanged; `COPY providers ./providers` already picks up the new module.
-  - Response text is read from the Interactions step timeline (`steps[].content[].text`, preferring `model_output` steps) with a fallback that scans every step, so a future rename of the step types degrades instead of breaking.
-  - Errors are surfaced in plain German instead of a stack trace: missing key (with a link to Google AI Studio), invalid/unauthorized key (401/403), unknown model (404), exhausted quota (429), overloaded API (503), and network/timeout failures.
-  - New add-on option `gemini_api_key` (password), mapped by `config_loader.py` onto `GEMINI_API_KEY`. `GOOGLE_API_KEY` is accepted as a fallback.
-- **Model registry with the current Gemini models**, selectable per request and add-on-wide: `gemini-flash-latest` (default alias), `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`. Any other `gemini-*` ID is accepted too, so new Google models work without a code change; non-Gemini values (e.g. a leftover `sonnet`) are rejected with a message listing the valid IDs.
-- **`GET /models`** returns the active provider plus the selectable models and default model per provider, so Home Assistant scripts can discover valid values instead of hard-coding them.
+Einträge sind aus **Nutzersicht** formuliert — was sich für den Anwender ändert, nicht welche
+Datei angefasst wurde.
 
-### Changed
-- **`model` is now a dropdown instead of a free-text field** (`config.yaml`), shared by both providers: `auto`, the Claude aliases (`sonnet`/`opus`/`haiku`), and the Gemini IDs. It only constrains the add-on-wide default — the `model` field in the `/ask` payload still accepts any string.
-- `JSON_INSTRUCTION` moved from `claude_sub_provider.py` to `base_provider.py`; it is provider-independent and now shared by both providers.
-- `providers/factory.py` registers `gemini`. `DEFAULT_PROVIDER` stays `claude_sub`, so existing installations are unaffected.
+## [Unveröffentlicht]
+
+## [0.6.0] — 18.08.2026
+
+### Hinzugefügt
+
+- **Eine Oberfläche direkt in Home Assistant.** Das Add-on bringt ein eigenes Panel mit
+  (Seitenleiste links, Eintrag „OmniAI"). Es zeigt, welcher Anbieter aktiv ist, welches
+  Standardmodell gilt und für welche Anbieter ein Zugang hinterlegt ist. Auf einer zweiten Seite
+  lässt sich eine Testanfrage stellen und die Antwort ansehen, ohne `curl` und ohne Kommandozeile;
+  eine dritte Seite listet die auswählbaren Modelle je Anbieter.
+- **Hell- und Dunkel-Modus** mit sichtbarem Schalter in der Kopfzeile. Die Vorauswahl kommt vom
+  Betriebssystem, die getroffene Wahl bleibt über das Neuladen hinweg erhalten.
+- **Automatischer Neustart**, wenn das Add-on nicht mehr antwortet.
+- Eine Projektdokumentation unter `docs/` und verbindliche Projektregeln in `AGENTS.md`.
+- Tests und Linting, die vor jedem Commit fehlerfrei durchlaufen müssen.
+
+### Geändert
+
+- **Fehlermeldungen sind jetzt Sätze statt Technik.** Bisher kam bei einem Fehler der englische
+  Originaltext der Gegenstelle zurück, teils samt Pfaden, Stacktrace oder der Rohausgabe des
+  Modells. Jetzt antwortet das Add-on mit einem deutschen Satz, der sagt, was schiefging und was
+  zu tun ist. Die technische Ursache steht vollständig im Log des Add-ons.
+- **Eine fehlerhafte Anfrage wird als solche gemeldet.** Fehlt der Prompt oder passt der
+  Anbietername nicht, kommt jetzt „Anfrage fehlerhaft" statt „Serverfehler". Automatisierungen,
+  die auf den Antwortcode reagieren, können beides nun unterscheiden.
+- **Das Add-on läuft auf einem Server für den Dauerbetrieb.** Bisher blockierte eine laufende
+  Anfrage an ein Modell alles andere — auch die Zustandsabfrage. Jetzt bleiben Oberfläche und
+  Zustandsabfrage währenddessen erreichbar.
+- Die Beschreibung des Add-ons und alle Meldungen sind auf Deutsch.
+- Die Versionen des Basisimages, der Claude-Befehlszeile und der Python-Pakete sind festgenagelt.
+  Ein Update ist damit eine sichtbare Änderung und passiert nicht mehr nebenbei beim Neubauen.
+
+### Sicherheit
+
+- Zugangsdaten erscheinen an keiner Stelle mehr in einer Ausgabe. Das Log meldet nur noch,
+  **welche** Zugänge hinterlegt sind, nicht womit; die Zustandsabfrage antwortet mit „ja"/„nein".
+- Bekannt und weiterhin offen: der Port 8000 des Add-ons ist **nicht** durch ein Passwort
+  geschützt. Wer ihn erreicht, kann Anfragen stellen und damit Kontingent verbrauchen. Er sollte
+  nicht ins Internet weitergeleitet werden. Wer nur die neue Oberfläche nutzt, kann ihn ganz
+  schließen.
+
+## [0.5.0] — 02.08.2026
+
+### Hinzugefügt
+
+- **Google Gemini als zweiter Anbieter.** Das Add-on ist nicht mehr auf Claude festgelegt: unter
+  `provider` lässt sich jetzt `gemini` wählen. Nötig ist ein Schlüssel aus Google AI Studio, der
+  unter `gemini_api_key` eingetragen wird. Der Verlauf wird bei Google ausdrücklich **nicht**
+  gespeichert.
+- **Auswahl unter den aktuellen Gemini-Modellen**, add-on-weit und pro Anfrage:
+  `gemini-flash-latest` (Vorgabe), `gemini-3.6-flash`, `gemini-3.5-flash`,
+  `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-2.5-pro`, `gemini-2.5-flash`,
+  `gemini-2.5-flash-lite`. Jede weitere `gemini-*`-Kennung wird ebenfalls angenommen, sodass neue
+  Modelle von Google ohne Update nutzbar sind.
+- **Abfrage der gültigen Werte** über `GET /models`: aktiver Anbieter, auswählbare Modelle und
+  Standardmodell je Anbieter. Automatisierungen müssen die Liste nicht mehr fest eintragen.
+
+### Geändert
+
+- **Das Feld `model` ist ein Auswahlfeld statt eines Freitextfelds** und gilt für beide Anbieter.
+  Es legt nur den add-on-weiten Standard fest — pro Anfrage lässt sich weiterhin jede Kennung
+  setzen.
+- Claude bleibt der vorausgewählte Anbieter; an bestehenden Installationen ändert sich nichts.
+
+### Behoben
+
+- Fehler von Google werden in verständlichen Sätzen gemeldet: fehlender oder ungültiger Schlüssel,
+  fehlende Freigabe, unbekanntes Modell, aufgebrauchtes Kontingent, Überlastung, keine Verbindung.
 
 ### Migration
-- The `model` option previously defaulted to `""`, which is not a valid member of the new `list(...)` schema. After updating, Home Assistant reports the configuration as invalid once — open the add-on configuration, pick `auto` (or the desired model) and save.
 
-## [0.3.0]
+- Das Feld `model` hatte bisher keinen Vorgabewert; der ist im neuen Auswahlfeld nicht enthalten.
+  Home Assistant meldet die Konfiguration deshalb einmalig als ungültig — Konfiguration öffnen,
+  `auto` oder das gewünschte Modell wählen, speichern.
 
-### Added
-- **Per-request model selection.** `POST /ask` now accepts an optional `model` field alongside `prompt` and `provider`. When set, `ClaudeSubProvider` passes it to the Claude CLI via `--model` (accepts aliases `sonnet`/`opus`/`haiku` or full model IDs). Omitting it keeps the CLI default.
-  - `app.py` reads `model` from the payload and forwards it to `provider.execute(prompt, model=...)`.
-  - `BaseProvider.execute` signature extended to `execute(prompt, model=None)`.
-  - `ClaudeSubProvider._resolve_model` prefers the per-request model, then falls back to the add-on-wide default.
-  - New optional `model` add-on option (`config.yaml`), mapped by `config_loader.py` onto the `OMNIAI_MODEL` environment variable as the fallback default.
+## [0.3.0] — 05.07.2026
 
-## [0.2.0]
+### Hinzugefügt
 
-### Fixed
-- **Authentication is now actually configurable — the add-on could not be logged in before.** A headless HA add-on cannot run the interactive `claude login` browser flow, and there was no field to enter any credential, so every `/ask` call ran an unauthenticated `claude` CLI and failed.
-  - Added `claude_oauth_token` (password) and `anthropic_api_key` (password) options to `config.yaml`; both optional.
-  - Added `config_loader.py`, which reads the Supervisor-written `/data/options.json` at start-up and maps the options onto `AI_PROVIDER`, `CLAUDE_CODE_OAUTH_TOKEN`, and `ANTHROPIC_API_KEY`. Previously nothing read the add-on options at all, so even the `provider` selection was ignored.
-  - `ClaudeSubProvider` now passes those environment variables into the `claude` subprocess and raises a clear, instructive error when no credential is set.
-  - Replaced the non-functional `XDG_CONFIG_HOME=/data` persistence with `HOME=/data`; the Claude CLI keys its state off `HOME`, not `XDG_CONFIG_HOME`.
-  - Restricted the `provider` schema to the only implemented provider (`list(claude_sub)`); selecting `openai`/`gemini` previously raised "Unknown provider".
-  - Documented the `claude setup-token` set-up flow in `info.md`.
-  - `Dockerfile` now copies `config_loader.py` into the image.
+- **Modellwahl pro Anfrage.** `POST /ask` nimmt neben `prompt` und `provider` jetzt auch `model`
+  entgegen. Damit lässt sich pro Automatisierung entscheiden, ob es schnell und günstig oder
+  gründlich sein soll. Ohne Angabe bleibt es beim Standard.
+- Ein add-on-weites Standardmodell in der Konfiguration.
 
-## [Unreleased]
+### Behoben
 
-### Added
-- Initial project scaffolding for the Skytech OmniAI Home Assistant Add-on.
-- `config.yaml`: Home Assistant add-on configuration exposing port 8000, mapping persistent `/data` storage, and defining the `provider` option (default `claude_sub`).
-- `Dockerfile`: Alpine-based image installing Node.js/npm, Python 3, pip, the `@anthropic-ai/claude-code` CLI, and a Python virtualenv with Flask.
-- `providers/base_provider.py`: Abstract `BaseProvider` class defining the `execute(prompt) -> dict` interface and a shared `parse_json` helper that all future providers (Claude, OpenAI, Gemini, ...) must use.
-- `providers/claude_sub_provider.py`: `ClaudeSubProvider` runs prompts through the Claude Code CLI (`claude -p`) via `subprocess`, sets `XDG_CONFIG_HOME=/data` for persistent login across add-on restarts, and appends a strict instruction forcing raw JSON output (no markdown fences).
-- `providers/factory.py`: `ProviderFactory` picks the AI provider implementation by name (request parameter or `AI_PROVIDER` env var), defaulting to `claude_sub`, so additional providers can be registered without changing `app.py`.
-- `app.py`: Flask server listening on port 8000, exposing `POST /ask` (routes a `prompt` to the provider factory and returns its JSON response) and `GET /health` for container health checks.
-- `.gitignore`: Excludes Python `__pycache__`/`.pyc` artifacts from version control.
+- Antworten, die das Modell in einen Markdown-Block verpackt oder mit erklärenden Sätzen umgeben
+  hat, werden jetzt ausgewertet, statt die Anfrage scheitern zu lassen.
 
-### Fixed
-- **Corrected the repository layout so Home Assistant accepts it as a valid add-on repository.** A HA add-on *repository* requires a `repository.yaml` (or `.json`) manifest at the root and each add-on in its own subfolder. The previous flat layout (add-on files directly in the root, no `repository.yaml`) was still reported as "not a valid add-on repository".
-  - Added `repository.yaml` at the repo root (`name`, `url`, `maintainer`) so the Supervisor recognizes the repository.
-  - Moved the add-on files (`config.yaml`, `Dockerfile`, `app.py`, `providers/`, `info.md`) back into the `skytech_omniai/` subfolder, which is the required per-add-on directory.
+## [0.2.0] — 04.07.2026
 
-### Changed
-- Earlier (incorrect) attempt: moved the add-on files out of `skytech_omniai/` into the repo root. This was reverted — the real cause of the validation error was the missing `repository.yaml`, not the subfolder depth.
+### Behoben
+
+- **Das Add-on ließ sich überhaupt nicht anmelden.** Der übliche Anmeldevorgang von Claude öffnet
+  einen Browser — in einem Add-on gibt es keinen. Ein Feld für Zugangsdaten fehlte ebenfalls, also
+  scheiterte jede Anfrage. Jetzt wird einmalig auf einem Rechner mit Browser ein langlebiges Token
+  erzeugt (`claude setup-token`) und im Add-on unter `claude_oauth_token` eingetragen. Alternativ
+  lässt sich unter `anthropic_api_key` ein nach Verbrauch abgerechneter Schlüssel hinterlegen.
+- **Die Anmeldung überstand keinen Neustart.** Sie liegt jetzt im dauerhaften Datenverzeichnis
+  des Add-ons.
+- **Die Konfiguration wurde gar nicht gelesen.** Auch die Wahl des Anbieters blieb dadurch ohne
+  Wirkung.
+- Ohne hinterlegten Zugang antwortet das Add-on mit einer Anleitung statt mit einem Fehler.
+
+## [0.1.0] — 04.07.2026
+
+### Hinzugefügt
+
+- Erste Version: Home-Assistant-Add-on mit `POST /ask` für Anfragen an Claude über das
+  Pro/Max-Abo und `GET /health` für die Zustandsabfrage.
+- Aufbau mit austauschbaren Anbietern, damit weitere KI-Dienste später ohne Umbau dazukommen
+  können.
+
+### Behoben
+
+- Home Assistant erkannte das Repository nicht als Add-on-Repository an. Ursache war ein fehlendes
+  Manifest in der Wurzel, nicht die Ordnertiefe.

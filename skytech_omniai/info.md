@@ -1,62 +1,67 @@
 # Skytech OmniAI
 
-Ein modulares **Home Assistant Add-on**, das als universelle Brücke zwischen deinem Smart Home und verschiedenen KI-Modellen (Large Language Models) fungiert. 
+Ein modulares **Home-Assistant-Add-on**, das als Brücke zwischen deinem Smart Home und
+verschiedenen KI-Modellen dient.
 
-Das Kern-Feature zum Start ist die Integration des regulären **Claude Pro/Max Web-Abos** über die offizielle Claude CLI. Dies ermöglicht es, komplexe KI-Anfragen direkt aus Home Assistant heraus zu stellen, strukturierte JSON-Antworten zu erhalten und dabei das bestehende Abo-Limit zu nutzen – komplett ohne zusätzliche API-Kosten.
+Das Kern-Feature ist die Anbindung des regulären **Claude-Pro/Max-Abos** über die offizielle
+Claude-Befehlszeile. Damit lassen sich Anfragen direkt aus Home Assistant stellen, strukturierte
+JSON-Antworten zurückbekommen und dabei das bestehende Abo-Limit nutzen — ohne zusätzliche Kosten
+pro Anfrage.
 
-## 🚀 Features & Architektur
+## Was das Add-on kann
 
-*   **Striktiv Modular:** Über ein Factory-Pattern sind aktuell **Claude (Abo)** und **Google Gemini** angebunden; weitere Provider wie OpenAI (ChatGPT) oder lokale LLMs (Ollama) lassen sich problemlos ergänzen.
-*   **Abo-Limit Trigger:** Der Claude-Subscription-Provider nutzt die offizielle CLI, wodurch bei jeder Anfrage dein rollierendes 5-Stunden-Web-Limit gestartet und genutzt wird.
-*   **Persistent Sessions:** Die Login-Session von Claude Code wird im geschützten `/data`-Verzeichnis von Home Assistant gespeichert und bleibt auch nach Add-on-Neustarts erhalten.
-*   **JSON-First:** Alle Provider sind darauf ausgelegt, saubere, strukturierte JSON-Daten ohne störende Markdown-Formatierung an Home Assistant zurückzuliefern.
+- **Zwei Anbieter, gleiche Bedienung.** Angebunden sind **Claude (Abo)** und **Google Gemini**.
+  Weitere Anbieter wie OpenAI oder lokale Modelle lassen sich ergänzen, ohne dass sich für
+  bestehende Automatisierungen etwas ändert.
+- **Das Abo statt Kosten pro Anfrage.** Über die Claude-Befehlszeile zählt jede Anfrage auf dein
+  rollierendes Fünf-Stunden-Limit.
+- **Anmeldung übersteht Neustarts.** Der Anmeldezustand liegt im geschützten Datenverzeichnis des
+  Add-ons.
+- **Immer JSON.** Alle Anbieter werden angewiesen, sauberes JSON ohne Markdown zurückzuliefern —
+  und was trotzdem verpackt ankommt, wird ausgepackt.
+- **Eine Oberfläche in Home Assistant.** Zustand ansehen, Testanfrage stellen, Modelle
+  nachschlagen — mit Hell- und Dunkel-Modus.
 
-## 🔑 Einrichtung / Anmeldung — Claude (Abo)
+## Einrichtung — Claude (Abo)
 
-Ein Home-Assistant-Add-on läuft **headless** – der interaktive Browser-Login
-von Claude (`claude login`) ist dort nicht möglich. Stattdessen wird ein
-langlebiges **OAuth-Token** deines Pro/Max-Abos verwendet:
+Ein Add-on läuft **ohne Bildschirm**; der Anmeldevorgang von Claude über den Browser ist dort nicht
+möglich. Stattdessen wird ein langlebiges **Token** deines Pro/Max-Abos verwendet:
 
-1.  **Token erzeugen** – auf einem Computer, an dem du dich im Browser bei
-    Claude anmelden kannst, Claude Code installieren und ausführen:
-    ```bash
-    npm install -g @anthropic-ai/claude-code
-    claude setup-token
-    ```
-    Der Login öffnet sich im Browser; anschließend wird ein Token ausgegeben.
-2.  **Token eintragen** – im Add-on unter **Konfiguration → `claude_oauth_token`**
-    einfügen und speichern.
-3.  **Add-on neu starten.** Das Token wird beim Start als
-    `CLAUDE_CODE_OAUTH_TOKEN` an die CLI übergeben.
+1. **Token erzeugen** — auf einem Computer, an dem du dich im Browser bei Claude anmelden kannst:
 
-> **Alternative (kostenpflichtig):** Statt des Abos kann unter
-> `anthropic_api_key` ein Anthropic-API-Key hinterlegt werden. Dieser wird
-> metered abgerechnet und nutzt **nicht** das Web-Abo.
+   ```bash
+   npm install -g @anthropic-ai/claude-code
+   claude setup-token
+   ```
 
-Ohne eines der beiden Felder liefert `/ask` eine klare Fehlermeldung mit
-Anleitung.
+   Die Anmeldung öffnet sich im Browser, anschließend wird ein Token ausgegeben.
+2. **Token eintragen** — im Add-on unter **Konfiguration → `claude_oauth_token`** einfügen und
+   speichern.
+3. **Add-on neu starten.**
 
-## 🔑 Einrichtung / Anmeldung — Google Gemini
+> **Alternative (kostenpflichtig):** Statt des Abos kann unter `anthropic_api_key` ein
+> Anthropic-Schlüssel hinterlegt werden. Der wird nach Verbrauch abgerechnet und nutzt das Abo
+> **nicht**.
 
-Gemini wird über einen API-Schlüssel angebunden (metered, kein Abo-Modell).
+Ohne eines der beiden Felder antwortet das Add-on mit einer Meldung, die sagt, was zu tun ist.
 
-1.  **Schlüssel erzeugen** – unter <https://aistudio.google.com/apikey> einen
-    API-Key für Google AI Studio anlegen.
-2.  **Schlüssel eintragen** – im Add-on unter **Konfiguration →
-    `gemini_api_key`** einfügen.
-3.  **Provider und Modell wählen** – `provider` auf `gemini` stellen und bei
-    `model` einen `gemini-*`-Eintrag auswählen (oder `auto` für den Standard).
-4.  **Add-on neu starten.**
+## Einrichtung — Google Gemini
 
-Technisch spricht das Add-on Googles **Interactions API**
-(`POST /v1beta/interactions`) an — seit 2026 Googles primäre Schnittstelle.
-Der Verlauf wird dabei bewusst **nicht** bei Google gespeichert (`store: false`).
+Gemini wird über einen Schlüssel angebunden (nach Verbrauch abgerechnet, kein Abo-Modell).
+
+1. **Schlüssel erzeugen** unter <https://aistudio.google.com/apikey>.
+2. **Schlüssel eintragen** im Add-on unter **Konfiguration → `gemini_api_key`**.
+3. **Anbieter und Modell wählen** — `provider` auf `gemini`, bei `model` einen `gemini-*`-Eintrag
+   auswählen oder `auto` für die Vorgabe.
+4. **Add-on neu starten.**
+
+Der Verlauf wird bei Google ausdrücklich **nicht** gespeichert.
 
 ### Verfügbare Gemini-Modelle
 
-| Modell-ID | Beschreibung |
+| Modell | Beschreibung |
 | --- | --- |
-| `gemini-flash-latest` | Alias, zeigt immer auf das neueste Flash-Modell (Standard) |
+| `gemini-flash-latest` | Zeigt immer auf das neueste Flash-Modell (Vorgabe) |
 | `gemini-3.6-flash` | Neuestes Modell, bestes Preis-Leistungs-Verhältnis |
 | `gemini-3.5-flash` | Stark bei agentischen und Coding-Aufgaben |
 | `gemini-3.5-flash-lite` | Schnellstes und günstigstes 3.5er |
@@ -65,67 +70,44 @@ Der Verlauf wird dabei bewusst **nicht** bei Google gespeichert (`store: false`)
 | `gemini-2.5-flash` | Bewährtes Preis-Leistungs-Modell |
 | `gemini-2.5-flash-lite` | Sparsamstes Modell |
 
-## 🎛️ Modellauswahl
+## Modellauswahl
 
-Das Feld `model` in der Add-on-Konfiguration ist ein **gemeinsames Dropdown**
-für beide Provider und legt nur den **Add-on-weiten Standard** fest:
+Das Feld `model` in der Konfiguration ist ein **gemeinsames Auswahlfeld** für beide Anbieter und
+legt nur den **add-on-weiten Standard** fest:
 
-*   `auto` – kein Modell erzwingen, der Provider entscheidet selbst.
-*   `sonnet` / `opus` / `haiku` – gehören zu `provider: claude_sub`.
-*   `gemini-*` – gehören zu `provider: gemini`.
+- `auto` — kein Modell erzwingen, der Anbieter entscheidet selbst.
+- `sonnet` / `opus` / `haiku` — gehören zu `claude_sub`.
+- `gemini-*` — gehören zu `gemini`.
 
-Passen Provider und Modell nicht zusammen, meldet `/ask` das im Klartext.
-**Pro Anfrage** kann im `/ask`-Body weiterhin jede beliebige Modell-ID gesetzt
-werden — auch solche, die nicht im Dropdown stehen (z. B. eine vollständige
-Claude-Modell-ID oder ein brandneues `gemini-*`-Modell).
+Passen Anbieter und Modell nicht zusammen, sagt das Add-on das im Klartext. **Pro Anfrage** lässt
+sich im Rumpf von `/ask` weiterhin jede Modellkennung setzen — auch eine, die nicht im Auswahlfeld
+steht.
 
-> **Hinweis beim Update von einer älteren Version:** Das `model`-Feld war früher
-> ein Freitextfeld mit leerem Standardwert und ist jetzt ein Dropdown. Home
-> Assistant meldet dadurch einmalig eine ungültige Konfiguration — einfach die
-> Konfiguration öffnen, `auto` (oder das gewünschte Modell) auswählen und
-> speichern.
+## Oberfläche
 
-### API testen
+Nach dem Start erscheint **OmniAI** in der Seitenleiste von Home Assistant:
+
+- **Übersicht** — aktiver Anbieter, Standardmodell, hinterlegte Zugänge, Verbindungsprüfung.
+- **Anfrage** — Anbieter und Modell wählen, Prompt eingeben, Antwort ansehen.
+- **Modelle** — was sich je Anbieter auswählen lässt.
+
+Der Schalter für Hell und Dunkel sitzt oben rechts; die Wahl bleibt über das Neuladen hinweg
+erhalten.
+
+## Schnittstelle
 
 ```bash
-# Claude (Abo) – nutzt den in der Konfiguration gesetzten Standard
+# Anfrage stellen
 curl -X POST http://<HA-IP>:8000/ask \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Gib mir ein JSON mit dem Feld status=ok"}'
 
-# Gemini mit explizitem Modell
-curl -X POST http://<HA-IP>:8000/ask \
-  -H "Content-Type: application/json" \
-  -d '{"provider": "gemini", "model": "gemini-3.6-flash",
-       "prompt": "Gib mir ein JSON mit dem Feld status=ok"}'
-```
-
-### Verfügbare Provider und Modelle abfragen
-
-```bash
+# Anbieter und Modelle abfragen
 curl http://<HA-IP>:8000/models
+
+# Zustand abfragen (Anbieter, Version, hinterlegte Zugänge als ja/nein)
+curl http://<HA-IP>:8000/status
 ```
 
-Liefert den aktiven Provider sowie je Provider die auswählbaren Modelle und
-dessen Standardmodell (`null` = der Provider entscheidet selbst).
-
-## 📂 Projektstruktur
-
-```text
-Skytech-Omni-AI/                    # Repo-Root = Add-on-Repository
-├── repository.yaml                # Manifest, das HA als Add-on-Repo erkennt
-├── CHANGELOG.md                   # Protokoll aller Änderungen (automatisch gepflegt)
-├── README.md
-└── skytech_omniai/                # Das eigentliche Add-on (Unterordner = Pflicht)
-    ├── config.yaml                # Home Assistant Add-on Konfiguration
-    ├── Dockerfile                 # Docker-Umgebung (Node.js, Python, Claude CLI)
-    ├── info.md                    # Diese Projektdokumentation
-    ├── app.py                     # Flask-Webserver (Schnittstelle zu Home Assistant)
-    ├── config_loader.py           # Liest die Add-on-Optionen aus /data/options.json
-    └── providers/
-        ├── __init__.py
-        ├── base_provider.py       # Abstraktes Fundament für alle KIs
-        ├── factory.py             # Steuert, welche KI geladen wird
-        ├── claude_sub_provider.py # Der Sonderfall: Claude über das Web-Abo
-        └── gemini_provider.py     # Google Gemini über die Interactions API
-```
+> **Hinweis zur Sicherheit:** Port 8000 ist nicht durch ein Passwort geschützt. Er gehört ins
+> Heimnetz und nicht ins Internet. Wer ausschließlich die Oberfläche nutzt, braucht ihn nicht.
