@@ -10,6 +10,7 @@ import pytest
 ENV_KEYS = [
     "AI_PROVIDER",
     "OMNIAI_MODEL",
+    "OMNIAI_TOOL_ACCESS",
     "CLAUDE_CODE_OAUTH_TOKEN",
     "ANTHROPIC_API_KEY",
     "GEMINI_API_KEY",

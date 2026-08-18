@@ -41,6 +41,7 @@ def test_apply_options_maps_every_value():
         {
             "provider": "gemini",
             "model": "gemini-2.5-pro",
+            "tool_access": "full",
             "claude_oauth_token": "token",
             "anthropic_api_key": "anthropic",
             "gemini_api_key": "google",
@@ -49,6 +50,7 @@ def test_apply_options_maps_every_value():
 
     assert os.environ["AI_PROVIDER"] == "gemini"
     assert os.environ["OMNIAI_MODEL"] == "gemini-2.5-pro"
+    assert os.environ["OMNIAI_TOOL_ACCESS"] == "full"
     assert os.environ["CLAUDE_CODE_OAUTH_TOKEN"] == "token"
     assert os.environ["ANTHROPIC_API_KEY"] == "anthropic"
     assert os.environ["GEMINI_API_KEY"] == "google"
@@ -63,9 +65,10 @@ def test_apply_options_treats_auto_like_an_empty_field():
 
 def test_apply_options_ignores_empty_values():
     """Leerzustand: leere Felder setzen nichts, statt Leerstrings zu hinterlassen."""
-    apply_options_to_env({"provider": "  ", "claude_oauth_token": ""})
+    apply_options_to_env({"provider": "  ", "tool_access": "", "claude_oauth_token": ""})
 
     assert "AI_PROVIDER" not in os.environ
+    assert "OMNIAI_TOOL_ACCESS" not in os.environ
     assert "CLAUDE_CODE_OAUTH_TOKEN" not in os.environ
 
 

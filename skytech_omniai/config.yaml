@@ -1,5 +1,5 @@
 name: "Skytech OmniAI"
-version: "0.6.0"
+version: "0.7.0"
 slug: "skytech_omniai"
 description: "Modulare KI-Brücke für Home Assistant — Claude über das Abo, Google Gemini und weitere Anbieter"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
@@ -30,6 +30,10 @@ options:
   provider: "claude_sub"
   # "auto" = kein Modell erzwingen, der jeweilige Provider entscheidet selbst.
   model: "auto"
+  # Werkzeug-Freigabe der Claude-CLI. Ohne Freigabe kann die KI nichts
+  # nachschlagen. "web" = Websuche und Seitenabruf, "full" = zusätzlich Shell-
+  # und Dateizugriff im Container, "off" = keine Werkzeuge.
+  tool_access: "web"
   claude_oauth_token: ""
   anthropic_api_key: ""
   gemini_api_key: ""
@@ -40,6 +44,7 @@ schema:
   # das Feld "model" im /ask-Rumpf weiterhin jede beliebige Modell-Kennung
   # gesetzt werden - diese Liste bestimmt nur den add-on-weiten Standard.
   model: "list(auto|sonnet|opus|haiku|gemini-flash-latest|gemini-3.6-flash|gemini-3.5-flash|gemini-3.5-flash-lite|gemini-3.1-flash-lite|gemini-2.5-pro|gemini-2.5-flash|gemini-2.5-flash-lite)"
+  tool_access: "list(off|web|full)"
   claude_oauth_token: "password?"
   anthropic_api_key: "password?"
   gemini_api_key: "password?"
