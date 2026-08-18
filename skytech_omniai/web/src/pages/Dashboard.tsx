@@ -4,7 +4,7 @@ import { api } from '../api'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/Layout'
 import { useToast } from '../components/Toast'
-import { providerLabel } from '../provider'
+import { TOOL_ACCESS_FULL, providerLabel, toolAccessLabel } from '../provider'
 import type { StatusResponse } from '../types'
 
 /* Einstiegsseite: zeigt, womit das Add-on gerade arbeitet und ob es
@@ -90,7 +90,18 @@ export function Dashboard() {
               </div>
             ) : null}
 
-            <div className="tiles dashboard-tiles">
+            {status.tool_access === TOOL_ACCESS_FULL ? (
+              <div className="hint-box">
+                Die Stufe „Alle Werkzeuge“ erlaubt der KI auch Befehle und Dateizugriff im
+                Add-on — dort liegt auch der hinterlegte Zugang. Für Anfragen, die etwas
+                nachschlagen sollen, genügt „Web-Recherche“: im Add-on unter „Konfiguration“
+                das Feld „tool_access“ auf „web“ stellen.
+              </div>
+            ) : null}
+
+            {/* Bewusst ohne .dashboard-tiles: das starre Vierer-Raster ginge bei fünf
+                Kacheln unschön auf. .tiles füllt die Zeile selbst auf. */}
+            <div className="tiles">
               <div className="tile">
                 <div className="tile-icon"><Icon name="settings" size={20} /></div>
                 <h3>Anbieter</h3>
@@ -101,6 +112,18 @@ export function Dashboard() {
                 <div className="tile-icon"><Icon name="list" size={20} /></div>
                 <h3>Standardmodell</h3>
                 <p className="tile-copy">{status.default_model ?? 'Der Anbieter entscheidet'}</p>
+              </div>
+
+              <div className="tile">
+                <div className="tile-icon"><Icon name="external" size={20} /></div>
+                <h3>Werkzeuge</h3>
+                <p className="tile-copy">
+                  {status.tool_access === TOOL_ACCESS_FULL ? (
+                    <span className="pill warn">{toolAccessLabel(status.tool_access)}</span>
+                  ) : (
+                    toolAccessLabel(status.tool_access)
+                  )}
+                </p>
               </div>
 
               {CREDENTIAL_KEYS.map((key) => (

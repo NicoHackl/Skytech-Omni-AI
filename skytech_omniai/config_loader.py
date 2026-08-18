@@ -82,6 +82,13 @@ def apply_options_to_env(options: dict) -> None:
     if model and model != "auto":
         os.environ["OMNIAI_MODEL"] = model
 
+    # Werkzeugstufe der Claude-CLI („off“, „web“, „full“). Ohne Freigabe lehnt
+    # die CLI im Headless-Modus jedes Werkzeug ab — Anfragen, die eine Recherche
+    # brauchen (Wetter, Nachrichten, Preise), scheitern dann.
+    tool_access = (options.get("tool_access") or "").strip()
+    if tool_access:
+        os.environ["OMNIAI_TOOL_ACCESS"] = tool_access
+
     # Langlebiges Token des Claude-Pro/Max-Abos. Wird einmal auf einem Rechner
     # mit Browser über `claude setup-token` erzeugt und hier eingetragen.
     token = (options.get("claude_oauth_token") or "").strip()
@@ -101,9 +108,10 @@ def apply_options_to_env(options: dict) -> None:
 
     # Bewusst ohne die Werte selbst: im Log steht nur, was gesetzt wurde.
     log.info(
-        "Optionen übernommen — Provider: %s, Standardmodell: %s, Zugänge: %s",
+        "Optionen übernommen — Provider: %s, Standardmodell: %s, Werkzeuge: %s, Zugänge: %s",
         os.environ.get("AI_PROVIDER", "Vorgabe"),
         os.environ.get("OMNIAI_MODEL", "keine Vorgabe"),
+        os.environ.get("OMNIAI_TOOL_ACCESS", "Vorgabe"),
         ", ".join(
             name
             for name, gesetzt in (

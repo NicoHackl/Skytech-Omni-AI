@@ -51,6 +51,36 @@ Empfehlung an den Betreiber: den Port nicht ins Internet weiterleiten. Wer nur d
 braucht, kann die Zeilen `ports` und `ports_description` aus `config.yaml` entfernen — der Ingress
 funktioniert ohne veröffentlichten Port weiter.
 
+## Werkzeuge der Claude-CLI
+
+`tool_access` entscheidet, was die KI während einer Anfrage tun darf. Die Stufen unterscheiden
+sich **sicherheitlich**, nicht nur im Komfort:
+
+| Stufe | Reichweite |
+|---|---|
+| `off` | Kein Zugriff nach außen und keiner ins Dateisystem |
+| `web` | Lesender Zugriff auf öffentliche Webseiten. Was das Modell abruft, bestimmt der Prompt |
+| `full` | Zusätzlich Befehle und Dateizugriff **im Add-on-Container** |
+
+Zu `full` gehört eine Kette, die man zusammen betrachten muss:
+
+1. Unter `/data` liegt das Token des Claude-Abos und der Anmeldezustand der CLI.
+2. `full` erlaubt der KI, Dateien dort zu lesen und Befehle auszuführen.
+3. Web-Zugriff ist in dieser Stufe ebenfalls frei — es gibt also einen Weg nach draußen.
+4. Port 8000 ist unauthentifiziert (siehe unten).
+
+Wer den Port erreicht, kann damit über einen entsprechend formulierten Prompt das Token auslesen
+und wegschicken lassen. Deshalb ist die Vorgabe `web`: sie deckt den eigentlichen Anwendungsfall
+— etwas nachschlagen — vollständig ab und lässt Schritt 2 der Kette weg. Begründung als D-012 in
+[design-entscheidungen.md](design-entscheidungen.md).
+
+Wer `full` braucht, sollte es nur zusammen mit einem geschlossenen Port 8000 einschalten; über den
+Ingress von Home Assistant greift dessen Anmeldung.
+
+Der Prompt selbst ist in **jeder** Stufe die Eingabe eines Aufrufers und wird nicht geprüft.
+Was darin steht, ist eine Anweisung an das Modell — und in Stufe `full` mittelbar eine Anweisung
+an den Container.
+
 ## Personenbezogene Daten
 
 | Datenart | Wird verarbeitet? | Wo gespeichert | Löschfrist |
@@ -58,6 +88,7 @@ funktioniert ohne veröffentlichten Port weiter.
 | Inhalt des Prompts | ja, im Durchlauf | nicht gespeichert; bei Google ausdrücklich `store: false` | entfällt |
 | Antwort des Modells | ja, im Durchlauf | nicht gespeichert | entfällt |
 | Anmeldezustand der Claude-CLI | ja | `/data/.claude` im Container | bis zur Deinstallation |
+| Abgerufene Webseiten (Stufe `web`/`full`) | nur im Durchlauf | nicht gespeichert | entfällt |
 | Zugangsdaten | ja | `/data/options.json`, vom Supervisor verwaltet | bis zum Leeren des Felds |
 
 Grundsatz Datenminimierung: Was nicht erhoben wird, kann nicht verloren gehen. Das Add-on legt

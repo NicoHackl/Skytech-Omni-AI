@@ -50,6 +50,18 @@ def test_status_without_credentials(client):
     assert daten["default_model"] is None
 
 
+def test_status_reports_the_tool_level(client):
+    """Ohne Angabe gilt die Vorgabe — die Oberfläche zeigt sie an."""
+    assert client.get("/status").get_json()["tool_access"] == "web"
+
+
+def test_status_reports_the_effective_tool_level(client, monkeypatch):
+    """Ein vertippter Wert erscheint nicht in der Oberfläche, sondern die Vorgabe."""
+    monkeypatch.setenv("OMNIAI_TOOL_ACCESS", "vollzugriff")
+
+    assert client.get("/status").get_json()["tool_access"] == "web"
+
+
 def test_ask_without_prompt_is_rejected(client):
     """Fehlerfall: eine unvollständige Anfrage ist ein Eingabefehler, kein Serverfehler."""
     antwort = client.post("/ask", json={})

@@ -88,14 +88,19 @@ Zustand des Add-ons, gedacht für die Oberfläche.
 ```json
 {
   "provider": "claude_sub",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "default_model": null,
+  "tool_access": "web",
   "credentials": { "claude_sub": true, "gemini": false }
 }
 ```
 
 Zu den Zugängen kommt **ausschließlich** `true`/`false` zurück — nie der Wert, nie ein Ausschnitt
 davon und auch nicht seine Länge.
+
+`tool_access` ist die Stufe, die **tatsächlich gilt** — nicht der rohe Wert aus der Konfiguration.
+Ein unbekannter Eintrag erscheint hier als `web`, weil der Provider genauso darauf zurückfällt.
+Beides stammt aus derselben Funktion, damit Oberfläche und Provider nicht auseinanderlaufen.
 
 ## `GET /health`
 

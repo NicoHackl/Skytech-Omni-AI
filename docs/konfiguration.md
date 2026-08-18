@@ -10,6 +10,7 @@ Start und legt sie als Umgebungsvariablen ab. Im Code steht kein einziger Zugang
 |---|---|---|---|
 | `provider` | ja | `claude_sub` | Aktiver Anbieter: `claude_sub` oder `gemini` |
 | `model` | ja | `auto` | Add-on-weites Standardmodell. `auto` heißt: der Anbieter entscheidet |
+| `tool_access` | ja | `web` | Welche Werkzeuge die Claude-CLI benutzen darf: `off`, `web` oder `full` |
 | `claude_oauth_token` | nein | leer | Langlebiges Token des Claude-Pro/Max-Abos, erzeugt mit `claude setup-token` |
 | `anthropic_api_key` | nein | leer | Alternative zum Abo: nach Verbrauch abgerechneter Anthropic-Schlüssel |
 | `gemini_api_key` | nein | leer | Schlüssel aus Google AI Studio |
@@ -27,6 +28,7 @@ Aus den Optionen abgeleitet. Beim Betrieb außerhalb von Home Assistant werden s
 |---|---|---|---|
 | `AI_PROVIDER` | nein | `claude_sub` | Aktiver Anbieter |
 | `OMNIAI_MODEL` | nein | — | Standardmodell. Nicht gesetzt heißt: der Anbieter entscheidet |
+| `OMNIAI_TOOL_ACCESS` | nein | `web` | Werkzeugstufe. Unbekannter Wert fällt auf `web` zurück |
 | `CLAUDE_CODE_OAUTH_TOKEN` | nein | — | Token des Abos, wird an die Claude-CLI durchgereicht |
 | `ANTHROPIC_API_KEY` | nein | — | Anthropic-Schlüssel als Alternative zum Abo |
 | `GEMINI_API_KEY` | nein | — | Schlüssel für Google Gemini |
@@ -38,6 +40,29 @@ Aus den Optionen abgeleitet. Beim Betrieb außerhalb von Home Assistant werden s
 
 `auto` im Feld `model` ist ein Sentinel und wird wie ein leeres Feld behandelt — er landet nicht
 in `OMNIAI_MODEL`.
+
+## Werkzeuge der Claude-CLI
+
+Die CLI läuft im Add-on ohne Bildschirm (`claude -p`). In diesem Modus gibt es keine interaktive
+Rückfrage — und **ohne ausdrückliche Freigabe lehnt die CLI jedes genehmigungspflichtige Werkzeug
+automatisch ab**, auch `WebSearch` und `WebFetch`. Es ist also nie etwas blockiert; es war nur nie
+freigegeben. `tool_access` steuert diese Freigabe:
+
+| Stufe | Was die KI darf | Wofür |
+|---|---|---|
+| `off` | Nichts. Antwort allein aus dem Trainingswissen | Wenn nur formatiert oder umformuliert werden soll |
+| `web` | `WebSearch` und `WebFetch` | **Vorgabe.** Wetter, Nachrichten, Preise, Fahrpläne |
+| `full` | Alle Werkzeuge der CLI, inklusive Befehle und Dateizugriff im Container | Sonderfälle. Vorher [sicherheit-datenschutz.md](sicherheit-datenschutz.md) lesen |
+
+Warum `web` und nicht `full` die Vorgabe ist: D-012 in
+[design-entscheidungen.md](design-entscheidungen.md).
+
+Die Option betrifft **nur** `provider: claude_sub`. Der Gemini-Provider ruft die Schnittstelle
+direkt auf und hat keine Werkzeuge; er antwortet aus seinem Trainingswissen.
+
+Nach dem Ändern der Option das Add-on neu starten. Ein unbekannter Wert wird nicht übernommen,
+sondern fällt auf die Vorgabe zurück und erscheint als Warnung im Log — ein Tippfehler soll den
+Provider nicht lahmlegen.
 
 ## Konfigurationsdateien
 

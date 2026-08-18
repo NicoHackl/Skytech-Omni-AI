@@ -17,6 +17,8 @@ pro Anfrage.
   rollierendes Fünf-Stunden-Limit.
 - **Anmeldung übersteht Neustarts.** Der Anmeldezustand liegt im geschützten Datenverzeichnis des
   Add-ons.
+- **Nachschlagen statt raten.** Für Claude lässt sich die Websuche freigeben, damit Anfragen
+  nach Wetter, Nachrichten oder Preisen mit echten Quellen beantwortet werden.
 - **Immer JSON.** Alle Anbieter werden angewiesen, sauberes JSON ohne Markdown zurückzuliefern —
   und was trotzdem verpackt ankommt, wird ausgepackt.
 - **Eine Oberfläche in Home Assistant.** Zustand ansehen, Testanfrage stellen, Modelle
@@ -83,11 +85,54 @@ Passen Anbieter und Modell nicht zusammen, sagt das Add-on das im Klartext. **Pr
 sich im Rumpf von `/ask` weiterhin jede Modellkennung setzen — auch eine, die nicht im Auswahlfeld
 steht.
 
+## Internet-Zugriff und Werkzeuge
+
+Die Claude-Befehlszeile läuft im Add-on **ohne Bildschirm** (`claude -p`). In diesem Modus gibt es
+keine Rückfrage — und ohne ausdrückliche Freigabe lehnt sie deshalb **jedes** Werkzeug ab, auch
+die Websuche. Antwortet die KI, sie könne nichts nachschlagen, ist also nichts blockiert: es war
+nur nichts freigegeben.
+
+Gesteuert wird das über die Option **`tool_access`**:
+
+| Stufe | Wirkung |
+| --- | --- |
+| `web` | **Vorgabe.** Websuche und Seitenabruf. Reicht für Wetter, Nachrichten, Preise, Fahrpläne. |
+| `full` | Zusätzlich Befehle und Dateizugriff **im Add-on**. Nur für Sonderfälle. |
+| `off` | Keine Werkzeuge. Die KI antwortet allein aus ihrem Trainingswissen. |
+
+> ⚠️ **Zu `full`:** In dieser Stufe darf die KI im Add-on Befehle ausführen und Dateien lesen —
+> dort liegt auch dein Claude-Token. Zusammen mit dem offenen Port 8000 ist das ein Weg, an das
+> Token zu kommen. Für reine Recherche genügt `web`. Wer `full` einschaltet, sollte den Port
+> schließen und nur die Oberfläche nutzen.
+
+Nach dem Ändern der Option das **Add-on neu starten**. Ein vertippter Wert wird nicht übernommen,
+sondern fällt auf `web` zurück.
+
+> **Hinweis:** `tool_access` betrifft nur `provider: claude_sub`. Google Gemini hat keinen
+> Web-Zugriff und antwortet allein aus seinem Trainingswissen.
+
+### Wetterabfrage testen
+
+```bash
+curl -X POST http://<HA-IP>:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"model": "haiku",
+       "prompt": "Wie wird das Wetter heute in Frauenau (94258)? Antworte als JSON mit den Feldern ort, datum, temperatur_min, temperatur_max, beschreibung, quelle."}'
+```
+
+Die Antwort dauert spürbar länger als eine Anfrage ohne Recherche: die KI sucht erst und liest
+dann die Quelle.
+
+> **Tipp:** Speziell fürs Wetter ist eine Wetter-Entität in Home Assistant (etwa DWD oder Met.no)
+> schneller, zuverlässiger und verbraucht kein Abo-Kontingent. Der Web-Zugriff lohnt sich vor
+> allem für alles, wofür es keine passende Integration gibt.
+
 ## Oberfläche
 
 Nach dem Start erscheint **OmniAI** in der Seitenleiste von Home Assistant:
 
-- **Übersicht** — aktiver Anbieter, Standardmodell, hinterlegte Zugänge, Verbindungsprüfung.
+- **Übersicht** — aktiver Anbieter, Standardmodell, Werkzeugstufe, hinterlegte Zugänge,
+  Verbindungsprüfung.
 - **Anfrage** — Anbieter und Modell wählen, Prompt eingeben, Antwort ansehen.
 - **Modelle** — was sich je Anbieter auswählen lässt.
 
@@ -105,7 +150,7 @@ curl -X POST http://<HA-IP>:8000/ask \
 # Anbieter und Modelle abfragen
 curl http://<HA-IP>:8000/models
 
-# Zustand abfragen (Anbieter, Version, hinterlegte Zugänge als ja/nein)
+# Zustand abfragen (Anbieter, Version, Werkzeugstufe, Zugänge als ja/nein)
 curl http://<HA-IP>:8000/status
 ```
 

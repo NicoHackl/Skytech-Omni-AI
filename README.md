@@ -66,6 +66,15 @@ curl http://<HA-IP>:8000/models
 
 Vollständige Beschreibung der Endpunkte: [docs/api-referenz.md](docs/api-referenz.md).
 
+### Nachschlagen statt raten
+
+Damit Claude Wetter, Nachrichten oder Preise beantworten kann, braucht die Befehlszeile eine
+ausdrückliche Freigabe — ohne sie lehnt sie im Add-on **jedes** Werkzeug ab. Die Option
+`tool_access` steht deshalb auf `web` (Websuche und Seitenabruf). `full` gibt zusätzlich Befehle
+und Dateizugriff im Add-on frei und gehört nur in Sonderfälle; `off` schaltet alles ab.
+Einzelheiten: [skytech_omniai/info.md](skytech_omniai/info.md) und
+[docs/sicherheit-datenschutz.md](docs/sicherheit-datenschutz.md).
+
 > **Hinweis:** Port 8000 ist nicht durch ein Passwort geschützt. Er gehört ins Heimnetz und nicht
 > ins Internet. Wer nur die Oberfläche nutzt, kann ihn schließen — der Ingress funktioniert ohne
 > ihn. Siehe [docs/sicherheit-datenschutz.md](docs/sicherheit-datenschutz.md).

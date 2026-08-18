@@ -20,7 +20,7 @@ from waitress import serve
 from werkzeug.exceptions import NotFound
 
 from config_loader import apply_options_to_env, load_options, read_addon_version
-from providers.claude_sub_provider import CLAUDE_MODELS
+from providers.claude_sub_provider import CLAUDE_MODELS, ClaudeSubProvider
 from providers.factory import DEFAULT_PROVIDER, ProviderFactory
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
@@ -119,12 +119,17 @@ def status():
 
     Zu den Zugängen wird ausschließlich gemeldet, **ob** einer hinterlegt ist —
     nie der Wert selbst und auch nicht, wie lang er ist.
+
+    ``tool_access`` kommt aus derselben Auflösung wie im Provider, damit die
+    Oberfläche nicht die rohe Option zeigt, sondern die Stufe, die tatsächlich
+    gilt — ein vertippter Wert fällt dort auf die Vorgabe zurück.
     """
     return jsonify(
         {
             "provider": os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER),
             "version": read_addon_version(),
             "default_model": os.environ.get("OMNIAI_MODEL") or None,
+            "tool_access": ClaudeSubProvider.resolve_tool_access(),
             "credentials": {
                 "claude_sub": bool(
                     os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()

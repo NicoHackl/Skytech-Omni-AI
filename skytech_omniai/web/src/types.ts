@@ -21,6 +21,8 @@ export interface StatusResponse {
   provider: string
   version: string | null
   default_model: string | null
+  /** Werkzeugstufe der Claude-CLI: `off`, `web` oder `full`. */
+  tool_access: string
   credentials: Record<string, boolean>
 }
 

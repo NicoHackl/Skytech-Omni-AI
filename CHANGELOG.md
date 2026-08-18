@@ -11,6 +11,50 @@ Datei angefasst wurde.
 
 ## [Unveröffentlicht]
 
+## [0.7.0] — 18.08.2026
+
+### Behoben
+
+- **Die KI konnte nichts nachschlagen.** Anfragen, die aktuelle Fakten brauchen — Wetter,
+  Nachrichten, Preise, Fahrpläne — endeten mit einer Absage wie „Wettervorhersage nicht möglich,
+  da WebFetch unterbunden ist". Es war nie etwas blockiert: die Claude-Befehlszeile läuft im
+  Add-on ohne Bildschirm und kann deshalb nicht nachfragen, ob sie ein Werkzeug benutzen darf —
+  also lehnt sie ohne ausdrückliche Freigabe **jedes** ab. Die Freigabe fehlte schlicht. Sie ist
+  jetzt da, und die KI wird zusätzlich angewiesen, aktuelle Fakten nachzuschlagen statt sie aus
+  dem Gedächtnis zu raten. Scheitert eine Recherche wirklich, meldet sie das in der Antwort,
+  statt sich etwas auszudenken.
+
+  Diese Verbesserung war schon einmal fertig und ging beim Zusammenführen zweier Entwicklungsstände
+  in Version 0.6.0 verloren. Sie ist hiermit wiederhergestellt; der Ablauf in
+  `docs/git-workflow.md` wurde so ergänzt, dass sich das nicht wiederholt.
+
+### Hinzugefügt
+
+- **Neue Option `tool_access`** mit drei Stufen. `web` (Vorgabe) erlaubt Websuche und
+  Seitenabruf — das deckt Wetter, Nachrichten und Preise ab. `full` erlaubt zusätzlich Befehle und
+  Dateizugriff im Add-on und ist für Sonderfälle gedacht. `off` schaltet alle Werkzeuge ab und
+  entspricht dem Verhalten davor. Ein vertippter Wert wird nicht übernommen, sondern fällt auf
+  `web` zurück.
+- Die Übersicht in der Oberfläche zeigt die eingestellte Stufe. Steht sie auf `full`, erscheint
+  dort ein Hinweis, warum das mehr ist als nötig.
+- Scheitert die Stufe `full`, weil das Add-on als Systembenutzer läuft, nennt die Meldung jetzt
+  den Ausweg über `web` statt der englischen Originalmeldung.
+
+### Sicherheit
+
+- Die Vorgabe ist bewusst `web` und nicht `full`. In der Stufe `full` darf die KI im Add-on Dateien
+  lesen — dort liegt auch das Token des Abos —, und Web-Zugriff hat sie dabei ebenfalls. Zusammen
+  mit dem ungeschützten Port 8000 wäre das ein Weg, das Token nach außen zu bringen. Wer `full`
+  braucht, sollte den Port schließen und nur die Oberfläche nutzen.
+
+### Migration
+
+- Keine. Die neue Option hat einen Vorgabewert, den Home Assistant beim Update selbst ergänzt —
+  anders als beim Umbau des Modellfelds in 0.5.0 wird die Konfiguration **nicht** als ungültig
+  gemeldet.
+- Wer das bisherige Verhalten ohne Werkzeuge behalten will, stellt `tool_access` auf `off` und
+  startet das Add-on neu.
+
 ## [0.6.0] — 18.08.2026
 
 ### Hinzugefügt
