@@ -1,43 +1,60 @@
+"""Gemeinsames Fundament aller KI-Provider.
+
+Hier steht, was jeder Provider können muss, und die Auswertung der Antwort:
+Modelle verpacken gültiges JSON gern in Markdown oder umgeben es mit Prosa,
+unabhängig davon, welcher Anbieter dahintersteht.
+"""
+
 import json
+import logging
 import re
 from abc import ABC, abstractmethod
 
-# Wird von jedem Provider an den Nutzer-Prompt angehängt. Provider-unabhängig,
-# weil alle Modelle dazu neigen, JSON in Markdown-Fences zu verpacken.
+log = logging.getLogger("omniai.provider")
+
+# Wird von jedem Provider an den Prompt des Nutzers angehängt. Bewusst
+# englisch: das ist eine Anweisung an das Modell, kein Text für Menschen.
 JSON_INSTRUCTION = (
     "\n\nIMPORTANT: Respond with raw JSON only. Do not wrap the response in "
     "markdown code fences, do not add any explanation before or after the "
     "JSON, and do not include any text that is not valid JSON."
 )
 
-# Matches a fenced code block, optionally tagged (```json ... ```), capturing
-# the inner body so we can unwrap it before parsing.
+# Ein umschließender Codeblock, optional mit Sprachkennung (```json … ```).
+# Gefangen wird der Rumpf, damit er ausgepackt werden kann.
 _FENCE_RE = re.compile(r"^```[a-zA-Z0-9]*\s*\n?(.*?)\n?```$", re.DOTALL)
-# Matches the first balanced-looking JSON object or array embedded in prose.
+# Das erste in Prosa eingebettete Objekt bzw. die erste eingebettete Liste.
 _EMBEDDED_JSON_RE = re.compile(r"(\{.*\}|\[.*\])", re.DOTALL)
+
+FEHLER_KEIN_JSON = (
+    "Die Antwort des Modells war kein auswertbares JSON. Bitte die Anfrage "
+    "erneut stellen oder den Prompt genauer formulieren."
+)
 
 
 class BaseProvider(ABC):
-    """Interface every AI provider (Claude, OpenAI, Gemini, ...) must implement."""
+    """Schnittstelle, die jeder Provider (Claude, Gemini, …) erfüllen muss."""
 
     @abstractmethod
-    def execute(self, prompt: str, model: str = None) -> dict:
-        """Run the prompt against the provider and return a parsed JSON dict.
+    def execute(self, prompt: str, model: str | None = None) -> dict:
+        """Führt den Prompt gegen den Provider aus und gibt geparstes JSON zurück.
 
-        ``model`` optionally selects a specific model within the provider; when
-        ``None`` the provider falls back to its own default (or the add-on-wide
-        default configured via the ``OMNIAI_MODEL`` environment variable).
+        ``model`` wählt optional ein bestimmtes Modell innerhalb des Providers.
+        Ohne Angabe greift der Standard des Providers oder das add-on-weite
+        Standardmodell aus der Umgebungsvariablen ``OMNIAI_MODEL``.
         """
         raise NotImplementedError
 
     @staticmethod
     def parse_json(raw_output: str) -> dict:
-        """Parse the model output into a dict, tolerating common LLM wrappers.
+        """Wertet die Ausgabe des Modells aus und verzeiht die üblichen Verpackungen.
 
-        Models frequently wrap valid JSON in Markdown code fences or surround it
-        with explanatory prose despite instructions. We therefore try, in order:
-        the raw string, the string with code fences stripped, and finally the
-        first embedded JSON object/array found in the text.
+        Versucht der Reihe nach: die Ausgabe selbst, die Ausgabe ohne
+        Markdown-Codeblock und schließlich das erste eingebettete JSON.
+
+        :raises ValueError: wenn keine der Varianten gültiges JSON ergibt. Die
+            Rohausgabe steht dann im Log, nicht in der Meldung — sie kann
+            beliebigen Text des Modells enthalten.
         """
         text = (raw_output or "").strip()
 
@@ -59,4 +76,5 @@ class BaseProvider(ABC):
             except json.JSONDecodeError:
                 continue
 
-        raise ValueError(f"Provider returned invalid JSON.\nRaw output: {raw_output}")
+        log.error("Antwort ohne auswertbares JSON. Rohausgabe: %s", raw_output)
+        raise ValueError(FEHLER_KEIN_JSON)
