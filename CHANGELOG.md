@@ -11,6 +11,51 @@ Datei angefasst wurde.
 
 ## [Unveröffentlicht]
 
+## [0.8.0] — 18.08.2026
+
+### Hinzugefügt
+
+- **ChatGPT über das Abo.** Neben Claude lässt sich jetzt auch ChatGPT als Anbieter wählen
+  (`provider: codex_sub`). Wie bei Claude läuft die Anfrage über die offizielle Befehlszeile des
+  Anbieters und zählt damit auf das Kontingent des bezahlten Abos — nicht auf eine Abrechnung nach
+  Verbrauch.
+- **Anmeldung ohne Browser im Add-on.** Für ChatGPT gibt es kein einzelnes Token zum Eintragen.
+  Stattdessen wird der Inhalt der Datei `auth.json` eingefügt, die beim einmaligen `codex login`
+  auf einem Rechner mit Browser entsteht — neues Feld `codex_auth_json`. Das Add-on übernimmt ihn
+  nur, wenn er sich geändert hat: die Befehlszeile frischt ihre Anmeldung im Betrieb selbst auf,
+  und ein Neustart darf diesen frischen Stand nicht durch den alten ersetzen.
+- **Vier Modelle zur Auswahl** — `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` und
+  `gpt-5.3-codex-spark` (nur mit ChatGPT Pro). Wie bei den anderen Anbietern lässt sich pro Anfrage
+  jede weitere Kennung setzen.
+- **Rückfall ohne Abo.** Unter `openai_api_key` lässt sich ein OpenAI-Schlüssel hinterlegen. Er
+  wird nach Verbrauch abgerechnet und nur benutzt, wenn kein Abo-Zugang eingetragen ist.
+- Die Übersicht in der Oberfläche zeigt eine eigene Kachel für den ChatGPT-Zugang; unter „Modelle“
+  erscheint der neue Anbieter mit seiner Auswahl.
+
+### Geändert
+
+- Ein aufgebrauchtes Kontingent und eine abgelaufene Anmeldung bekommen bei ChatGPT jeweils eine
+  eigene Meldung, die sagt, was zu tun ist — statt einer allgemeinen Absage.
+- Die Werkzeugstufe `tool_access` gilt jetzt für beide Befehlszeilen und nicht mehr nur für Claude.
+
+### Entfernt
+
+- **Das Add-on läuft nur noch auf 64-Bit-Systemen** (`amd64` und `aarch64`). Die Befehlszeile von
+  ChatGPT wird für 32-Bit-Geräte nicht angeboten. Wer das Add-on bisher auf einem 32-Bit-System
+  betreibt (ältere Raspberry-Pi-Modelle mit 32-Bit-Betriebssystem), bekommt ab dieser Version keine
+  Updates mehr; die installierte Fassung 0.7.0 läuft weiter.
+
+### Sicherheit
+
+- Die Anmeldung für ChatGPT liegt im geschützten Datenverzeichnis des Add-ons und ist nur für das
+  Add-on selbst lesbar. Weder sie noch der eingetragene Wert erscheinen in Meldungen oder im Log —
+  gemeldet wird nur, **dass** ein Zugang hinterlegt ist.
+- **Die Stufe `web` wirkt bei ChatGPT anders als bei Claude.** Bei Claude sind in dieser Stufe genau
+  zwei Werkzeuge freigegeben, Dateien lesen kann die KI dort nicht. Bei ChatGPT gibt es keine
+  solche Liste, sondern eine Schutzstufe: Schreiben und eigene Netzverbindungen sind unterbunden,
+  lesende Befehle im Add-on bleiben möglich. Wer auch das ausschließen will, wählt `off` oder
+  bleibt bei Claude.
+
 ## [0.7.0] — 18.08.2026
 
 ### Behoben

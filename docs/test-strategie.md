@@ -58,7 +58,7 @@ nachweislich fehlschlagen.
 
 ## Grundregeln
 
-- Tests laufen **ohne** Netzwerkzugriff, ohne echte Zugangsdaten und ohne die Claude-CLI.
+- Tests laufen **ohne** Netzwerkzugriff, ohne echte Zugangsdaten und ohne die Befehlszeilen.
   `subprocess.run` und die HTTP-Aufrufe werden ersetzt, nie ausgeführt.
 - `tests/conftest.py` räumt vor jedem Test die bekannten Umgebungsvariablen ab. Ohne das hinge
   das Ergebnis davon ab, was auf dem Rechner des Entwicklers gesetzt ist.
@@ -77,5 +77,6 @@ verfolgt. Abdeckung ist ein Warnsignal, kein Ziel an sich — 100 % ohne Zusiche
 wertlos.
 
 Ungetestet bleiben dürfen: die Verdrahtung in `main.tsx`, reine Anzeigekomponenten und der Aufruf
-der echten Claude-CLI. Letzterer ist als Lücke in [bekannte-luecken.md](bekannte-luecken.md)
-geführt — nach jedem Anheben der CLI-Version wird von Hand eine Anfrage gestellt.
+der echten Claude- bzw. Codex-CLI. Letzterer ist als Lücke in
+[bekannte-luecken.md](bekannte-luecken.md) geführt — nach jedem Anheben einer CLI-Version wird
+über den betroffenen Anbieter von Hand eine Anfrage gestellt.
