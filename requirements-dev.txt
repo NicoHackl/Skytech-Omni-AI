@@ -1,0 +1,3 @@
+# Nur für Entwicklung und Tests. Landet nicht im Add-on-Image.
+pytest==9.1.1
+ruff==0.16.3
