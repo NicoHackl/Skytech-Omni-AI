@@ -1,0 +1,23 @@
+# Werkzeugkonfiguration für den Python-Teil des Add-ons. Es gibt kein
+# Python-Paket zu bauen — das Add-on wird als Container ausgeliefert.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["skytech_omniai", "tests"]
+extend-exclude = ["vorlage", "frontend", "bin", "skytech_omniai/web"]
+
+[tool.ruff.lint]
+# E/W Formfehler, F ungenutztes und undefiniertes, I Importreihenfolge,
+# UP veraltete Schreibweisen, B typische Fallen, SIM unnötige Umständlichkeit,
+# RUF ruff-eigene Regeln (fängt unter anderem implizites Optional ab).
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Der Quellcode liegt im Add-on-Ordner und importiert sich selbst flach
+# (z. B. "from providers.factory import ..."), genau wie im Container.
+pythonpath = ["skytech_omniai"]
