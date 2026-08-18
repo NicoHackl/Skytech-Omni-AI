@@ -13,6 +13,10 @@
 
 Der Merge nach `main` erfolgt **manuell auf Zuruf**, nie automatisch durch einen Agenten.
 
+Wird ein Merge-Konflikt pauschal zugunsten einer Seite aufgelöst („Branch X hat Vorrang"), wird
+vorher geprüft, was die andere Seite dabei verliert: `git log <ziel>..<quelle>` und umgekehrt.
+Eine Seite pauschal gewinnen zu lassen ist zulässig — sie ungesehen gewinnen zu lassen nicht.
+
 ## Commit-Format
 
 [Conventional Commits](https://www.conventionalcommits.org/), Betreffzeile deutsch, max. 72 Zeichen:
@@ -35,14 +39,19 @@ Der Rumpf ist nur nötig, wenn das „warum" nicht aus der Betreffzeile hervorge
 
 ## Ablauf je Arbeitspaket
 
-1. Auf `agent/main` wechseln — existiert er weder lokal noch remote, wird er neu angelegt:
-   `git checkout agent/main 2>/dev/null || git checkout -b agent/main`
-2. Existiert der Branch bereits, aktuellen Stand holen: `git pull --rebase`
-3. Ändern, Tests (`pytest`) und Linting (`ruff check . && ruff format --check . && npm run typecheck --prefix skytech_omniai/web`) grün bekommen
-4. [CHANGELOG.md](../CHANGELOG.md) ergänzen
-5. Betroffene `docs/`-Dateien aktualisieren
-6. `git add` gezielt — **nie** `git add -A` ohne vorherige Prüfung von `git status`
-7. Committen und pushen auf `agent/main` — beim allerersten Push auf einen neuen Branch
+1. **Zuerst `git fetch origin`.** Erst danach wird gewechselt oder abgezweigt, und zwar von
+   `origin/<branch>`, nie von einem lokalen Zeiger. Ein lokaler Branch kann Wochen alt sein,
+   ohne dass man es ihm ansieht — genau daran ist am 18.08.2026 ein Arbeitspaket verlorengegangen:
+   der Arbeitsbranch entstand aus einem veralteten lokalen Stand, der fehlende Commit war damit
+   nie enthalten und wurde beim späteren Merge stillschweigend überschrieben.
+2. Auf `agent/main` wechseln — existiert er weder lokal noch remote, wird er neu angelegt:
+   `git checkout agent/main 2>/dev/null || git checkout -b agent/main origin/main`
+3. Existiert der Branch bereits, aktuellen Stand holen: `git pull --rebase`
+4. Ändern, Tests (`pytest`) und Linting (`ruff check . && ruff format --check . && npm run typecheck --prefix skytech_omniai/web`) grün bekommen
+5. [CHANGELOG.md](../CHANGELOG.md) ergänzen
+6. Betroffene `docs/`-Dateien aktualisieren
+7. `git add` gezielt — **nie** `git add -A` ohne vorherige Prüfung von `git status`
+8. Committen und pushen auf `agent/main` — beim allerersten Push auf einen neuen Branch
    `git push -u origin agent/main`, danach reicht `git push`
 
 Ein Commit bildet **eine** abgeschlossene Änderung ab. Sammelcommits über mehrere unabhängige
