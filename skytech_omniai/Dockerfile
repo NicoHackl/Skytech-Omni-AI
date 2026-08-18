@@ -14,9 +14,11 @@ RUN apk add --no-cache \
     bash \
     tzdata
 
-# Feste Fassung der Claude-Code-CLI: eine neue Hauptversion kann das Verhalten
-# von "claude -p" ändern und damit die Antworten des Add-ons.
-RUN npm install -g @anthropic-ai/claude-code@2.1.234
+# Feste Fassungen der beiden Befehlszeilen: eine neue Hauptversion kann das
+# Verhalten von "claude -p" bzw. "codex exec" ändern und damit die Antworten
+# des Add-ons. Die Codex-CLI bringt ein vorgebautes musl-Binary mit und gibt es
+# nur für x86_64 und aarch64 — deshalb wird das Add-on nur für 64 Bit gebaut.
+RUN npm install -g @anthropic-ai/claude-code@2.1.234 @openai/codex@0.147.0
 
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"

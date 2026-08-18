@@ -20,7 +20,9 @@ from waitress import serve
 from werkzeug.exceptions import NotFound
 
 from config_loader import apply_options_to_env, load_options, read_addon_version
-from providers.claude_sub_provider import CLAUDE_MODELS, ClaudeSubProvider
+from providers.base_provider import resolve_tool_access
+from providers.claude_sub_provider import CLAUDE_MODELS
+from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER, ProviderFactory
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
@@ -104,6 +106,7 @@ def models():
             "active_provider": os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER),
             "providers": {
                 "claude_sub": {"models": CLAUDE_MODELS, "default": None},
+                "codex_sub": {"models": CODEX_MODELS, "default": None},
                 "gemini": {
                     "models": GEMINI_MODELS,
                     "default": GEMINI_DEFAULT_MODEL,
@@ -129,11 +132,15 @@ def status():
             "provider": os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER),
             "version": read_addon_version(),
             "default_model": os.environ.get("OMNIAI_MODEL") or None,
-            "tool_access": ClaudeSubProvider.resolve_tool_access(),
+            "tool_access": resolve_tool_access(),
             "credentials": {
                 "claude_sub": bool(
                     os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip()
                     or os.environ.get("ANTHROPIC_API_KEY", "").strip()
+                ),
+                "codex_sub": bool(
+                    os.environ.get("CODEX_AUTH_JSON", "").strip()
+                    or os.environ.get("OPENAI_API_KEY", "").strip()
                 ),
                 "gemini": bool(
                     os.environ.get("GEMINI_API_KEY", "").strip()

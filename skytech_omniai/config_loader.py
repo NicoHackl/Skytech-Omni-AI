@@ -2,7 +2,7 @@
 
 Alles, was der Betreiber im Reiter „Konfiguration“ von Home Assistant einträgt,
 schreibt der Supervisor in eine Datei im Container. Von dort wandert es in die
-Umgebung, weil Provider und die Claude-CLI ihre Werte dort erwarten.
+Umgebung, weil Provider und die beiden Befehlszeilen ihre Werte dort erwarten.
 """
 
 import json
@@ -100,6 +100,19 @@ def apply_options_to_env(options: dict) -> None:
     if api_key:
         os.environ["ANTHROPIC_API_KEY"] = api_key
 
+    # Anmeldung des ChatGPT-Abos: der vollständige Inhalt der Datei „auth.json“,
+    # die „codex login“ auf einem Rechner mit Browser anlegt. Der Provider legt
+    # ihn im Datenverzeichnis ab — aber nur, wenn sich der Wert geändert hat,
+    # damit die von der CLI erneuerten Tokens erhalten bleiben.
+    codex_auth_json = (options.get("codex_auth_json") or "").strip()
+    if codex_auth_json:
+        os.environ["CODEX_AUTH_JSON"] = codex_auth_json
+
+    # Alternative zum Abo: nach Verbrauch abgerechneter OpenAI-Schlüssel.
+    openai_api_key = (options.get("openai_api_key") or "").strip()
+    if openai_api_key:
+        os.environ["OPENAI_API_KEY"] = openai_api_key
+
     # Google-AI-Studio-Schlüssel für den Gemini-Provider. Wird unter
     # https://aistudio.google.com/apikey erzeugt und metered abgerechnet.
     gemini_api_key = (options.get("gemini_api_key") or "").strip()
@@ -117,6 +130,8 @@ def apply_options_to_env(options: dict) -> None:
             for name, gesetzt in (
                 ("Claude-Abo", bool(token)),
                 ("Anthropic-API", bool(api_key)),
+                ("ChatGPT-Abo", bool(codex_auth_json)),
+                ("OpenAI-API", bool(openai_api_key)),
                 ("Gemini", bool(gemini_api_key)),
             )
             if gesetzt

@@ -7,7 +7,12 @@
 - Der Gemini-Schlüssel geht als Kopfzeile `x-goog-api-key` raus und **nicht** als Adressparameter:
   Adressen landen in Zugriffsprotokollen und bei Zwischenstationen, Kopfzeilen nicht.
 - Das Claude-Token wird als Umgebungsvariable an den Unterprozess durchgereicht, nie als Argument
-  auf der Befehlszeile — Argumente sind in der Prozessliste sichtbar.
+  auf der Befehlszeile — Argumente sind in der Prozessliste sichtbar. Aus demselben Grund geht der
+  Prompt an die Codex-CLI über die Standardeingabe.
+- Die Anmeldung des ChatGPT-Abos liegt als Datei unter `/data/.codex/auth.json`, nur für den
+  Add-on-Prozess lesbar (`0600`, Verzeichnis `0700`). Sie wird aus der Konfiguration nur dann neu
+  geschrieben, wenn sich der eingetragene Wert geändert hat — sonst überschriebe ein Neustart die
+  von der CLI erneuerten Tokens.
 - `GET /status` meldet zu jedem Zugang nur `true` oder `false`. Weder der Wert noch ein Ausschnitt
   noch seine Länge verlässt das Add-on.
 - Vor jedem Commit `git diff --staged` prüfen.
@@ -21,8 +26,8 @@
 - Pfade unterhalb der Wurzel werden von `send_from_directory` aufgelöst; Ausbruchsversuche mit
   `..` weist es ab, und die Anfrage landet auf der Auffangroute.
 - `provider` und `model` werden gegen bekannte Werte geprüft, bevor irgendetwas damit geschieht.
-  `model` fließt bei Claude als Argument in einen Unterprozess — der wird ohne Shell gestartet
-  (`subprocess.run` mit Argumentliste), es gibt also keine Shell-Auswertung.
+  `model` fließt bei Claude und ChatGPT als Argument in einen Unterprozess — der wird ohne Shell
+  gestartet (`subprocess.run` mit Argumentliste), es gibt also keine Shell-Auswertung.
 - Der Prompt selbst wird nicht geprüft: er ist der Inhalt der Anfrage und geht unverändert an das
   Modell.
 
@@ -51,7 +56,7 @@ Empfehlung an den Betreiber: den Port nicht ins Internet weiterleiten. Wer nur d
 braucht, kann die Zeilen `ports` und `ports_description` aus `config.yaml` entfernen — der Ingress
 funktioniert ohne veröffentlichten Port weiter.
 
-## Werkzeuge der Claude-CLI
+## Werkzeuge der Befehlszeilen
 
 `tool_access` entscheidet, was die KI während einer Anfrage tun darf. Die Stufen unterscheiden
 sich **sicherheitlich**, nicht nur im Komfort:
@@ -61,6 +66,18 @@ sich **sicherheitlich**, nicht nur im Komfort:
 | `off` | Kein Zugriff nach außen und keiner ins Dateisystem |
 | `web` | Lesender Zugriff auf öffentliche Webseiten. Was das Modell abruft, bestimmt der Prompt |
 | `full` | Zusätzlich Befehle und Dateizugriff **im Add-on-Container** |
+
+**Die Stufen sind nicht bei beiden Befehlszeilen gleich scharf.** Bei Claude ist `web` eine Liste
+einzeln freigegebener Werkzeuge (`WebSearch`, `WebFetch`) — es gibt in dieser Stufe schlicht kein
+Werkzeug, mit dem sich eine Datei lesen ließe. Bei Codex gibt es diese Liste nicht, sondern eine
+Sandbox-Stufe: `read-only` verhindert Schreibzugriffe und eigenständige Netzverbindungen, **lesende
+Befehle im Container bleiben aber möglich**. In der Vorgabestufe kann ChatGPT damit prinzipiell
+Dateien unter `/data` lesen — Claude kann das dort nicht.
+
+Das ist deutlich weniger als `full` (kein Schreiben, kein freier Netzzugang; hinausgehen könnte
+Gelesenes allenfalls über eine Suchanfrage), aber mehr als bei Claude in derselben Stufe. Wer das
+nicht will, stellt `tool_access` auf `off` oder betreibt `codex_sub` nur über den Ingress mit
+geschlossenem Port 8000.
 
 Zu `full` gehört eine Kette, die man zusammen betrachten muss:
 
@@ -88,6 +105,7 @@ an den Container.
 | Inhalt des Prompts | ja, im Durchlauf | nicht gespeichert; bei Google ausdrücklich `store: false` | entfällt |
 | Antwort des Modells | ja, im Durchlauf | nicht gespeichert | entfällt |
 | Anmeldezustand der Claude-CLI | ja | `/data/.claude` im Container | bis zur Deinstallation |
+| Anmeldezustand der Codex-CLI | ja | `/data/.codex` im Container | bis zur Deinstallation |
 | Abgerufene Webseiten (Stufe `web`/`full`) | nur im Durchlauf | nicht gespeichert | entfällt |
 | Zugangsdaten | ja | `/data/options.json`, vom Supervisor verwaltet | bis zum Leeren des Felds |
 
@@ -95,7 +113,7 @@ Grundsatz Datenminimierung: Was nicht erhoben wird, kann nicht verloren gehen. D
 weder einen Verlauf noch ein Protokoll der Anfragen an.
 
 **Wichtig für den Betreiber:** Was im Prompt steht, verlässt das Haus. Wer Zustände aus dem Smart
-Home in eine Anfrage schreibt, gibt sie an Anthropic bzw. Google. Es gehört nur hinein, was für die
+Home in eine Anfrage schreibt, gibt sie an Anthropic, OpenAI bzw. Google. Es gehört nur hinein, was für die
 Aufgabe nötig ist.
 
 ## Externe Dienste
@@ -103,6 +121,7 @@ Aufgabe nötig ist.
 | Dienst | Welche Daten gehen dorthin | Warum nötig |
 |---|---|---|
 | Anthropic | Prompt, gewähltes Modell, Abo-Token bzw. Schlüssel | Der Prompt wird dort beantwortet |
+| OpenAI | Prompt, gewähltes Modell, Anmeldung des ChatGPT-Abos bzw. Schlüssel | Dasselbe für ChatGPT. Kein Verlauf: jeder Lauf ist eigenständig (`--ephemeral`) |
 | Google | Prompt, gewähltes Modell, Schlüssel | Dasselbe für Gemini. `store: false` unterbindet das Speichern des Verlaufs |
 
 Ein neuer externer Dienst ist eine Design-Entscheidung → Eintrag in
@@ -111,10 +130,10 @@ verlassen.
 
 ## Abhängigkeiten
 
-- Die Versionen von Flask, waitress, der Claude-CLI und der Basisimages sind festgenagelt. Ein
+- Die Versionen von Flask, waitress, der beiden Befehlszeilen und der Basisimages sind festgenagelt. Ein
   Update ist damit ein sichtbarer Commit und kein stiller Seiteneffekt.
-- Sicherheitsupdates zeitnah einspielen. Beim Anheben der Claude-CLI prüfen, ob `claude -p` sich
-  noch gleich verhält — das Verhalten des Add-ons hängt daran.
+- Sicherheitsupdates zeitnah einspielen. Beim Anheben einer der Befehlszeilen prüfen, ob `claude -p`
+  bzw. `codex exec` sich noch gleich verhält — das Verhalten des Add-ons hängt daran.
 - Neue Abhängigkeiten vor Aufnahme prüfen: Wartungsstand, Verbreitung, Lizenz. Für die Oberfläche
   gilt zusätzlich die Liste der ausgeschlossenen Pakete in [frontend.md](frontend.md).
 

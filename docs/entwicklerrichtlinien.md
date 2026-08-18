@@ -78,8 +78,8 @@ Nie geloggt werden: Passwörter, Tokens, API-Keys, personenbezogene Daten. Siehe
 - Eine neue Laufzeit-Abhängigkeit ist eine Design-Entscheidung → Eintrag in
   [design-entscheidungen.md](design-entscheidungen.md).
 - Im Add-on-Bild sind zusätzlich festgenagelt: die Basisimages je Architektur (`build.yaml`) und
-  die Version der Claude-Code-CLI (`Dockerfile`). Letztere ist keine Formalie — das Verhalten des
-  Add-ons hängt daran, wie `claude -p` antwortet.
+  die Versionen der Claude-Code- und der Codex-CLI (`Dockerfile`). Letztere sind keine Formalie —
+  das Verhalten des Add-ons hängt daran, wie `claude -p` bzw. `codex exec` antwortet.
 - Die `apk`-Pakete tragen **keine** eigene Version. Sie kommen aus dem festgelegten Basisimage;
   eine Version zusätzlich einzutragen würde den Build bei jeder Alpine-Fassung brechen, ohne mehr
   Verlässlichkeit zu bringen. Wer die Fassung wechselt, ändert `build.yaml` — und nur dort.

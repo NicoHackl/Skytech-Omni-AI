@@ -5,6 +5,7 @@
 
 const PROVIDER_LABELS: Record<string, string> = {
   claude_sub: 'Claude (Abo)',
+  codex_sub: 'ChatGPT (Abo)',
   gemini: 'Google Gemini',
 }
 
@@ -16,8 +17,8 @@ export function providerLabel(key: string): string {
 /** Wert des Auswahlfelds für „kein Modell erzwingen“. */
 export const MODEL_AUTO = 'auto'
 
-/* Werkzeugstufen der Claude-CLI. Der Nutzer liest, was die Stufe bewirkt, nicht
-   den technischen Wert aus der Konfiguration (eiserne Regel 12). */
+/* Werkzeugstufen der beiden Befehlszeilen. Der Nutzer liest, was die Stufe
+   bewirkt, nicht den technischen Wert aus der Konfiguration (eiserne Regel 12). */
 
 const TOOL_ACCESS_LABELS: Record<string, string> = {
   off: 'Keine Werkzeuge',

@@ -8,6 +8,7 @@ import os
 
 from providers.base_provider import BaseProvider
 from providers.claude_sub_provider import ClaudeSubProvider
+from providers.codex_sub_provider import CodexSubProvider
 from providers.gemini_provider import GeminiProvider
 
 log = logging.getLogger("omniai.factory")
@@ -16,6 +17,7 @@ DEFAULT_PROVIDER = "claude_sub"
 
 _PROVIDERS = {
     "claude_sub": ClaudeSubProvider,
+    "codex_sub": CodexSubProvider,
     "gemini": GeminiProvider,
 }
 
@@ -23,6 +25,7 @@ _PROVIDERS = {
 # technischen Namen in die Konfiguration ein, deshalb steht er mit dabei.
 _ANZEIGENAMEN = {
     "claude_sub": "Claude (Abo)",
+    "codex_sub": "ChatGPT (Abo)",
     "gemini": "Google Gemini",
 }
 

@@ -12,7 +12,7 @@ import type { StatusResponse } from '../types'
    Schlüssel taucht hier weder ganz noch gekürzt auf. */
 
 /** Reihenfolge der Zugangskacheln, gleich wie im Auswahlfeld der Konfiguration. */
-const CREDENTIAL_KEYS = ['claude_sub', 'gemini']
+const CREDENTIAL_KEYS = ['claude_sub', 'codex_sub', 'gemini']
 
 export function Dashboard() {
   const [status, setStatus] = useState<StatusResponse | null>(null)

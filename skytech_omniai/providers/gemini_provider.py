@@ -1,9 +1,10 @@
 """Google Gemini über die Interactions-Schnittstelle.
 
 Der Aufruf läuft bewusst über ``urllib`` aus der Standardbibliothek: das
-Add-on-Image ist Alpine-basiert und wird auch für armv7/armhf gebaut, wo das
-offizielle SDK über pydantic-core eine Rust-Werkzeugkette nachziehen würde.
-Für einen einzelnen JSON-POST lohnt diese Abhängigkeit nicht.
+Add-on-Image ist Alpine-basiert (musl), und das offizielle SDK zöge über
+pydantic-core eine Rust-Werkzeugkette nach. Für einen einzelnen JSON-POST lohnt
+diese Abhängigkeit nicht. (Zum Zeitpunkt der Entscheidung wurde zusätzlich für
+armv7/armhf gebaut; seit D-014 nur noch für 64 Bit.)
 """
 
 import json
