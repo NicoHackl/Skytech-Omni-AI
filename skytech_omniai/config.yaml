@@ -1,7 +1,7 @@
 name: "Skytech OmniAI"
-version: "0.6.0"
+version: "0.7.0"
 slug: "skytech_omniai"
-description: "Modular AI bridge for Home Assistant - Claude Subscription, OpenAI, Gemini and more"
+description: "Modulare KI-Brücke für Home Assistant — Claude über das Abo, Google Gemini und weitere Anbieter"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
 arch:
   - aarch64
@@ -15,17 +15,25 @@ boot: auto
 ports:
   8000/tcp: 8000
 ports_description:
-  8000/tcp: "Skytech OmniAI HTTP API"
+  8000/tcp: "Schnittstelle von Skytech OmniAI"
+# Die Oberfläche wird von Home Assistant eingebettet; sie läuft im selben
+# Prozess wie die Schnittstelle und braucht deshalb keinen eigenen Port.
+ingress: true
+ingress_port: 8000
+panel_icon: "mdi:robot"
+panel_title: "OmniAI"
+# Neustart, sobald das Add-on nicht mehr antwortet.
+watchdog: "http://[HOST]:[PORT:8000]/health"
 map:
   - data:rw
 options:
   provider: "claude_sub"
   # "auto" = kein Modell erzwingen, der jeweilige Provider entscheidet selbst.
   model: "auto"
-  # Werkzeug-Freigabe der Claude-CLI. "full" = alle Werkzeuge (inkl. Shell und
-  # Dateizugriff im Container), "web" = nur Websuche und Seitenabruf,
-  # "off" = keine Werkzeuge. Ohne Freigabe kann die KI nichts nachschlagen.
-  tool_access: "full"
+  # Werkzeug-Freigabe der Claude-CLI. Ohne Freigabe kann die KI nichts
+  # nachschlagen. "web" = Websuche und Seitenabruf, "full" = zusätzlich Shell-
+  # und Dateizugriff im Container, "off" = keine Werkzeuge.
+  tool_access: "web"
   claude_oauth_token: ""
   anthropic_api_key: ""
   gemini_api_key: ""
@@ -33,8 +41,8 @@ schema:
   provider: "list(claude_sub|gemini)"
   # Gemeinsame Liste für alle Provider: die ersten Einträge gehören zu
   # "claude_sub", die "gemini-*"-Einträge zu "gemini". Pro Anfrage kann über
-  # das Feld "model" im /ask-Body weiterhin jede beliebige Modell-ID gesetzt
-  # werden - diese Liste bestimmt nur den Add-on-weiten Standard.
+  # das Feld "model" im /ask-Rumpf weiterhin jede beliebige Modell-Kennung
+  # gesetzt werden - diese Liste bestimmt nur den add-on-weiten Standard.
   model: "list(auto|sonnet|opus|haiku|gemini-flash-latest|gemini-3.6-flash|gemini-3.5-flash|gemini-3.5-flash-lite|gemini-3.1-flash-lite|gemini-2.5-pro|gemini-2.5-flash|gemini-2.5-flash-lite)"
   tool_access: "list(off|web|full)"
   claude_oauth_token: "password?"

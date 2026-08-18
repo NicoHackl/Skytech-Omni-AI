@@ -1,2 +1,19 @@
+# Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node und Bauergebnisse
+node_modules/
+dist/
+
+# Lokale Werte, nie eingecheckt
+.env
+.env.*
+!.env.example
+
+# Betriebssystem
+.DS_Store
