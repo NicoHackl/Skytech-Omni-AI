@@ -2,6 +2,49 @@
 
 All notable changes to the Skytech OmniAI Home Assistant Add-on are documented in this file.
 
+## [0.6.0]
+
+### Fixed
+- **Die KI konnte nichts im Internet nachschlagen.** Anfragen, die aktuelle
+  Fakten brauchen (Wetter, Nachrichten, Preise), endeten mit einer Absage wie
+  „Wettervorhersage nicht möglich, da WebFetch unterbunden ist".
+  - Ursache: `claude_sub_provider.py` startete die CLI ohne `--allowedTools`
+    und ohne `--permission-mode`. Im Headless-Print-Modus (`claude -p`) gilt
+    standardmäßig `permission-mode: default`; da es dort keine interaktive
+    Rückfrage gibt, wird **jedes genehmigungspflichtige Werkzeug automatisch
+    abgelehnt** — auch `WebSearch` und `WebFetch`. Es war also nie etwas aktiv
+    blockiert, sondern schlicht nie freigegeben.
+  - `ClaudeSubProvider._tool_access_args()` hängt die passenden CLI-Argumente
+    an: `--permission-mode bypassPermissions` (Stufe `full`) bzw.
+    `--allowedTools WebSearch WebFetch` (Stufe `web`).
+  - Der `SYSTEM_PROMPT` verstärkte das Problem: „headless JSON generation
+    endpoint" ohne Projekt oder Arbeitsverzeichnis las sich für das Modell wie
+    „kein Internet". Er weist jetzt ausdrücklich auf die Web-Werkzeuge hin,
+    verbietet die Behauptung fehlenden Internetzugangs und das Raten aktueller
+    Fakten aus dem Gedächtnis. Da „never refuse" erhalten bleibt, gibt es als
+    Ventil ein `error`-Feld **innerhalb** des JSON — damit eine gescheiterte
+    Recherche gemeldet statt erfunden wird.
+
+### Added
+- **Neue Option `tool_access`** (`off` | `web` | `full`, Standard `full`),
+  gemappt von `config_loader.py` auf `OMNIAI_TOOL_ACCESS`. `off` entspricht dem
+  Verhalten vor dieser Version, `web` gibt ausschließlich Websuche und
+  Seitenabruf frei, `full` alle Werkzeuge der CLI. Ein unbekannter oder leerer
+  Wert fällt auf den Standard zurück, damit ein Tippfehler den Provider nicht
+  lahmlegt.
+- **Verständliche Fehlermeldung, wenn `full` unter root scheitert.** Add-ons
+  laufen als root, und manche CLI-Versionen verweigern in dieser Konstellation
+  das Umgehen der Berechtigungsabfrage. Der Subprozess bekommt deshalb
+  `IS_SANDBOX=1`; bricht die CLI trotzdem ab, wird die englische CLI-Meldung
+  durch einen deutschen Hinweis ersetzt, der auf die Stufe `web` verweist.
+
+### Migration
+- Keine. Die neue Option hat einen Standardwert, den der Supervisor beim Update
+  ergänzt — anders als der Dropdown-Umbau in 0.5.0 meldet Home Assistant hier
+  **keine** ungültige Konfiguration.
+- Wer den bisherigen Stand ohne Werkzeuge behalten will, stellt `tool_access`
+  auf `off` und startet das Add-on neu.
+
 ## [0.5.0]
 
 ### Added
