@@ -39,6 +39,13 @@ def apply_options_to_env(options: dict) -> None:
     if model and model != "auto":
         os.environ["OMNIAI_MODEL"] = model
 
+    # Werkzeug-Freigabe für die Claude-CLI ("off" / "web" / "full"). Ohne
+    # Freigabe lehnt die CLI im Headless-Modus jedes Werkzeug ab, weshalb
+    # Anfragen mit Web-Recherche (Wetter, Nachrichten) bisher scheiterten.
+    tool_access = (options.get("tool_access") or "").strip()
+    if tool_access:
+        os.environ["OMNIAI_TOOL_ACCESS"] = tool_access
+
     # Long-lived Claude Pro/Max subscription token. Generate it once on a
     # machine where you can log in with a browser via `claude setup-token`,
     # then paste the result into the add-on configuration.
