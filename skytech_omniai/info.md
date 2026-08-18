@@ -85,6 +85,49 @@ Claude-Modell-ID oder ein brandneues `gemini-*`-Modell).
 > Konfiguration öffnen, `auto` (oder das gewünschte Modell) auswählen und
 > speichern.
 
+## 🌐 Internet-Zugriff / Werkzeuge
+
+Die Claude-CLI läuft im Add-on **headless** (`claude -p`). In diesem Modus gibt
+es keine interaktive Rückfrage — und ohne ausdrückliche Freigabe lehnt die CLI
+deshalb **jedes** Werkzeug automatisch ab. Genau daran scheiterten Anfragen wie
+„Wie wird das Wetter heute in Frauenau (94258)?" mit der Antwort, WebFetch sei
+unterbunden.
+
+Die Option **`tool_access`** steuert diese Freigabe:
+
+| Stufe | Wirkung |
+| --- | --- |
+| `full` | **Standard.** Alle Werkzeuge der CLI, inklusive Websuche, Seitenabruf, Shell- und Dateizugriff im Container. |
+| `web` | Nur `WebSearch` und `WebFetch`. Reicht für Wetter, Nachrichten, Preise — kein Shell- oder Dateizugriff. |
+| `off` | Keine Werkzeuge. Entspricht dem Verhalten vor Version 0.6.0: die KI antwortet ausschließlich aus ihrem Trainingswissen. |
+
+> ⚠️ **Zu `full`:** Diese Stufe erlaubt der CLI auch Shell-Befehle und
+> Dateizugriff **innerhalb des Add-on-Containers** — dort liegt unter `/data`
+> auch dein Claude-OAuth-Token. Für reine Recherche-Anfragen genügt `web`.
+
+Nach dem Ändern der Option das **Add-on neu starten**.
+
+> **Hinweis:** `tool_access` betrifft nur `provider: claude_sub`. Der
+> Gemini-Provider hat weiterhin keinen Web-Zugriff und antwortet allein aus
+> seinem Trainingswissen.
+
+### Wetterabfrage testen
+
+```bash
+curl -X POST http://<HA-IP>:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"model": "haiku",
+       "prompt": "Wie wird das Wetter heute in Frauenau (94258)? Antworte als JSON mit den Feldern ort, datum, temperatur_min, temperatur_max, beschreibung, quelle."}'
+```
+
+Die Antwort dauert spürbar länger als eine Anfrage ohne Recherche, weil die KI
+erst sucht und dann die Quelle liest.
+
+> **Tipp:** Speziell für Wetter ist eine native Home-Assistant-Wetter-Entität
+> (z. B. DWD oder Met.no) schneller, zuverlässiger und verbraucht kein
+> Abo-Kontingent. Der Web-Zugriff lohnt sich vor allem für alles, wofür es
+> keine passende HA-Integration gibt.
+
 ### API testen
 
 ```bash
