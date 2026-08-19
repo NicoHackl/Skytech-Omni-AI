@@ -3,22 +3,24 @@
 Ein modulares **Home-Assistant-Add-on**, das als Brücke zwischen deinem Smart Home und
 verschiedenen KI-Modellen dient.
 
-Das Kern-Feature ist die Anbindung des regulären **Claude-Pro/Max-Abos** über die offizielle
-Claude-Befehlszeile. Damit lassen sich Anfragen direkt aus Home Assistant stellen, strukturierte
-JSON-Antworten zurückbekommen und dabei das bestehende Abo-Limit nutzen — ohne zusätzliche Kosten
-pro Anfrage.
+Das Kern-Feature ist die Anbindung bestehender **Abos** über die offiziellen Befehlszeilen der
+Anbieter: **Claude Pro/Max** und **ChatGPT**. Damit lassen sich Anfragen direkt aus Home Assistant
+stellen, strukturierte JSON-Antworten zurückbekommen und dabei das jeweilige Abo-Kontingent
+nutzen — ohne zusätzliche Kosten pro Anfrage.
+
+> Voraussetzung: ein **64-Bit-System** (`amd64` oder `aarch64`).
 
 ## Was das Add-on kann
 
-- **Zwei Anbieter, gleiche Bedienung.** Angebunden sind **Claude (Abo)** und **Google Gemini**.
-  Weitere Anbieter wie OpenAI oder lokale Modelle lassen sich ergänzen, ohne dass sich für
+- **Drei Anbieter, gleiche Bedienung.** Angebunden sind **Claude (Abo)**, **ChatGPT (Abo)** und
+  **Google Gemini**. Weitere Anbieter wie lokale Modelle lassen sich ergänzen, ohne dass sich für
   bestehende Automatisierungen etwas ändert.
-- **Das Abo statt Kosten pro Anfrage.** Über die Claude-Befehlszeile zählt jede Anfrage auf dein
-  rollierendes Fünf-Stunden-Limit.
+- **Das Abo statt Kosten pro Anfrage.** Über die jeweilige Befehlszeile zählt jede Anfrage auf das
+  Kontingent deines Abos.
 - **Anmeldung übersteht Neustarts.** Der Anmeldezustand liegt im geschützten Datenverzeichnis des
   Add-ons.
-- **Nachschlagen statt raten.** Für Claude lässt sich die Websuche freigeben, damit Anfragen
-  nach Wetter, Nachrichten oder Preisen mit echten Quellen beantwortet werden.
+- **Nachschlagen statt raten.** Für Claude und ChatGPT lässt sich die Websuche freigeben, damit
+  Anfragen nach Wetter, Nachrichten oder Preisen mit echten Quellen beantwortet werden.
 - **Immer JSON.** Alle Anbieter werden angewiesen, sauberes JSON ohne Markdown zurückzuliefern —
   und was trotzdem verpackt ankommt, wird ausgepackt.
 - **Eine Oberfläche in Home Assistant.** Zustand ansehen, Testanfrage stellen, Modelle
@@ -47,6 +49,45 @@ möglich. Stattdessen wird ein langlebiges **Token** deines Pro/Max-Abos verwend
 
 Ohne eines der beiden Felder antwortet das Add-on mit einer Meldung, die sagt, was zu tun ist.
 
+## Einrichtung — ChatGPT (Abo)
+
+Für ChatGPT gibt es **kein** einzelnes Token zum Eintragen: die Codex-Befehlszeile speichert ihre
+Anmeldung als Datei und frischt sie im Betrieb selbst auf. Deshalb wird diese Datei einmalig
+eingefügt.
+
+1. **Anmelden** — auf einem Computer, an dem du dich im Browser bei ChatGPT anmelden kannst:
+
+   ```bash
+   npm install -g @openai/codex
+   codex login
+   cat ~/.codex/auth.json
+   ```
+
+   Wichtig: mit dem **ChatGPT-Konto** anmelden, nicht mit einem API-Schlüssel — nur so zählen die
+   Anfragen auf dein Abo.
+2. **Inhalt eintragen** — den vollständigen Inhalt von `auth.json` im Add-on unter
+   **Konfiguration → `codex_auth_json`** einfügen und speichern.
+3. **Anbieter wählen** — `provider` auf `codex_sub`, bei `model` einen `gpt-*`-Eintrag auswählen
+   oder `auto` für die Vorgabe.
+4. **Add-on neu starten.**
+
+Das Add-on übernimmt den eingetragenen Wert nur, **wenn er sich geändert hat** — sonst würde jeder
+Neustart die zwischenzeitlich erneuerte Anmeldung durch den alten Stand ersetzen. Meldet das
+Add-on später, die Anmeldung gelte nicht mehr: Schritt 1 und 2 wiederholen.
+
+> **Alternative (kostenpflichtig):** Statt des Abos kann unter `openai_api_key` ein
+> OpenAI-Schlüssel hinterlegt werden. Der wird nach Verbrauch abgerechnet und nutzt das Abo
+> **nicht**.
+
+### Verfügbare ChatGPT-Modelle
+
+| Modell | Beschreibung |
+| --- | --- |
+| `gpt-5.6-sol` | Für komplexe Aufgaben |
+| `gpt-5.6-terra` | Ausgewogen, für den Alltag |
+| `gpt-5.6-luna` | Schnell und günstig |
+| `gpt-5.3-codex-spark` | Nur mit ChatGPT Pro |
+
 ## Einrichtung — Google Gemini
 
 Gemini wird über einen Schlüssel angebunden (nach Verbrauch abgerechnet, kein Abo-Modell).
@@ -74,11 +115,12 @@ Der Verlauf wird bei Google ausdrücklich **nicht** gespeichert.
 
 ## Modellauswahl
 
-Das Feld `model` in der Konfiguration ist ein **gemeinsames Auswahlfeld** für beide Anbieter und
+Das Feld `model` in der Konfiguration ist ein **gemeinsames Auswahlfeld** für alle Anbieter und
 legt nur den **add-on-weiten Standard** fest:
 
 - `auto` — kein Modell erzwingen, der Anbieter entscheidet selbst.
 - `sonnet` / `opus` / `haiku` — gehören zu `claude_sub`.
+- `gpt-*` — gehören zu `codex_sub`.
 - `gemini-*` — gehören zu `gemini`.
 
 Passen Anbieter und Modell nicht zusammen, sagt das Add-on das im Klartext. **Pro Anfrage** lässt
@@ -87,10 +129,10 @@ steht.
 
 ## Internet-Zugriff und Werkzeuge
 
-Die Claude-Befehlszeile läuft im Add-on **ohne Bildschirm** (`claude -p`). In diesem Modus gibt es
-keine Rückfrage — und ohne ausdrückliche Freigabe lehnt sie deshalb **jedes** Werkzeug ab, auch
-die Websuche. Antwortet die KI, sie könne nichts nachschlagen, ist also nichts blockiert: es war
-nur nichts freigegeben.
+Beide Befehlszeilen laufen im Add-on **ohne Bildschirm** (`claude -p`, `codex exec`). In diesem
+Modus gibt es keine Rückfrage — und ohne ausdrückliche Freigabe benutzt die KI deshalb **kein**
+Werkzeug, auch nicht die Websuche. Antwortet sie, sie könne nichts nachschlagen, ist also nichts
+blockiert: es war nur nichts freigegeben.
 
 Gesteuert wird das über die Option **`tool_access`**:
 
@@ -101,14 +143,20 @@ Gesteuert wird das über die Option **`tool_access`**:
 | `off` | Keine Werkzeuge. Die KI antwortet allein aus ihrem Trainingswissen. |
 
 > ⚠️ **Zu `full`:** In dieser Stufe darf die KI im Add-on Befehle ausführen und Dateien lesen —
-> dort liegt auch dein Claude-Token. Zusammen mit dem offenen Port 8000 ist das ein Weg, an das
-> Token zu kommen. Für reine Recherche genügt `web`. Wer `full` einschaltet, sollte den Port
-> schließen und nur die Oberfläche nutzen.
+> dort liegen auch deine Zugänge. Zusammen mit dem offenen Port 8000 ist das ein Weg, an sie zu
+> kommen. Für reine Recherche genügt `web`. Wer `full` einschaltet, sollte den Port schließen und
+> nur die Oberfläche nutzen.
+
+> **Unterschied zwischen den Anbietern:** Bei Claude gibt `web` genau zwei Werkzeuge frei
+> (Websuche, Seitenabruf) — Dateien lesen kann die KI in dieser Stufe nicht. Bei ChatGPT ist `web`
+> eine Schutzstufe statt einer Werkzeugliste: Schreiben und eigene Netzverbindungen sind
+> unterbunden, lesende Befehle im Add-on bleiben möglich. Wer auch das ausschließen will, wählt
+> `off` oder nutzt `claude_sub`.
 
 Nach dem Ändern der Option das **Add-on neu starten**. Ein vertippter Wert wird nicht übernommen,
 sondern fällt auf `web` zurück.
 
-> **Hinweis:** `tool_access` betrifft nur `provider: claude_sub`. Google Gemini hat keinen
+> **Hinweis:** `tool_access` betrifft `claude_sub` und `codex_sub`. Google Gemini hat keinen
 > Web-Zugriff und antwortet allein aus seinem Trainingswissen.
 
 ### Wetterabfrage testen

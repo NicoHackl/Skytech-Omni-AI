@@ -29,7 +29,7 @@ geprüft, nicht gegen die Absicht. Was hier „fertig" heißt, muss laufen.
 | Fabrik mit austauschbaren Anbietern | fertig | D-005 |
 | Google Gemini | fertig | D-007 |
 | `GET /models` zum Abfragen der gültigen Werte | fertig | [api-referenz.md](api-referenz.md) |
-| OpenAI als dritter Anbieter | offen | |
+| ChatGPT über das Abo als dritter Anbieter | fertig | D-013 |
 | Lokale Modelle über Ollama | offen | |
 
 ### M3 — Bedienbar ohne Kommandozeile
@@ -60,6 +60,7 @@ geprüft, nicht gegen die Absicht. Was hier „fertig" heißt, muss laufen.
 
 | Thema | Warum zurückgestellt | Bedingung für Wiederaufnahme |
 |---|---|---|
+| Geräte-Anmeldung für ChatGPT aus der Oberfläche | Der Zugang wird einmalig eingefügt; ein eigener Anmeldevorgang mit zwei Endpunkten lohnt für einen einmaligen Schritt nicht (D-013) | Sobald die eingefügte Anmeldung im Betrieb wiederholt abläuft |
 | Authentifizierung des offenen Ports | Automatisierungen bräuchten ein zusätzliches Token; im Heimnetz kein Gewinn | Sobald jemand das Add-on außerhalb des Heimnetzes erreichbar machen will |
 | Verlauf über mehrere Anfragen | Hieße Persistenz und ein Datenschutzthema, das keiner gefordert hat | Sobald ein Anwendungsfall mehr als eine Runde braucht |
 

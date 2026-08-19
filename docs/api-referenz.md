@@ -42,7 +42,7 @@ Führt einen Prompt gegen den gewählten Anbieter aus.
 | Feld | Typ | Pflicht | Bedeutung |
 |---|---|---|---|
 | `prompt` | Text | ja | Die Frage an das Modell. Die Anweisung, ausschließlich JSON zu liefern, hängt das Add-on selbst an |
-| `provider` | Text | nein | `claude_sub` oder `gemini`. Ohne Angabe gilt die Add-on-Konfiguration |
+| `provider` | Text | nein | `claude_sub`, `codex_sub` oder `gemini`. Ohne Angabe gilt die Add-on-Konfiguration |
 | `model` | Text | nein | Modell für genau diese Anfrage. Erlaubt ist **jede** Kennung des Anbieters, auch eine, die nicht im Auswahlfeld steht |
 
 **Antwort `200`** — das geparste JSON des Modells, unverändert durchgereicht:
@@ -64,6 +64,12 @@ curl -X POST http://<HA-IP>:8000/ask \
   -H "Content-Type: application/json" \
   -d '{"provider": "gemini", "model": "gemini-3.6-flash",
        "prompt": "Gib mir ein JSON mit dem Feld status=ok"}'
+
+# ChatGPT über das Abo
+curl -X POST http://<HA-IP>:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "codex_sub", "model": "gpt-5.6-luna",
+       "prompt": "Gib mir ein JSON mit dem Feld status=ok"}'
 ```
 
 ## `GET /models`
@@ -76,6 +82,7 @@ Liefert die auswählbaren Werte, damit Automatisierungen sie nicht fest verdraht
   "active_provider": "claude_sub",
   "providers": {
     "claude_sub": { "models": ["sonnet", "opus", "haiku"], "default": null },
+    "codex_sub": { "models": ["gpt-5.6-sol", "…"], "default": null },
     "gemini": { "models": ["gemini-flash-latest", "…"], "default": "gemini-flash-latest" }
   }
 }
@@ -88,10 +95,10 @@ Zustand des Add-ons, gedacht für die Oberfläche.
 ```json
 {
   "provider": "claude_sub",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "default_model": null,
   "tool_access": "web",
-  "credentials": { "claude_sub": true, "gemini": false }
+  "credentials": { "claude_sub": true, "codex_sub": false, "gemini": false }
 }
 ```
 
@@ -122,7 +129,8 @@ bestimmt dabei das `<base>`-Element — Einzelheiten in [architektur.md](archite
 | Dienst | Endpunkt | Wofür | Verhalten bei Ausfall |
 |---|---|---|---|
 | Anthropic | Claude-Code-CLI als Unterprozess, Zeitlimit 300 s | Prompts über das Pro/Max-Abo | Meldung „Claude hat die Anfrage nicht beantwortet", Ursache im Log |
+| OpenAI | Codex-CLI als Unterprozess (`codex exec`), Zeitlimit 300 s | Prompts über das ChatGPT-Abo | Meldung je nach Ursache (Kontingent, abgelaufene Anmeldung, sonst allgemein), Rohausgabe nur im Log |
 | Google | `POST https://generativelanguage.googleapis.com/v1beta/interactions`, Zeitlimit 300 s | Prompts über Gemini | Meldung je nach Ursache (Schlüssel, Kontingent, Überlastung), Antwortcode nur im Log |
 
-Beide Aufrufe haben ein ausdrückliches Zeitlimit und ein definiertes Verhalten im Fehlerfall.
+Alle Aufrufe haben ein ausdrückliches Zeitlimit und ein definiertes Verhalten im Fehlerfall.
 Welche Daten dabei das Haus verlassen: [sicherheit-datenschutz.md](sicherheit-datenschutz.md).

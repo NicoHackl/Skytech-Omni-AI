@@ -7,15 +7,16 @@
 
 Skytech OmniAI ist ein Home-Assistant-Add-on und eine modulare Brücke zwischen dem Smart Home und
 mehreren KI-Anbietern. Es nimmt Prompts über eine HTTP-Schnittstelle entgegen, leitet sie an
-Claude (Pro/Max-Abo über die Claude-Code-CLI) oder Google Gemini weiter und liefert geprüftes JSON
-zurück. Eine Weboberfläche über den Ingress von Home Assistant zeigt den Zustand und erlaubt
+Claude (Pro/Max-Abo über die Claude-Code-CLI), ChatGPT (Abo über die Codex-CLI) oder Google Gemini
+weiter und liefert geprüftes JSON zurück. Eine Weboberfläche über den Ingress von Home Assistant zeigt den Zustand und erlaubt
 Testanfragen.
 
 **Nicht** Aufgabe dieses Projekts:
 
 - Kein Gedächtnis über Anfragen hinweg. Jede Anfrage steht für sich; es gibt keinen Verlauf und
   keine Sitzung.
-- Keine eigene Persistenz. Gespeichert wird nur, was die Claude-CLI selbst unter `/data` ablegt.
+- Keine eigene Persistenz. Gespeichert wird nur, was die beiden Befehlszeilen selbst unter `/data`
+  ablegen — ihr Anmeldezustand.
 - Keine Automatisierungslogik. Wann etwas gefragt wird und was mit der Antwort geschieht,
   entscheidet Home Assistant.
 - Keine Zugriffssteuerung auf dem offenen Port — siehe
@@ -25,10 +26,11 @@ Testanfragen.
 
 | Schicht | Technologie | Warum |
 |---|---|---|
-| Sprache / Laufzeit | Python 3 (Alpine) | Die Claude-CLI wird als Prozess gestartet; Python genügt dafür und ist im Basisimage vorhanden |
+| Sprache / Laufzeit | Python 3 (Alpine, nur 64 Bit) | Die Befehlszeilen werden als Prozess gestartet; Python genügt dafür und ist im Basisimage vorhanden. 32 Bit entfällt, weil es die Codex-CLI dort nicht gibt — D-014 |
 | Webserver | Flask + waitress | Flask für die wenigen Endpunkte, waitress als Produktionsserver — D-008 |
 | Anbieter Claude | Claude-Code-CLI als Unterprozess | Nutzt das Pro/Max-Abo statt eines nach Verbrauch abgerechneten Schlüssels — D-006 |
-| Anbieter Gemini | `urllib` aus der Standardbibliothek | Das offizielle SDK zöge auf armv7/armhf eine Rust-Werkzeugkette nach — D-007 |
+| Anbieter ChatGPT | Codex-CLI als Unterprozess (`codex exec`) | Dasselbe für das ChatGPT-Abo; die Anmeldung wird als `auth.json` eingetragen — D-013 |
+| Anbieter Gemini | `urllib` aus der Standardbibliothek | Das offizielle SDK zöge über pydantic-core eine Rust-Werkzeugkette ins musl-Bild nach — D-007 |
 | Oberfläche | React 18 + TypeScript + Vite | Festgelegter Stack, siehe [frontend.md](frontend.md) |
 | Auslieferung | Ein Container, ein Prozess | Die Oberfläche liegt als gebautes Bündel im Bild und wird von Flask ausgeliefert — D-009 |
 | Tests | pytest, ruff | Keine Netzzugriffe, keine echten Zugangsdaten — siehe [test-strategie.md](test-strategie.md) |
@@ -47,19 +49,19 @@ Testanfragen.
                                           ▼
                                   ┌───────────────┐
                                   │  factory.py   │
-                                  └───┬───────┬───┘
-                                      │       │
-                     ┌────────────────┘       └────────────────┐
-                     ▼                                         ▼
-          ┌─────────────────────┐                   ┌────────────────────┐
-          │ claude_sub_provider │                   │  gemini_provider   │
-          │  Unterprozess       │                   │  HTTPS             │
-          └──────────┬──────────┘                   └──────────┬─────────┘
-                     │                                         │
-                     ▼                                         ▼
-               Claude-Code-CLI                           Google Gemini
-                     │                                         │
-                     └──────────► base_provider.parse_json ◄────┘
+                                  └──┬─────┬────┬─┘
+                                     │     │    │
+              ┌──────────────────────┘     │    └──────────────────┐
+              ▼                            ▼                       ▼
+   ┌─────────────────────┐     ┌────────────────────┐   ┌────────────────────┐
+   │ claude_sub_provider │     │ codex_sub_provider │   │  gemini_provider   │
+   │  Unterprozess       │     │  Unterprozess      │   │  HTTPS             │
+   └──────────┬──────────┘     └─────────┬──────────┘   └──────────┬─────────┘
+              │                          │                         │
+              ▼                          ▼                         ▼
+        Claude-Code-CLI              Codex-CLI                Google Gemini
+              │                          │                         │
+              └──────────► base_provider.parse_json ◄──────────────┘
 
   config_loader.py liest beim Start /data/options.json und legt die Werte
   als Umgebungsvariablen ab, aus denen sich alle Komponenten bedienen.
@@ -70,7 +72,7 @@ Testanfragen.
 | `app.py` | HTTP-Schnittstelle, Auslieferung der Oberfläche, Übersetzung von Fehlern in Sätze | Mit einem Anbieter reden oder Modellnamen kennen |
 | `config_loader.py` | Optionen lesen, in die Umgebung schreiben, Version aus `config.yaml` lesen | Entscheiden, welcher Anbieter genommen wird |
 | `providers/factory.py` | Anhand des Namens die Umsetzung wählen | Prompts ausführen |
-| `providers/base_provider.py` | Gemeinsame Schnittstelle, Auswertung der Modellantwort | Einen bestimmten Anbieter kennen |
+| `providers/base_provider.py` | Gemeinsame Schnittstelle, Auswertung der Modellantwort, Auflösung der Werkzeugstufe | Einen bestimmten Anbieter kennen |
 | `providers/*_provider.py` | Genau einen Anbieter ansprechen und seine Fehler übersetzen | HTTP-Antwortcodes des eigenen Servers festlegen |
 | `web/` | Anzeigen und bedienen | Fachlogik enthalten oder Rohwerte ungefiltert zeigen |
 
@@ -84,7 +86,7 @@ ist das eine Design-Entscheidung → [design-entscheidungen.md](design-entscheid
 2. Eine Anfrage trifft als `POST /ask` ein. `app.py` prüft, ob ein Prompt dabei ist.
 3. `ProviderFactory` wählt die Umsetzung: Angabe in der Anfrage, sonst Konfiguration, sonst Claude.
 4. Der Provider löst das Modell auf, hängt die JSON-Anweisung an den Prompt und ruft seinen Anbieter
-   auf — als Unterprozess (Claude) oder über HTTPS (Gemini).
+   auf — als Unterprozess (Claude, ChatGPT) oder über HTTPS (Gemini).
 5. `BaseProvider.parse_json` wertet die Antwort aus und verzeiht Markdown-Blöcke und umgebende
    Prosa.
 6. Das Ergebnis geht unverändert an den Aufrufer. Scheitert ein Schritt, wird die technische
@@ -121,7 +123,7 @@ Skytech-Omni-AI/                  # Repo-Wurzel = Add-on-Repository
 └── skytech_omniai/               # das Add-on selbst (Unterordner ist Pflicht)
     ├── config.yaml               # Add-on-Konfiguration, Quelle der Versionsnummer
     ├── build.yaml                # Basisimages je Architektur, festgenagelt
-    ├── Dockerfile                # Bild: Node, Python, Claude-CLI, gebaute Oberfläche
+    ├── Dockerfile                # Bild: Node, Python, Claude- und Codex-CLI, gebaute Oberfläche
     ├── requirements.txt          # Laufzeit-Abhängigkeiten, feste Versionen
     ├── info.md                   # Text, den der Add-on-Store anzeigt
     ├── app.py                    # HTTP-Schnittstelle und Auslieferung der Oberfläche

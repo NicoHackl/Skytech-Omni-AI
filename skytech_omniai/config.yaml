@@ -1,14 +1,13 @@
 name: "Skytech OmniAI"
-version: "0.7.0"
+version: "0.8.0"
 slug: "skytech_omniai"
-description: "Modulare KI-Brücke für Home Assistant — Claude über das Abo, Google Gemini und weitere Anbieter"
+description: "Modulare KI-Brücke für Home Assistant — Claude und ChatGPT über das jeweilige Abo, dazu Google Gemini"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
+# Nur 64 Bit: die Codex-CLI wird ausschließlich für x86_64 und aarch64
+# ausgeliefert. Begründung: D-014.
 arch:
   - aarch64
   - amd64
-  - armv7
-  - armhf
-  - i386
 init: false
 startup: application
 boot: auto
@@ -30,21 +29,26 @@ options:
   provider: "claude_sub"
   # "auto" = kein Modell erzwingen, der jeweilige Provider entscheidet selbst.
   model: "auto"
-  # Werkzeug-Freigabe der Claude-CLI. Ohne Freigabe kann die KI nichts
+  # Werkzeug-Freigabe der beiden Befehlszeilen. Ohne Freigabe kann die KI nichts
   # nachschlagen. "web" = Websuche und Seitenabruf, "full" = zusätzlich Shell-
   # und Dateizugriff im Container, "off" = keine Werkzeuge.
   tool_access: "web"
   claude_oauth_token: ""
   anthropic_api_key: ""
+  codex_auth_json: ""
+  openai_api_key: ""
   gemini_api_key: ""
 schema:
-  provider: "list(claude_sub|gemini)"
+  provider: "list(claude_sub|codex_sub|gemini)"
   # Gemeinsame Liste für alle Provider: die ersten Einträge gehören zu
-  # "claude_sub", die "gemini-*"-Einträge zu "gemini". Pro Anfrage kann über
-  # das Feld "model" im /ask-Rumpf weiterhin jede beliebige Modell-Kennung
-  # gesetzt werden - diese Liste bestimmt nur den add-on-weiten Standard.
-  model: "list(auto|sonnet|opus|haiku|gemini-flash-latest|gemini-3.6-flash|gemini-3.5-flash|gemini-3.5-flash-lite|gemini-3.1-flash-lite|gemini-2.5-pro|gemini-2.5-flash|gemini-2.5-flash-lite)"
+  # "claude_sub", die "gpt-*"-Einträge zu "codex_sub", die "gemini-*"-Einträge
+  # zu "gemini". Pro Anfrage kann über das Feld "model" im /ask-Rumpf weiterhin
+  # jede beliebige Modell-Kennung gesetzt werden - diese Liste bestimmt nur den
+  # add-on-weiten Standard.
+  model: "list(auto|sonnet|opus|haiku|gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|gpt-5.3-codex-spark|gemini-flash-latest|gemini-3.6-flash|gemini-3.5-flash|gemini-3.5-flash-lite|gemini-3.1-flash-lite|gemini-2.5-pro|gemini-2.5-flash|gemini-2.5-flash-lite)"
   tool_access: "list(off|web|full)"
   claude_oauth_token: "password?"
   anthropic_api_key: "password?"
+  codex_auth_json: "password?"
+  openai_api_key: "password?"
   gemini_api_key: "password?"

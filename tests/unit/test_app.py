@@ -22,13 +22,16 @@ def test_health_answers(client):
     assert antwort.get_json() == {"status": "ok"}
 
 
-def test_models_lists_both_providers(client):
+def test_models_lists_every_provider(client):
     """Normalfall: Automatisierungen können die gültigen Werte abfragen."""
     daten = client.get("/models").get_json()
 
-    assert set(daten["providers"]) == {"claude_sub", "gemini"}
+    assert set(daten["providers"]) == {"claude_sub", "codex_sub", "gemini"}
     assert daten["providers"]["gemini"]["default"] == "gemini-flash-latest"
     assert daten["providers"]["claude_sub"]["default"] is None
+    # Ohne Angabe entscheidet die Codex-CLI selbst.
+    assert daten["providers"]["codex_sub"]["default"] is None
+    assert "gpt-5.6-sol" in daten["providers"]["codex_sub"]["models"]
 
 
 def test_status_reports_credentials_as_yes_or_no(client, monkeypatch):
@@ -37,7 +40,7 @@ def test_status_reports_credentials_as_yes_or_no(client, monkeypatch):
 
     daten = client.get("/status").get_json()
 
-    assert daten["credentials"] == {"claude_sub": False, "gemini": True}
+    assert daten["credentials"] == {"claude_sub": False, "codex_sub": False, "gemini": True}
     # Der Wert selbst taucht nirgends in der Antwort auf.
     assert "geheim" not in json.dumps(daten, ensure_ascii=False)
 
@@ -46,8 +49,18 @@ def test_status_without_credentials(client):
     """Leerzustand: frisch installiert ist noch nichts hinterlegt."""
     daten = client.get("/status").get_json()
 
-    assert daten["credentials"] == {"claude_sub": False, "gemini": False}
+    assert daten["credentials"] == {"claude_sub": False, "codex_sub": False, "gemini": False}
     assert daten["default_model"] is None
+
+
+def test_status_reports_the_chatgpt_access(client, monkeypatch):
+    """Auch zum ChatGPT-Zugang kommt nur ja/nein — der eingefügte Inhalt nie."""
+    monkeypatch.setenv("CODEX_AUTH_JSON", '{"tokens": {"access_token": "geheim"}}')
+
+    daten = client.get("/status").get_json()
+
+    assert daten["credentials"]["codex_sub"] is True
+    assert "geheim" not in json.dumps(daten, ensure_ascii=False)
 
 
 def test_status_reports_the_tool_level(client):

@@ -3,6 +3,7 @@
 import pytest
 
 from providers.claude_sub_provider import ClaudeSubProvider
+from providers.codex_sub_provider import CodexSubProvider
 from providers.factory import ProviderFactory
 from providers.gemini_provider import GeminiProvider
 
@@ -15,6 +16,11 @@ def test_defaults_to_the_subscription_provider():
 def test_creates_the_requested_provider():
     """Normalfall: der Name aus der Anfrage entscheidet."""
     assert isinstance(ProviderFactory.create("gemini"), GeminiProvider)
+
+
+def test_creates_the_chatgpt_provider():
+    """Der dritte Anbieter ist über denselben Weg erreichbar."""
+    assert isinstance(ProviderFactory.create("codex_sub"), CodexSubProvider)
 
 
 def test_reads_the_configured_provider(monkeypatch):
@@ -31,6 +37,7 @@ def test_rejects_an_unknown_provider():
 
     text = str(fehler.value)
     assert "Claude (Abo)" in text
+    assert "ChatGPT (Abo)" in text
     assert "Google Gemini" in text
     # Kein Klassenname und keine Python-Schreibweise im sichtbaren Text.
     assert "Provider" not in text

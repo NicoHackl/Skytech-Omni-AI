@@ -8,7 +8,14 @@ import logging
 import os
 import subprocess
 
-from providers.base_provider import JSON_INSTRUCTION, BaseProvider
+from providers.base_provider import (
+    JSON_INSTRUCTION,
+    TOOL_ACCESS_FULL,
+    TOOL_ACCESS_OFF,
+    TOOL_ACCESS_WEB,
+    BaseProvider,
+    resolve_tool_access,
+)
 
 log = logging.getLogger("omniai.claude")
 
@@ -41,18 +48,9 @@ SYSTEM_PROMPT = (
 # ebenfalls erlaubt.
 CLAUDE_MODELS = ["sonnet", "opus", "haiku"]
 
-# Freigabestufen für die Werkzeuge der CLI. Im Headless-Modus („claude -p“) gibt
-# es keine interaktive Rückfrage — und ohne ausdrückliche Freigabe lehnt die CLI
-# deshalb jedes genehmigungspflichtige Werkzeug automatisch ab, auch WebSearch
-# und WebFetch. Es ist also nie etwas blockiert, es war nur nie freigegeben.
-TOOL_ACCESS_OFF = "off"  # keine Werkzeuge, Antwort allein aus dem Trainingswissen
-TOOL_ACCESS_WEB = "web"  # nur Websuche und Seitenabruf
-TOOL_ACCESS_FULL = "full"  # alle Werkzeuge, inklusive Shell- und Dateizugriff
-
-# Vorgabe ist bewusst „web“ und nicht „full“: „full“ erlaubt der CLI auch Shell-
-# und Dateizugriff im Container, und dort liegt unter /data das Token des Abos.
-# Für Recherchefragen genügt die Websuche. Begründung: D-012.
-DEFAULT_TOOL_ACCESS = TOOL_ACCESS_WEB
+# Die Stufen selbst und ihre Auflösung stehen in ``base_provider`` — sie gelten
+# für beide Befehlszeilen. Hier steht nur, wie eine Stufe für „claude -p“
+# aussieht.
 
 # Die beiden Werkzeuge, die für eine Recherche nötig sind: WebSearch findet die
 # Quelle, WebFetch liest sie aus.
@@ -111,30 +109,9 @@ class ClaudeSubProvider(BaseProvider):
         # XDG_CONFIG_HOME wirkte nicht: die CLI hängt ihren Zustand an HOME.)
         os.environ.setdefault("HOME", "/data")
 
-    @staticmethod
-    def resolve_tool_access() -> str:
-        """Liest die Werkzeugstufe aus der Umgebung.
-
-        Ein unbekannter oder leerer Wert fällt auf die Vorgabe zurück: ein
-        Tippfehler in der Konfiguration soll den Provider nicht lahmlegen.
-
-        Ist bewusst öffentlich — ``app.py`` meldet denselben Wert über
-        ``GET /status``, damit Oberfläche und Provider nicht auseinanderlaufen.
-        """
-        level = os.environ.get("OMNIAI_TOOL_ACCESS", "").strip().lower()
-        if level in (TOOL_ACCESS_OFF, TOOL_ACCESS_WEB, TOOL_ACCESS_FULL):
-            return level
-        if level:
-            log.warning(
-                "Unbekannte Werkzeugstufe %r, es gilt die Vorgabe %r",
-                level,
-                DEFAULT_TOOL_ACCESS,
-            )
-        return DEFAULT_TOOL_ACCESS
-
     def _tool_access_args(self) -> list:
         """Übersetzt die Werkzeugstufe in Argumente für die CLI."""
-        level = self.resolve_tool_access()
+        level = resolve_tool_access()
         if level == TOOL_ACCESS_OFF:
             return []
         if level == TOOL_ACCESS_WEB:
@@ -154,7 +131,7 @@ class ClaudeSubProvider(BaseProvider):
         if not token and not api_key:
             log.error("Aufruf ohne hinterlegte Claude-Zugangsdaten abgelehnt")
             raise RuntimeError(FEHLER_KEINE_ZUGANGSDATEN)
-        if self.resolve_tool_access() == TOOL_ACCESS_FULL:
+        if resolve_tool_access() == TOOL_ACCESS_FULL:
             # Das Add-on läuft als root in einem abgeschotteten Container. Ohne
             # diese Markierung lehnen manche CLI-Fassungen das Umgehen der
             # Berechtigungsabfrage unter root grundsätzlich ab.
@@ -172,7 +149,7 @@ class ClaudeSubProvider(BaseProvider):
         wie_root_verweigerung = any(m in klein for m in ROOT_MARKER) and any(
             m in klein for m in PERMISSION_MARKER
         )
-        if self.resolve_tool_access() == TOOL_ACCESS_FULL and wie_root_verweigerung:
+        if resolve_tool_access() == TOOL_ACCESS_FULL and wie_root_verweigerung:
             return FEHLER_WERKZEUGE_UNTER_ROOT
         return FEHLER_CLI_ABGEBROCHEN
 
@@ -198,7 +175,7 @@ class ClaudeSubProvider(BaseProvider):
         log.info(
             "Anfrage an Claude, Modell: %s, Werkzeuge: %s",
             chosen_model or "Vorgabe der CLI",
-            self.resolve_tool_access(),
+            resolve_tool_access(),
         )
 
         try:

@@ -6,12 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 from providers import claude_sub_provider
-from providers.claude_sub_provider import (
-    DEFAULT_TOOL_ACCESS,
-    TOOL_ACCESS_WEB,
-    WEB_TOOLS,
-    ClaudeSubProvider,
-)
+from providers.base_provider import DEFAULT_TOOL_ACCESS, TOOL_ACCESS_WEB, resolve_tool_access
+from providers.claude_sub_provider import WEB_TOOLS, ClaudeSubProvider
 
 
 def _result(returncode=0, stdout="", stderr=""):
@@ -165,21 +161,21 @@ def test_off_level_passes_no_tool_arguments(provider, monkeypatch):
 def test_the_default_level_is_web():
     """Leerzustand: ohne Angabe wird recherchiert, aber nicht mehr."""
     assert DEFAULT_TOOL_ACCESS == TOOL_ACCESS_WEB
-    assert ClaudeSubProvider.resolve_tool_access() == TOOL_ACCESS_WEB
+    assert resolve_tool_access() == TOOL_ACCESS_WEB
 
 
 def test_an_unknown_level_falls_back_to_the_default(monkeypatch):
     """Fehlerfall: ein Tippfehler legt den Provider nicht lahm."""
     monkeypatch.setenv("OMNIAI_TOOL_ACCESS", "vollzugriff")
 
-    assert ClaudeSubProvider.resolve_tool_access() == DEFAULT_TOOL_ACCESS
+    assert resolve_tool_access() == DEFAULT_TOOL_ACCESS
 
 
 def test_the_level_is_read_case_insensitively(monkeypatch):
     """Ein grossgeschriebener Wert ist kein Tippfehler."""
     monkeypatch.setenv("OMNIAI_TOOL_ACCESS", "  FULL  ")
 
-    assert ClaudeSubProvider.resolve_tool_access() == "full"
+    assert resolve_tool_access() == "full"
 
 
 def test_a_refusal_under_root_points_to_the_web_level(provider, monkeypatch):
