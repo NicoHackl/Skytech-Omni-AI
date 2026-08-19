@@ -2,11 +2,14 @@
 
 Home-Assistant-Add-on und modulare Brücke zwischen dem Smart Home und mehreren KI-Anbietern. Es
 nimmt Prompts über eine HTTP-Schnittstelle entgegen, leitet sie an **Claude** (über das
-Pro/Max-Abo, nicht über einen nach Verbrauch abgerechneten Schlüssel) oder an **Google Gemini**
-weiter und liefert geprüftes JSON zurück. Eine Weboberfläche in Home Assistant zeigt den Zustand
+Pro/Max-Abo), **ChatGPT** (über das ChatGPT-Abo) oder **Google Gemini** weiter und liefert
+geprüftes JSON zurück — bei Claude und ChatGPT über das jeweilige Abo statt über einen nach
+Verbrauch abgerechneten Schlüssel. Eine Weboberfläche in Home Assistant zeigt den Zustand
 und erlaubt Testanfragen.
 
 ## Installation
+
+Voraussetzung: ein **64-Bit-System** (`amd64` oder `aarch64`).
 
 1. In Home Assistant unter **Einstellungen → Add-ons → Add-on-Store → ⋮ → Repositories** die
    Adresse `https://github.com/NicoHackl/Skytech-Omni-AI` hinzufügen.
@@ -32,6 +35,25 @@ starten.
 > Alternative: Unter `anthropic_api_key` lässt sich ein Anthropic-Schlüssel hinterlegen. Der wird
 > nach Verbrauch abgerechnet und nutzt das Abo **nicht**.
 
+### ChatGPT über das Abo
+
+Für ChatGPT gibt es kein einzelnes Token. Die Anmeldung entsteht auf einem Rechner mit Browser und
+wird als Datei eingefügt:
+
+```bash
+npm install -g @openai/codex
+codex login          # Anmeldung mit dem ChatGPT-Konto, nicht mit einem API-Schlüssel
+cat ~/.codex/auth.json
+```
+
+Den vollständigen Inhalt unter **Konfiguration → `codex_auth_json`** einfügen, `provider` auf
+`codex_sub` stellen und das Add-on neu starten. Das Add-on schreibt die Anmeldung nur dann neu,
+wenn sich der eingetragene Wert ändert — die Codex-Befehlszeile frischt ihre Tokens sonst selbst
+auf.
+
+> Alternative: Unter `openai_api_key` lässt sich ein OpenAI-Schlüssel hinterlegen. Der wird nach
+> Verbrauch abgerechnet und nutzt das Abo **nicht**.
+
 ### Google Gemini
 
 Unter <https://aistudio.google.com/apikey> einen Schlüssel erzeugen, ihn unter
@@ -54,6 +76,12 @@ curl -X POST http://<HA-IP>:8000/ask \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Gib mir ein JSON mit dem Feld status=ok"}'
 
+# ChatGPT über das Abo
+curl -X POST http://<HA-IP>:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "codex_sub", "model": "gpt-5.6-luna",
+       "prompt": "Gib mir ein JSON mit dem Feld status=ok"}'
+
 # Gemini mit ausdrücklichem Modell
 curl -X POST http://<HA-IP>:8000/ask \
   -H "Content-Type: application/json" \
@@ -68,9 +96,9 @@ Vollständige Beschreibung der Endpunkte: [docs/api-referenz.md](docs/api-refere
 
 ### Nachschlagen statt raten
 
-Damit Claude Wetter, Nachrichten oder Preise beantworten kann, braucht die Befehlszeile eine
-ausdrückliche Freigabe — ohne sie lehnt sie im Add-on **jedes** Werkzeug ab. Die Option
-`tool_access` steht deshalb auf `web` (Websuche und Seitenabruf). `full` gibt zusätzlich Befehle
+Damit Claude oder ChatGPT Wetter, Nachrichten oder Preise beantworten können, braucht die
+Befehlszeile eine ausdrückliche Freigabe — ohne sie benutzt sie im Add-on **kein** Werkzeug. Die
+Option `tool_access` steht deshalb auf `web` (Websuche und Seitenabruf). `full` gibt zusätzlich Befehle
 und Dateizugriff im Add-on frei und gehört nur in Sonderfälle; `off` schaltet alles ab.
 Einzelheiten: [skytech_omniai/info.md](skytech_omniai/info.md) und
 [docs/sicherheit-datenschutz.md](docs/sicherheit-datenschutz.md).

@@ -44,6 +44,8 @@ def test_apply_options_maps_every_value():
             "tool_access": "full",
             "claude_oauth_token": "token",
             "anthropic_api_key": "anthropic",
+            "codex_auth_json": '{"tokens": {}}',
+            "openai_api_key": "openai",
             "gemini_api_key": "google",
         }
     )
@@ -53,6 +55,8 @@ def test_apply_options_maps_every_value():
     assert os.environ["OMNIAI_TOOL_ACCESS"] == "full"
     assert os.environ["CLAUDE_CODE_OAUTH_TOKEN"] == "token"
     assert os.environ["ANTHROPIC_API_KEY"] == "anthropic"
+    assert os.environ["CODEX_AUTH_JSON"] == '{"tokens": {}}'
+    assert os.environ["OPENAI_API_KEY"] == "openai"
     assert os.environ["GEMINI_API_KEY"] == "google"
 
 
