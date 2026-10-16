@@ -1,3 +1,5 @@
 # Nur für Entwicklung und Tests. Landet nicht im Add-on-Image.
 pytest==9.1.1
+pytest-cov==7.0.0
+pyyaml==6.0.3
 ruff==0.16.3
