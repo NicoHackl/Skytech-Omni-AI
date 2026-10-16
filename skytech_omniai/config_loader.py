@@ -1,8 +1,10 @@
 """Liest die Add-on-Optionen und legt sie als Umgebungsvariablen ab.
 
-Alles, was der Betreiber im Reiter „Konfiguration“ von Home Assistant einträgt,
-schreibt der Supervisor in eine Datei im Container. Von dort wandert es in die
+Alles, was der Betreiber auf der Seite „Einstellungen“ der Oberfläche oder im
+Reiter „Konfiguration“ von Home Assistant einträgt, verwaltet der Supervisor
+und legt es in einer Datei im Container ab. Von dort wandert es in die
 Umgebung, weil Provider und die beiden Befehlszeilen ihre Werte dort erwarten.
+Geschrieben wird diese Datei hier nie — das übernimmt ``supervisor_client``.
 """
 
 import json
@@ -64,60 +66,78 @@ def read_addon_version() -> str | None:
     return treffer.group(1) if treffer else None
 
 
-def apply_options_to_env(options: dict) -> None:
+# Option → Umgebungsvariable. Provider und die beiden Befehlszeilen erwarten
+# ihre Werte in der Umgebung; die Reihenfolge ist die der Konfigurationsseite.
+#
+# - provider: aktiver Anbieter.
+# - model: add-on-weites Standardmodell. Ein „model“ im Rumpf von /ask schlägt
+#   es; dieser Wert greift nur, wenn die Anfrage selbst keines nennt.
+# - tool_access: Werkzeugstufe der Befehlszeilen („off“, „web“, „full“). Ohne
+#   Freigabe lehnt die CLI im Headless-Modus jedes Werkzeug ab — Anfragen, die
+#   eine Recherche brauchen (Wetter, Nachrichten, Preise), scheitern dann.
+# - claude_oauth_token: langlebiges Token des Claude-Pro/Max-Abos, einmal auf
+#   einem Rechner mit Browser über `claude setup-token` erzeugt.
+# - anthropic_api_key: Alternative zum Abo, nach Verbrauch abgerechnet.
+# - codex_auth_json: Anmeldung des ChatGPT-Abos, der vollständige Inhalt der
+#   Datei „auth.json“, die „codex login“ anlegt. Der Provider legt ihn im
+#   Datenverzeichnis ab — aber nur, wenn sich der Wert geändert hat, damit die
+#   von der CLI erneuerten Tokens erhalten bleiben.
+# - openai_api_key: Alternative zum Abo, nach Verbrauch abgerechnet.
+# - gemini_api_key: Google-AI-Studio-Schlüssel, unter
+#   https://aistudio.google.com/apikey erzeugt und nach Verbrauch abgerechnet.
+OPTION_ENV_MAP = {
+    "provider": "AI_PROVIDER",
+    "model": "OMNIAI_MODEL",
+    "tool_access": "OMNIAI_TOOL_ACCESS",
+    "claude_oauth_token": "CLAUDE_CODE_OAUTH_TOKEN",
+    "anthropic_api_key": "ANTHROPIC_API_KEY",
+    "codex_auth_json": "CODEX_AUTH_JSON",
+    "openai_api_key": "OPENAI_API_KEY",
+    "gemini_api_key": "GEMINI_API_KEY",
+}
+
+# Zugänge: werden nie angezeigt, nie geloggt und an der Oberfläche nur als
+# „hinterlegt ja/nein“ gemeldet. Klarnamen stehen für die Log-Zeile dabei.
+SECRET_OPTIONS = {
+    "claude_oauth_token": "Claude-Abo",
+    "anthropic_api_key": "Anthropic-API",
+    "codex_auth_json": "ChatGPT-Abo",
+    "openai_api_key": "OpenAI-API",
+    "gemini_api_key": "Gemini",
+}
+
+# „auto“ ist der Sentinel des Auswahlfelds „model“ und bedeutet „kein Modell
+# erzwingen“ — er wird deshalb wie ein leeres Feld behandelt.
+MODEL_AUTO = "auto"
+
+
+def _option_value(options: dict, key: str) -> str:
+    """Bereinigter Wert einer Option; der Sentinel „auto“ zählt als leer."""
+    value = options.get(key)
+    value = value.strip() if isinstance(value, str) else ""
+    if key == "model" and value == MODEL_AUTO:
+        return ""
+    return value
+
+
+def apply_options_to_env(options: dict, *, clear_missing: bool = False) -> None:
     """Bildet die Add-on-Optionen auf die erwarteten Umgebungsvariablen ab.
 
     Damit ist das ganze Add-on aus der Oberfläche von Home Assistant heraus
     konfigurierbar; im Code steht kein einziger Zugangsdatenwert.
+
+    Beim Start bleibt ein leeres Feld folgenlos: eine von außen gesetzte
+    Variable (lokale Entwicklung) wird nicht überschrieben. Nach dem Speichern
+    auf der Seite „Einstellungen“ dagegen muss ein geleertes Feld auch aus der
+    Umgebung verschwinden, sonst gälte ein entfernter Zugang bis zum Neustart
+    weiter — dafür ``clear_missing=True``.
     """
-    provider = (options.get("provider") or "").strip()
-    if provider:
-        os.environ["AI_PROVIDER"] = provider
-
-    # Add-on-weites Standardmodell. Ein „model“ im Rumpf von /ask schlägt es;
-    # dieser Wert greift nur, wenn die Anfrage selbst keines nennt.
-    # „auto“ ist der Sentinel des Auswahlfelds und bedeutet „kein Modell
-    # erzwingen" — er wird deshalb wie ein leeres Feld behandelt.
-    model = (options.get("model") or "").strip()
-    if model and model != "auto":
-        os.environ["OMNIAI_MODEL"] = model
-
-    # Werkzeugstufe der Claude-CLI („off“, „web“, „full“). Ohne Freigabe lehnt
-    # die CLI im Headless-Modus jedes Werkzeug ab — Anfragen, die eine Recherche
-    # brauchen (Wetter, Nachrichten, Preise), scheitern dann.
-    tool_access = (options.get("tool_access") or "").strip()
-    if tool_access:
-        os.environ["OMNIAI_TOOL_ACCESS"] = tool_access
-
-    # Langlebiges Token des Claude-Pro/Max-Abos. Wird einmal auf einem Rechner
-    # mit Browser über `claude setup-token` erzeugt und hier eingetragen.
-    token = (options.get("claude_oauth_token") or "").strip()
-    if token:
-        os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
-
-    # Alternative zum Abo: metered abgerechneter Anthropic-API-Schlüssel.
-    api_key = (options.get("anthropic_api_key") or "").strip()
-    if api_key:
-        os.environ["ANTHROPIC_API_KEY"] = api_key
-
-    # Anmeldung des ChatGPT-Abos: der vollständige Inhalt der Datei „auth.json“,
-    # die „codex login“ auf einem Rechner mit Browser anlegt. Der Provider legt
-    # ihn im Datenverzeichnis ab — aber nur, wenn sich der Wert geändert hat,
-    # damit die von der CLI erneuerten Tokens erhalten bleiben.
-    codex_auth_json = (options.get("codex_auth_json") or "").strip()
-    if codex_auth_json:
-        os.environ["CODEX_AUTH_JSON"] = codex_auth_json
-
-    # Alternative zum Abo: nach Verbrauch abgerechneter OpenAI-Schlüssel.
-    openai_api_key = (options.get("openai_api_key") or "").strip()
-    if openai_api_key:
-        os.environ["OPENAI_API_KEY"] = openai_api_key
-
-    # Google-AI-Studio-Schlüssel für den Gemini-Provider. Wird unter
-    # https://aistudio.google.com/apikey erzeugt und metered abgerechnet.
-    gemini_api_key = (options.get("gemini_api_key") or "").strip()
-    if gemini_api_key:
-        os.environ["GEMINI_API_KEY"] = gemini_api_key
+    for key, env_name in OPTION_ENV_MAP.items():
+        value = _option_value(options, key)
+        if value:
+            os.environ[env_name] = value
+        elif clear_missing:
+            os.environ.pop(env_name, None)
 
     # Bewusst ohne die Werte selbst: im Log steht nur, was gesetzt wurde.
     log.info(
@@ -125,16 +145,6 @@ def apply_options_to_env(options: dict) -> None:
         os.environ.get("AI_PROVIDER", "Vorgabe"),
         os.environ.get("OMNIAI_MODEL", "keine Vorgabe"),
         os.environ.get("OMNIAI_TOOL_ACCESS", "Vorgabe"),
-        ", ".join(
-            name
-            for name, gesetzt in (
-                ("Claude-Abo", bool(token)),
-                ("Anthropic-API", bool(api_key)),
-                ("ChatGPT-Abo", bool(codex_auth_json)),
-                ("OpenAI-API", bool(openai_api_key)),
-                ("Gemini", bool(gemini_api_key)),
-            )
-            if gesetzt
-        )
+        ", ".join(name for key, name in SECRET_OPTIONS.items() if _option_value(options, key))
         or "keine",
     )

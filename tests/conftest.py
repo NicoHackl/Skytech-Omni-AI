@@ -18,6 +18,8 @@ ENV_KEYS = [
     "CODEX_HOME",
     "GEMINI_API_KEY",
     "GOOGLE_API_KEY",
+    "SUPERVISOR_TOKEN",
+    "SUPERVISOR_URL",
 ]
 
 

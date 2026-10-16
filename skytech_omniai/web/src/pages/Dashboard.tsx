@@ -85,8 +85,9 @@ export function Dashboard() {
           <>
             {!ready ? (
               <div className="hint-box">
-                Damit Anfragen beantwortet werden können, im Add-on unter „Konfiguration“ den
-                Zugang für {providerLabel(status.provider)} eintragen und das Add-on neu starten.
+                Damit Anfragen beantwortet werden können, in den Einstellungen den Zugang für{' '}
+                {providerLabel(status.provider)} eintragen.{' '}
+                <Link to="/einstellungen">Zu den Einstellungen</Link>
               </div>
             ) : null}
 
@@ -94,8 +95,8 @@ export function Dashboard() {
               <div className="hint-box">
                 Die Stufe „Alle Werkzeuge“ erlaubt der KI auch Befehle und Dateizugriff im
                 Add-on — dort liegt auch der hinterlegte Zugang. Für Anfragen, die etwas
-                nachschlagen sollen, genügt „Web-Recherche“: im Add-on unter „Konfiguration“
-                das Feld „tool_access“ auf „web“ stellen.
+                nachschlagen sollen, genügt „Web-Recherche“.{' '}
+                <Link to="/einstellungen">Zu den Einstellungen</Link>
               </div>
             ) : null}
 

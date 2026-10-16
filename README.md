@@ -14,7 +14,9 @@ Voraussetzung: ein **64-Bit-System** (`amd64` oder `aarch64`).
 1. In Home Assistant unter **Einstellungen → Add-ons → Add-on-Store → ⋮ → Repositories** die
    Adresse `https://github.com/NicoHackl/Skytech-Omni-AI` hinzufügen.
 2. **Skytech OmniAI** installieren.
-3. Unter **Konfiguration** einen Zugang hinterlegen (siehe unten) und das Add-on starten.
+3. Das Add-on starten, in der Seitenleiste **OmniAI → Einstellungen** öffnen und einen Zugang
+   hinterlegen (siehe unten). Gespeichertes gilt sofort, ohne Neustart. Der Reiter
+   **Konfiguration** des Add-ons zeigt dieselben Werte und funktioniert weiterhin.
 
 ## Zugang einrichten
 
@@ -29,8 +31,7 @@ npm install -g @anthropic-ai/claude-code
 claude setup-token
 ```
 
-Das Ergebnis im Add-on unter **Konfiguration → `claude_oauth_token`** eintragen und das Add-on neu
-starten.
+Das Ergebnis unter **Einstellungen → Token des Claude-Abos** eintragen und speichern.
 
 > Alternative: Unter `anthropic_api_key` lässt sich ein Anthropic-Schlüssel hinterlegen. Der wird
 > nach Verbrauch abgerechnet und nutzt das Abo **nicht**.
@@ -46,8 +47,8 @@ codex login          # Anmeldung mit dem ChatGPT-Konto, nicht mit einem API-Schl
 cat ~/.codex/auth.json
 ```
 
-Den vollständigen Inhalt unter **Konfiguration → `codex_auth_json`** einfügen, `provider` auf
-`codex_sub` stellen und das Add-on neu starten. Das Add-on schreibt die Anmeldung nur dann neu,
+Den vollständigen Inhalt unter **Einstellungen → Anmeldung des ChatGPT-Abos** einfügen, als
+Anbieter „ChatGPT (Abo)“ wählen und speichern. Das Add-on schreibt die Anmeldung nur dann neu,
 wenn sich der eingetragene Wert ändert — die Codex-Befehlszeile frischt ihre Tokens sonst selbst
 auf.
 
@@ -57,8 +58,7 @@ auf.
 ### Google Gemini
 
 Unter <https://aistudio.google.com/apikey> einen Schlüssel erzeugen, ihn unter
-**Konfiguration → `gemini_api_key`** eintragen, `provider` auf `gemini` stellen und das Add-on neu
-starten.
+**Einstellungen → Gemini-Schlüssel** eintragen, als Anbieter „Google Gemini“ wählen und speichern.
 
 ## Nutzung
 

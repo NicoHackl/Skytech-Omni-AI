@@ -10,6 +10,16 @@ import { ThemeSwitch } from './Theme'
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-item${isActive ? ' active' : ''}`
 
+/* Nach dem Speichern der Einstellungen muss der Fuß der Sidebar den neuen
+   Anbieter zeigen. Ein Ereignis am Fenster reicht dafür; ein eigener
+   Zustands-Container wäre für einen einzigen Wert zu viel. */
+const SETTINGS_CHANGED = 'omniai:settings-changed'
+
+/** Meldet dem Layout, dass sich die Einstellungen geändert haben. */
+export function notifySettingsChanged() {
+  window.dispatchEvent(new Event(SETTINGS_CHANGED))
+}
+
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [provider, setProvider] = useState<string | null>(null)
@@ -20,14 +30,18 @@ export function Layout() {
      daran und verschwindet nicht. */
   useEffect(() => {
     let cancelled = false
-    api
-      .status()
-      .then((status) => {
-        if (!cancelled) setProvider(providerLabel(status.provider))
-      })
-      .catch((cause: Error) => console.error('Zustand nicht abrufbar', cause))
+    const refresh = () =>
+      api
+        .status()
+        .then((status) => {
+          if (!cancelled) setProvider(providerLabel(status.provider))
+        })
+        .catch((cause: Error) => console.error('Zustand nicht abrufbar', cause))
+    void refresh()
+    window.addEventListener(SETTINGS_CHANGED, refresh)
     return () => {
       cancelled = true
+      window.removeEventListener(SETTINGS_CHANGED, refresh)
     }
   }, [])
 
@@ -49,6 +63,9 @@ export function Layout() {
           <div className="nav-label">Nutzung</div>
           <NavLink to="/anfrage" className={navClass}><Icon name="edit" /><span>Anfrage</span></NavLink>
           <NavLink to="/modelle" className={navClass}><Icon name="list" /><span>Modelle</span></NavLink>
+
+          <div className="nav-label">Verwaltung</div>
+          <NavLink to="/einstellungen" className={navClass}><Icon name="settings" /><span>Einstellungen</span></NavLink>
         </nav>
 
         <div className="sidebar-foot">

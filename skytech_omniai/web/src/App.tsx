@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { Anfrage } from './pages/Anfrage'
 import { Dashboard } from './pages/Dashboard'
+import { Einstellungen } from './pages/Einstellungen'
 import { Modelle } from './pages/Modelle'
 
 /* Ausschliesslich die Routentabelle: kein Zustand, kein Markup ausser der
@@ -14,6 +15,7 @@ export function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/anfrage" element={<Anfrage />} />
         <Route path="/modelle" element={<Modelle />} />
+        <Route path="/einstellungen" element={<Einstellungen />} />
         <Route
           path="*"
           element={<div className="content"><div className="empty">Diese Seite gibt es nicht.</div></div>}

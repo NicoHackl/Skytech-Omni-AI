@@ -113,6 +113,7 @@ Seitenwechsel nicht neu montiert werden.
     <Route path="/" element={<Dashboard />} />
     <Route path="/anfrage" element={<Anfrage />} />
     <Route path="/modelle" element={<Modelle />} />
+    <Route path="/einstellungen" element={<Einstellungen />} />
     <Route path="*" element={<div className="content"><div className="empty">Diese Seite gibt es nicht.</div></div>} />
   </Route>
 </Routes>

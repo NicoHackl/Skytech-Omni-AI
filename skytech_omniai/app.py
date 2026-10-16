@@ -26,6 +26,8 @@ from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER, ProviderFactory
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
+from settings import merge_update, public_view, revision
+from supervisor_client import SupervisorClient, SupervisorRejected, SupervisorUnavailable
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO").upper(),
@@ -36,8 +38,9 @@ logging.basicConfig(
 )
 log = logging.getLogger("omniai")
 
-# Die Add-on-Optionen (/data/options.json) werden einmal beim Start gelesen und
-# als Umgebungsvariablen abgelegt, bevor die erste Anfrage eintrifft.
+# Die Add-on-Optionen (/data/options.json) werden beim Start gelesen und als
+# Umgebungsvariablen abgelegt, bevor die erste Anfrage eintrifft. Speichert die
+# Seite „Einstellungen“ neu, setzt PUT /settings die Umgebung erneut.
 apply_options_to_env(load_options())
 
 # Verzeichnis mit dem gebauten Bündel der Oberfläche. Fehlt es, läuft das
@@ -51,6 +54,24 @@ WEB_DIST = Path(__file__).resolve().parent / "web" / "dist"
 INGRESS_PFAD_MUSTER = re.compile(r"^/[A-Za-z0-9._~/-]*$")
 
 FEHLER_UNBEKANNT = "Die Anfrage konnte nicht bearbeitet werden. Bitte später erneut versuchen."
+FEHLER_NUR_INGRESS = "Einstellungen lassen sich nur in Home Assistant über die Seitenleiste ändern."
+FEHLER_NUR_LESEN = (
+    "Die Einstellungen lassen sich nur ändern, wenn das Add-on in Home Assistant läuft."
+)
+FEHLER_KONFLIKT = (
+    "Die Einstellungen wurden inzwischen anderswo geändert. Bitte neu laden und erneut speichern."
+)
+FEHLER_UNGUELTIG = "Bitte die markierten Felder prüfen."
+FEHLER_EINSTELLUNGEN = "Die Einstellungen konnten nicht gespeichert werden."
+
+# Über diese Adresse reicht der Supervisor die Aufrufe aus der Seitenleiste von
+# Home Assistant herein — erst nachdem Home Assistant den Nutzer angemeldet
+# hat. Port 8000 ist dagegen unauthentifiziert; wer dort die Einstellungen
+# ändern könnte, könnte die Werkzeugstufe „full“ setzen und damit an die
+# Zugänge unter /data gelangen. Der Kopf X-Ingress-Path taugt nicht als Beleg,
+# den kann jeder Aufrufer selbst mitschicken.
+INGRESS_PROXY_ADDR = "172.30.32.2"
+
 FEHLER_OHNE_OBERFLAECHE = (
     "Die Oberfläche wurde nicht mit ausgeliefert. Die Schnittstelle des Add-ons "
     "ist davon nicht betroffen und funktioniert weiter."
@@ -149,6 +170,87 @@ def status():
             },
         }
     )
+
+
+def _from_ingress() -> bool:
+    """Kommt die Anfrage über den Ingress von Home Assistant?"""
+    return request.remote_addr == INGRESS_PROXY_ADDR
+
+
+def _stored_options(supervisor: SupervisorClient) -> tuple[dict, bool]:
+    """Gespeicherte Optionen und ob sie aus dem Supervisor stammen.
+
+    Ohne Supervisor (außerhalb von Home Assistant) oder wenn er gerade nicht
+    antwortet, gilt die Datei, die beim Start gelesen wurde — die Seite zeigt
+    dann den Stand an, lässt aber nichts speichern.
+    """
+    if supervisor.available:
+        try:
+            return supervisor.get_self_options(), True
+        except (SupervisorUnavailable, SupervisorRejected) as fehler:
+            log.warning("Optionen nicht vom Supervisor lesbar, es gilt die Datei: %s", fehler)
+    return load_options(), False
+
+
+@app.route("/settings", methods=["GET"])
+def settings_read():
+    """Einstellungen für die gleichnamige Seite der Oberfläche.
+
+    Zugänge kommen nur als „hinterlegt ja/nein“ zurück — dieselbe Auskunft,
+    die ``/status`` ohnehin gibt. ``can_save`` sagt der Oberfläche, ob sie ein
+    Formular oder nur eine Anzeige rendert.
+    """
+    supervisor = SupervisorClient()
+    options, from_supervisor = _stored_options(supervisor)
+    return jsonify({**public_view(options), "can_save": from_supervisor and _from_ingress()})
+
+
+@app.route("/settings", methods=["PUT"])
+def settings_save():
+    """Speichert die Einstellungen und übernimmt sie ohne Neustart.
+
+    Erwartet ``options`` (Entwurf der Oberfläche) und ``stored_revision`` (der
+    Stand, auf dem der Entwurf beruht). Die Provider lesen ihre Werte bei
+    jeder Anfrage aus der Umgebung; nach dem Speichern genügt es deshalb, sie
+    neu zu setzen.
+    """
+    if not _from_ingress():
+        log.warning("Speichern der Einstellungen von %s abgelehnt", request.remote_addr)
+        return jsonify({"error": FEHLER_NUR_INGRESS}), 403
+
+    supervisor = SupervisorClient()
+    if not supervisor.available:
+        return jsonify({"error": FEHLER_NUR_LESEN}), 503
+
+    payload = request.get_json(silent=True)
+    draft = payload.get("options") if isinstance(payload, dict) else None
+    if not isinstance(draft, dict):
+        return jsonify({"error": FEHLER_EINSTELLUNGEN}), 400
+
+    try:
+        current = supervisor.get_self_options()
+        if payload.get("stored_revision") != revision(current):
+            return jsonify({"error": FEHLER_KONFLIKT}), 409
+
+        merged, field_errors = merge_update(current, draft)
+        if field_errors:
+            return jsonify({"error": FEHLER_UNGUELTIG, "field_errors": field_errors}), 422
+
+        valid, message = supervisor.validate_options(merged)
+        if not valid:
+            # Die Meldung des Supervisors ist englisch und nennt Schemafelder —
+            # sie gehört ins Log, nicht auf den Bildschirm.
+            log.warning("Supervisor lehnt die Einstellungen ab: %s", message)
+            return jsonify({"error": FEHLER_EINSTELLUNGEN}), 422
+
+        supervisor.save_options(merged)
+    except (SupervisorUnavailable, SupervisorRejected) as fehler:
+        # Die Sätze sind im Client bereits übersetzt, die Ursache steht im Log.
+        return jsonify({"error": str(fehler)}), 502
+
+    apply_options_to_env(merged, clear_missing=True)
+    log.info("Einstellungen über die Oberfläche gespeichert")
+    return jsonify({**public_view(merged), "can_save": True})
 
 
 @app.route("/health", methods=["GET"])
