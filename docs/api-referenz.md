@@ -190,8 +190,9 @@ wird die Absenderadresse des Ingress-Proxys, nicht ein Kopf; Begründung als D-0
 { "status": "ok" }
 ```
 
-Antwortet, sobald der Prozess läuft. Der Watchdog des Add-ons hängt an diesem Endpunkt
-(`config.yaml`) und startet das Add-on neu, wenn er ausbleibt.
+Antwortet, sobald der Prozess läuft. Der `HEALTHCHECK` im `Dockerfile` fragt diesen Endpunkt
+alle 30 Sekunden ab; meldet Docker das Add-on danach als „unhealthy“, startet der Supervisor es
+neu. Der Smoke-Test der CI prüft Endpunkt und HEALTHCHECK.
 
 ## `GET /` und alle übrigen Pfade
 
