@@ -66,6 +66,8 @@ export interface SettingsResponse {
   stored_revision: string
   /** Nur über Home Assistant lässt sich speichern. */
   can_save: boolean
+  /** Warum nicht: kein Zugang zu den Optionen oder Aufruf am Ingress vorbei. */
+  read_only_reason: 'supervisor' | 'ingress' | null
 }
 
 /** Was an `PUT /settings` geht. Zugang: `""` = unverändert, `null` = entfernen. */

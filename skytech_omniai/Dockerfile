@@ -48,4 +48,9 @@ COPY providers ./providers
 
 EXPOSE 8000
 
-CMD ["/opt/venv/bin/python3", "/app/app.py"]
+# Das Basisimage startet über s6-overlay (/init), und das reicht den CMD mit
+# bereinigter Umgebung weiter: ohne with-contenv fehlen dem Prozess sowohl
+# SUPERVISOR_TOKEN (Seite „Einstellungen“ kann nicht speichern) als auch das
+# TZ von oben (Log-Zeitstempel in UTC). with-contenv lädt die Umgebung des
+# Containers, die s6 beim Start beiseitegelegt hat.
+CMD ["/usr/bin/with-contenv", "/opt/venv/bin/python3", "/app/app.py"]
