@@ -73,9 +73,13 @@ class SupervisorClient:
         """
         return bool(self._token)
 
+    def get_self_info(self) -> dict:
+        """Angaben zum eigenen Add-on: Name, Slug samt Repository-Präfix, Optionen …"""
+        return self._request("GET", "/addons/self/info")
+
     def get_self_options(self) -> dict:
         """Die gespeicherten Optionen des Add-ons, so wie der Supervisor sie hält."""
-        data = self._request("GET", "/addons/self/info")
+        data = self.get_self_info()
         options = data.get("options")
         return options if isinstance(options, dict) else {}
 

@@ -123,10 +123,14 @@ Befehl. Begründung: D-009 in [design-entscheidungen.md](design-entscheidungen.m
 ```text
 Skytech-Omni-AI/                  # Repo-Wurzel = Add-on-Repository
 ├── repository.yaml               # Manifest, an dem Home Assistant das Repo erkennt
+├── .github/workflows/            # CI und Release (ci.yaml), CodeQL
+├── .githooks/                    # commit-msg und pre-push, aktiv über core.hooksPath
+├── scripts/                      # check.sh, smoke_test.sh, release.py, commit_msg.py
 ├── docs/                         # diese Doku
-├── tests/                        # Tests, Struktur spiegelt den Quellcode
+├── tests/                        # Tests, Struktur spiegelt Quellcode und scripts/
 └── skytech_omniai/               # das Add-on selbst (Unterordner ist Pflicht)
-    ├── config.yaml               # Add-on-Konfiguration, Quelle der Versionsnummer
+    ├── config.yaml               # Add-on-Konfiguration; Version "dev", echte Nummer nur auf main
+    ├── CHANGELOG.md              # nur auf main, vom Release-Job erzeugt (D-017)
     ├── build.yaml                # Basisimages je Architektur, festgenagelt
     ├── Dockerfile                # Bild: Node, Python, Claude- und Codex-CLI, gebaute Oberfläche
     ├── requirements.txt          # Laufzeit-Abhängigkeiten, feste Versionen
@@ -152,6 +156,7 @@ Zusagen, auf die sich der gesamte Code verlässt:
 2. Jede Ausgabe an einen Aufrufer ist entweder das JSON des Modells oder ein deutscher Satz unter
    `error`.
 3. Die Versionsnummer steht nur in `skytech_omniai/config.yaml`; alles andere liest sie von dort.
+   Auf `agent/main` steht dort `dev`, die echte Nummer setzt der Release-Job auf `main` (D-017).
 4. `parse_json` ist der einzige Ort, an dem aus Modellausgabe eine Datenstruktur wird.
 5. `web/src/api.ts` ist der einzige Ort, an dem die Oberfläche `fetch` aufruft.
 

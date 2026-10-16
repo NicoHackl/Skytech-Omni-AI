@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.10.0] — 16.10.2026
+
+### Geändert
+
+- Links unten in der Seitenleiste stehen jetzt der Name des Add-ons und „Addon-Config“; ein Klick öffnet die Konfiguration des Add-ons in Home Assistant. Die Anzeige des aktiven Anbieters dort entfällt, er steht weiter auf der Übersicht.
+
 ## [0.9.3] — 16.10.2026
 
 ### Geändert
