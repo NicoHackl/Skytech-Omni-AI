@@ -75,3 +75,10 @@ export interface SettingsInput {
   options: Omit<SettingsOptions, SecretKey> & Record<SecretKey, string | null>
   stored_revision: string
 }
+
+/** Antwort von `GET /addon` (D-018): Name und HA-Konfigurationsseite des
+    Add-ons. `config_path` fehlt ohne Supervisor — dann gibt es keinen Link. */
+export interface AddonInfo {
+  name: string
+  config_path: string | null
+}

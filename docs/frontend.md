@@ -285,7 +285,8 @@ ungeprüft in einen Toast schiebt, reicht technische Texte an den Nutzer durch.
 
 `components/Layout.tsx` liefert zwei Dinge:
 
-1. `Layout` — Sidebar (Marke, Navigationsgruppen mit Zählern, Fußbereich) plus `<main>` mit
+1. `Layout` — Sidebar (Marke, Navigationsgruppen mit Zählern, Fuß `AddonFoot` mit Link zur
+   Add-on-Konfiguration in HA, D-018) plus `<main>` mit
    `<Outlet />`. Unter 820px als Off-Canvas-Panel mit Hintergrund-Backdrop.
 2. `PageHeader` — die klebrige Kopfzeile jeder Seite: `title`, optional `subtitle`, den
    `ThemeSwitch` und optional `actions` (die Primäraktion der Seite).

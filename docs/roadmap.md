@@ -54,7 +54,10 @@ geprüft, nicht gegen die Absicht. Was hier „fertig" heißt, muss laufen.
 | Produktionsserver statt Entwicklungsserver | fertig | D-008 |
 | Feste Versionen für Bild und Abhängigkeiten | fertig | [entwicklerrichtlinien.md](entwicklerrichtlinien.md) |
 | Tests und Linting | fertig | [test-strategie.md](test-strategie.md) |
-| Automatischer Neustart über den Watchdog | fertig | [konfiguration.md](konfiguration.md) |
+| Automatischer Neustart über den HEALTHCHECK des Bilds | fertig | [api-referenz.md](api-referenz.md) |
+| CI: Prüfungen lokal und in GitHub identisch, Smoke-Test des Bilds | fertig | [test-strategie.md](test-strategie.md) |
+| Automatisches Release mit Version und Changelog aus den Commits | fertig | D-017 |
+| Bild für `aarch64` in der CI prüfen | offen | [bekannte-luecken.md](bekannte-luecken.md) |
 | Anfragen und Antwortzeiten in der Oberfläche sichtbar | offen | |
 
 ## Zurückgestellt

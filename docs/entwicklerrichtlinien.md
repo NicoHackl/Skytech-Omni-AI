@@ -74,7 +74,7 @@ Nie geloggt werden: Passwörter, Tokens, API-Keys, personenbezogene Daten. Siehe
 
 - Neue Abhängigkeit nur, wenn sie mehr Aufwand spart, als sie an Wartung kostet. Eine
   10-Zeilen-Hilfsfunktion rechtfertigt kein zusätzliches Paket.
-- Versionen werden gepinnt (`skytech_omniai/requirements.txt`, `requirements-dev.txt`, `skytech_omniai/web/package-lock.json`).
+- Versionen werden gepinnt (`skytech_omniai/requirements.txt`, `requirements-dev.txt`, `skytech_omniai/web/package-lock.json`, Actions in `.github/workflows/` per Commit-SHA). Dependabot schlägt Updates wöchentlich als PR gegen `agent/main` vor.
 - Eine neue Laufzeit-Abhängigkeit ist eine Design-Entscheidung → Eintrag in
   [design-entscheidungen.md](design-entscheidungen.md).
 - Im Add-on-Bild sind zusätzlich festgenagelt: die Basisimages je Architektur (`build.yaml`) und
@@ -86,5 +86,5 @@ Nie geloggt werden: Passwörter, Tokens, API-Keys, personenbezogene Daten. Siehe
 
 ## Formatierung
 
-Formatierung erledigt das Tooling, nicht die Diskussion: `ruff check . && ruff format --check . && npm run typecheck --prefix skytech_omniai/web`. Manuelles Abweichen vom
+Formatierung erledigt das Tooling, nicht die Diskussion: `scripts/check.sh` (darin `ruff check`, `ruff format --check` und `tsc`). Manuelles Abweichen vom
 Formatter ist kein zulässiger Diff-Inhalt — er verrauscht Reviews.

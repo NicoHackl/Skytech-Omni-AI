@@ -25,8 +25,8 @@ nicht stillschweigend schöngeschrieben.
 | [frontend.md](frontend.md) | Frontend-Stack, Verzeichnisstruktur, Routing, API-Client, Seiten- und Formularmuster, Hell/Dunkel, Auslieferung |
 | [design-system.md](design-system.md) | Designsprachen, Tokens je Modus, Klassenkatalog, Zustände, Haltepunkte, Icons, Barrierefreiheit |
 | [nutzertexte.md](nutzertexte.md) | Was der Nutzer zu sehen bekommt: Zeit- und Zahlenformate, Fehlermeldungen, Formulierung, Prüfliste |
-| [git-workflow.md](git-workflow.md) | Branch-Modell, Commit-Format, Versionierung, Release-Ablauf |
-| [test-strategie.md](test-strategie.md) | Testarten, Pflicht-Testfälle, Abdeckung |
+| [git-workflow.md](git-workflow.md) | Branch-Modell, Commit-Format, Changelog-Trailer, Hooks, Versionierung, automatisches Release |
+| [test-strategie.md](test-strategie.md) | Testarten, Pflicht-Testfälle, Abdeckung, Jobs der CI |
 | [design-entscheidungen.md](design-entscheidungen.md) | Entscheidungs-Log D-001 … — Quelle der Wahrheit fürs „warum" |
 | [adr/](adr/) | Ausführliche Architecture Decision Records zu einzelnen Entscheidungen |
 | [konfiguration.md](konfiguration.md) | Env-Variablen, Config-Optionen, Secrets-Handhabung |

@@ -148,10 +148,25 @@ Ein neuer externer Dienst ist eine Design-Entscheidung → Eintrag in
 [design-entscheidungen.md](design-entscheidungen.md), inklusive der Frage, welche Daten das Haus
 verlassen.
 
+## Release-Zugang
+
+- Nach `main` — also an alle Installationen — schreibt nur der Release-Job, über einen
+  Deploy-Key mit Schreibrecht (Secret `RELEASE_DEPLOY_KEY`). Das Ruleset von `main` lässt außer
+  ihm nur Repo-Admins zu; Force-Push und Löschen sind auf `main` und `agent/main` gesperrt.
+- Der private Schlüssel existiert ausschließlich als GitHub-Secret, keine lokale Kopie. Taucht er
+  je anderswo auf: Deploy-Key unter Settings → Deploy keys löschen, neuen erzeugen
+  (`ssh-keygen -t ed25519`), öffentlichen Teil mit Schreibrecht eintragen, privaten als Secret
+  setzen.
+- Der Admin-Bypass gilt für jeden, der mit Admin-Zugangsdaten pusht — auch für einen Agenten,
+  der die Zugangsdaten des Users nutzt. Davor schützt nur Regel 1 in [`AGENTS.md`](../AGENTS.md).
+- Die CI sucht bei jedem Lauf mit gitleaks in der ganzen Historie nach Secrets, prüft die
+  Abhängigkeiten mit `pip-audit` und `npm audit` und den Code mit CodeQL (Reiter „Security“).
+
 ## Abhängigkeiten
 
 - Die Versionen von Flask, waitress, der beiden Befehlszeilen und der Basisimages sind festgenagelt. Ein
-  Update ist damit ein sichtbarer Commit und kein stiller Seiteneffekt.
+  Update ist damit ein sichtbarer Commit und kein stiller Seiteneffekt. Dependabot schlägt
+  Updates wöchentlich als PR gegen `agent/main` vor; Befehlszeilen und Basisimage hebt er nicht an.
 - Sicherheitsupdates zeitnah einspielen. Beim Anheben einer der Befehlszeilen prüfen, ob `claude -p`
   bzw. `codex exec` sich noch gleich verhält — das Verhalten des Add-ons hängt daran.
 - Neue Abhängigkeiten vor Aufnahme prüfen: Wartungsstand, Verbreitung, Lizenz. Für die Oberfläche

@@ -261,6 +261,45 @@ def settings_save():
     return jsonify({**public_view(merged), "can_save": True, "read_only_reason": None})
 
 
+# Name im Sidebar-Fuß, solange der Supervisor den echten nicht liefert.
+ADDON_FALLBACK_NAME = "Skytech OmniAI"
+
+# Supervisor-Slugs bestehen aus Kleinbuchstaben, Ziffern und Unterstrichen. Was
+# anders aussieht, wird nicht zu einem Pfad im Frontend von Home Assistant.
+SLUG_MUSTER = re.compile(r"[a-z0-9_]+")
+
+# Name und Konfigurationsseite ändern sich zur Laufzeit nicht; gemerkt wird
+# nur ein Erfolg, ein Ausfall wird beim nächsten Aufruf erneut versucht.
+_addon_link: dict = {}
+
+
+@app.route("/addon", methods=["GET"])
+def addon():
+    """Name und Konfigurationsseite des Add-ons in Home Assistant (D-018).
+
+    Speist den Fuß der Sidebar. Der Slug trägt das Präfix des
+    Add-on-Repositorys (z. B. ``b80e8355_skytech_omniai``) und steht nur beim
+    Supervisor. Ohne ihn fehlt nur der Link — die Antwort ist immer 200.
+    """
+    if not _addon_link:
+        supervisor = SupervisorClient()
+        if supervisor.available:
+            try:
+                info = supervisor.get_self_info()
+            except (SupervisorUnavailable, SupervisorRejected) as fehler:
+                log.warning("Add-on-Slug nicht abrufbar, Sidebar-Fuß ohne Link: %s", fehler)
+                info = {}
+            slug = str(info.get("slug") or "")
+            if SLUG_MUSTER.fullmatch(slug):
+                _addon_link.update(
+                    name=str(info.get("name") or ADDON_FALLBACK_NAME),
+                    config_path=f"/hassio/addon/{slug}/config",
+                )
+            elif info:
+                log.warning("Supervisor meldet keinen gültigen Add-on-Slug, Sidebar-Fuß ohne Link")
+    return jsonify(dict(_addon_link) or {"name": ADDON_FALLBACK_NAME, "config_path": None})
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"})

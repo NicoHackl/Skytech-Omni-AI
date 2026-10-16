@@ -127,10 +127,13 @@ Provider nicht lahmlegen.
 
 | Datei | Zweck | Eingecheckt |
 |---|---|---|
-| `skytech_omniai/config.yaml` | Add-on-Konfiguration, Version und Optionsschema. **Einzige Quelle der Versionsnummer** | ja |
+| `skytech_omniai/config.yaml` | Add-on-Konfiguration, Version und Optionsschema. **Einzige Quelle der Versionsnummer** — auf `agent/main` immer `dev`, die echte setzt der Release-Job auf `main` | ja |
+| `skytech_omniai/CHANGELOG.md` | Änderungen je Version, erscheint im Update-Dialog von Home Assistant. Nur auf `main`, vom Release-Job aus den Changelog-Trailern erzeugt | nur auf `main` |
 | `skytech_omniai/build.yaml` | Basisimages je Architektur, festgenagelt | ja |
 | `skytech_omniai/requirements.txt` | Laufzeit-Abhängigkeiten mit festen Versionen | ja |
-| `requirements-dev.txt` | pytest und ruff, nur für Entwicklung | ja |
+| `requirements-dev.txt` | pytest, pytest-cov, PyYAML und ruff, nur für Entwicklung | ja |
+| `.hadolint.yaml` | Regeln für die Prüfung des Dockerfiles in der CI | ja |
+| `.github/dependabot.yml` | Wöchentliche Updates der Abhängigkeiten als PR gegen `agent/main` | ja |
 | `.env.example` | Vorlage ohne echte Werte | ja |
 | `.env` | Lokale Werte, enthält Zugangsdaten | **nein** |
 | `/data/options.json` | Vom Supervisor geschrieben, liegt nur im Container. Das Add-on liest sie nur | **nein** |
@@ -151,3 +154,12 @@ Provider nicht lahmlegen.
 Alles, was sich zwischen Umgebungen unterscheidet (Anbieter, Modell, Port, Ausführlichkeit des
 Logs), ist konfigurierbar und hat eine sinnvolle Vorgabe. Fest verdrahtete Werte im Code sind ein
 Fehler, kein Feature.
+
+## Secrets der CI
+
+| Secret | Wo | Zweck |
+|---|---|---|
+| `RELEASE_DEPLOY_KEY` | GitHub → Settings → Secrets and variables → Actions | Privater Teil des Deploy-Keys „CI-Release“ (Schreibrecht). Der Release-Job pusht damit nach `main`; das Ruleset von `main` lässt außer ihm nur Admins zu. Fehlt er, scheitert nur ein Release, die Prüfungen laufen weiter |
+
+Neu erzeugen, falls er je außerhalb von GitHub aufgetaucht ist — siehe
+[sicherheit-datenschutz.md](sicherheit-datenschutz.md#release-zugang).

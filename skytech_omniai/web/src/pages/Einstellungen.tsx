@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { ApiError, api, fieldErrorsOf } from '../api'
 import { Icon } from '../components/Icon'
-import { PageHeader, notifySettingsChanged } from '../components/Layout'
+import { PageHeader } from '../components/Layout'
 import { useToast } from '../components/Toast'
 import { MODEL_AUTO, TOOL_ACCESS_FULL, providerLabel, toolAccessLabel } from '../provider'
 import type {
@@ -149,7 +149,6 @@ export function Einstellungen() {
       for (const key of removed) options[key] = null
       const saved = await api.saveSettings({ options, stored_revision: loaded.stored_revision })
       adopt(saved)
-      notifySettingsChanged()
       toast('Gespeichert. Gilt ab der nächsten Anfrage.')
     } catch (cause) {
       setFieldErrors(fieldErrorsOf(cause))
