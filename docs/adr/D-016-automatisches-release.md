@@ -1,7 +1,8 @@
 # D-016: Grüne CI auf agent/main veröffentlicht automatisch nach main
 
 - **Datum:** 16.10.2026
-- **Status:** Aktiv
+- **Status:** Ersetzt durch [D-017](D-017-release-branch.md) — der Bot schreibt nicht mehr nach
+  `agent/main`, der Changelog steht in Trailern
 - **Betrifft:** `.github/workflows/ci.yaml`, `scripts/release.py`, `scripts/check.sh`,
   `skytech_omniai/config.yaml` (Version), `CHANGELOG.md`, Branch `main`
 

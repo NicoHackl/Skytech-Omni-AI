@@ -11,7 +11,7 @@
 
 - [ ] Tests laufen fehlerfrei
 - [ ] Linting läuft fehlerfrei
-- [ ] `CHANGELOG.md` ergänzt (bei funktionaler oder gestalterischer Änderung)
+- [ ] Changelog-Trailer `Changelog-<Kategorie>: …` im Commit (bei funktionaler oder gestalterischer Änderung)
 - [ ] Betroffene Dateien in `docs/` aktualisiert
 - [ ] Neue Grundsatzentscheidung in `docs/design-entscheidungen.md` eingetragen
 - [ ] Keine Secrets im Diff (`git diff --staged` geprüft)

@@ -1,10 +1,11 @@
 # Prüfungen und Release für Skytech OmniAI.
 #
 # Jeder Push auf agent/main durchläuft alle Prüfungen. Sind sie grün und hat
-# sich seit dem letzten Tag etwas unter skytech_omniai/ geändert, hebt der Job
-# "release" die Version an, schreibt den Changelog fort, taggt und zieht main per
-# Fast-Forward nach. main ist der Stand, den Home Assistant installiert.
-# Ablauf und Regeln: docs/git-workflow.md, Begründung: D-016.
+# sich seit dem letzten Release etwas unter skytech_omniai/ geändert, legt der
+# Job "release" auf main einen Release-Commit an: der geprüfte Stand, gestempelt
+# mit Version und Changelog, dazu ein Tag. main ist der Stand, den Home
+# Assistant installiert. agent/main bleibt unberührt — kein Bot-Commit, kein
+# "git pull --rebase". Ablauf und Regeln: docs/git-workflow.md, Begründung: D-017.
 #
 # Lokal laufen dieselben Prüfungen über scripts/check.sh (--docker für Bild und
 # Smoke-Test). Actions sind auf Commit-SHAs festgenagelt; Dependabot hebt sie an.
@@ -170,11 +171,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # Ganze Historie samt origin/main: der Plan rechnet ab dem zuletzt
+          # veröffentlichten Stand.
           fetch-depth: 0
 
-      # Zeigt, was ein Release jetzt täte, und warnt, wenn das Add-on sich
-      # geändert hat, der Abschnitt "Unveröffentlicht" aber leer ist.
-      - name: Versionssprung ermitteln
+      # Nur Warnungen: ein gepushter Commit lässt sich nicht mehr ändern. Lokal
+      # verhindert der commit-msg-Hook, dass es so weit kommt.
+      - name: Commit-Messages prüfen
+        run: python3 scripts/commit_msg.py --range "$(git merge-base origin/main HEAD)..HEAD"
+
+      # Zeigt Versionssprung und Changelog-Abschnitt des nächsten Releases.
+      - name: Versionssprung und Changelog ermitteln
         run: |
           {
             echo "### Release-Vorschau"
@@ -192,34 +199,27 @@ jobs:
       group: release
       cancel-in-progress: false
     steps:
-      # Der Deploy-Key ist im Ruleset von main als einzige Ausnahme eingetragen.
-      # Seine Pushes lösen — anders als GITHUB_TOKEN — wieder die CI aus; der
-      # Release-Commit wird dadurch selbst noch einmal geprüft. Fehlt der Key,
-      # liest checkout mit GITHUB_TOKEN; scheitern soll der Job dann erst, wenn
-      # wirklich etwas zu veröffentlichen ist.
+      # Der Deploy-Key ist im Ruleset von main als einzige Ausnahme neben den
+      # Admins eingetragen. Fehlt er, liest checkout mit GITHUB_TOKEN; scheitern
+      # soll der Job dann erst, wenn wirklich etwas zu veröffentlichen ist.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: agent/main
+          # Genau der geprüfte Stand. Ist agent/main inzwischen weiter, kommt der
+          # Rest mit dem Lauf des neueren Pushs.
+          ref: ${{ github.sha }}
           fetch-depth: 0
           ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
-      - name: Nur den neuesten Stand releasen
-        id: current
-        run: |
-          if [ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ]; then
-            echo "latest=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::agent/main ist inzwischen weiter — der Lauf des neueren Stands übernimmt das Release."
-            echo "latest=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Version und Changelog fortschreiben
+      - name: Version und Changelog in den Arbeitsbaum schreiben
         id: plan
-        if: steps.current.outputs.latest == 'true'
-        run: python3 scripts/release.py apply
+        run: python3 scripts/release.py apply "$GITHUB_SHA"
 
-      - name: Commit, Tag und Fast-Forward nach main
-        if: steps.current.outputs.latest == 'true' && steps.plan.outputs.bump != 'none'
+      # Der Release-Commit wird direkt aus dem Baum gebaut statt gemergt — ein
+      # Konflikt ist damit ausgeschlossen. Elternteile: das bisherige main und
+      # der veröffentlichte Stand von agent/main. Über diesen zweiten Elternteil
+      # findet der nächste Lauf heraus, was schon veröffentlicht ist.
+      - name: Release-Commit und Tag auf main
+        if: steps.plan.outputs.bump != 'none'
         env:
           VERSION: ${{ steps.plan.outputs.version }}
           HAS_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
@@ -228,16 +228,21 @@ jobs:
             echo "::error::Secret RELEASE_DEPLOY_KEY fehlt — ohne ihn darf der Job nicht nach main pushen (docs/git-workflow.md)."
             exit 1
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add skytech_omniai/config.yaml CHANGELOG.md
-          git commit -m "chore(release): Version ${VERSION}"
-          git tag -a "v${VERSION}" -m "Version ${VERSION}"
-          # Alles oder nichts: scheitert eins (etwa weil main kein Vorfahr mehr
-          # ist), bleiben agent/main, main und die Tags unverändert.
-          git push --atomic origin HEAD:refs/heads/agent/main HEAD:refs/heads/main "refs/tags/v${VERSION}"
+          export GIT_AUTHOR_NAME="github-actions[bot]"
+          export GIT_AUTHOR_EMAIL="41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+          export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+          git add skytech_omniai/config.yaml skytech_omniai/CHANGELOG.md
+          tree="$(git write-tree)"
+          commit="$(git commit-tree "$tree" -p origin/main -p "$GITHUB_SHA" \
+            -m "chore(release): Version ${VERSION}" \
+            -m "Veröffentlicht aus agent/main ${GITHUB_SHA::7}.")"
+          git tag -a "v${VERSION}" -m "Version ${VERSION}" "$commit"
+          # Alles oder nichts. main nimmt nur einen Fast-Forward an; ist main
+          # inzwischen weiter, scheitert der Push, und nichts ist verändert.
+          git push --atomic origin "${commit}:refs/heads/main" "refs/tags/v${VERSION}"
           echo "### Version ${VERSION} veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Kein Release
-        if: steps.current.outputs.latest == 'true' && steps.plan.outputs.bump == 'none'
-        run: echo "Seit dem letzten Tag keine Änderung am Add-on — main bleibt, wie es ist." >> "$GITHUB_STEP_SUMMARY"
+        if: steps.plan.outputs.bump == 'none'
+        run: echo "Seit dem letzten Release keine Änderung am Add-on — main bleibt, wie es ist." >> "$GITHUB_STEP_SUMMARY"
