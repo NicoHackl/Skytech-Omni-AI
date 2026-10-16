@@ -56,6 +56,26 @@ Empfehlung an den Betreiber: den Port nicht ins Internet weiterleiten. Wer nur d
 braucht, kann die Zeilen `ports` und `ports_description` aus `config.yaml` entfernen — der Ingress
 funktioniert ohne veröffentlichten Port weiter.
 
+## Die Seite „Einstellungen“
+
+Die Oberfläche kann Zugänge und Werkzeugstufe ändern. Damit das nicht zum zweiten offenen Weg
+neben Port 8000 wird:
+
+- **Speichern nur über den Ingress.** `PUT /settings` nimmt nur Aufrufe an, die vom Ingress-Proxy
+  des Supervisors kommen (`172.30.32.2`) — also erst, nachdem Home Assistant den Nutzer angemeldet
+  hat. Der Kopf `X-Ingress-Path` taugt dafür nicht, den kann jeder Aufrufer selbst schicken. Ohne
+  diese Sperre könnte jeder, der Port 8000 erreicht, `full` einschalten und über einen Prompt die
+  Zugänge auslesen.
+- **Nur für Administratoren.** `panel_admin: true` blendet die Oberfläche für andere Nutzer aus
+  der Seitenleiste aus.
+- **Zugänge nur schreiben.** `GET /settings` liefert jedes Zugangsfeld leer und dazu nur
+  „hinterlegt ja/nein“ — dieselbe Auskunft wie `GET /status`. Ein Wert kommt nie zurück.
+- **Manager-Rolle.** Das Add-on fordert `hassio_role: manager` an, weil der Supervisor das
+  Speichern der eigenen Optionen sonst verweigert. Der Supervisor-Token verlässt den Prozess nur
+  in Richtung Supervisor, ausdrücklich ohne Proxy, und erscheint nie im Log.
+- Die Rückmeldung des Supervisors (englisch, mit Schemafeldern) geht ins Log, nicht auf den
+  Bildschirm.
+
 ## Werkzeuge der Befehlszeilen
 
 `tool_access` entscheidet, was die KI während einer Anfrage tun darf. Die Stufen unterscheiden
@@ -107,7 +127,7 @@ an den Container.
 | Anmeldezustand der Claude-CLI | ja | `/data/.claude` im Container | bis zur Deinstallation |
 | Anmeldezustand der Codex-CLI | ja | `/data/.codex` im Container | bis zur Deinstallation |
 | Abgerufene Webseiten (Stufe `web`/`full`) | nur im Durchlauf | nicht gespeichert | entfällt |
-| Zugangsdaten | ja | `/data/options.json`, vom Supervisor verwaltet | bis zum Leeren des Felds |
+| Zugangsdaten | ja | `/data/options.json`, vom Supervisor verwaltet — geschrieben über den Reiter „Konfiguration“ oder die Seite „Einstellungen“ | bis zum Leeren bzw. „Entfernen“ |
 
 Grundsatz Datenminimierung: Was nicht erhoben wird, kann nicht verloren gehen. Das Add-on legt
 weder einen Verlauf noch ein Protokoll der Anfragen an.

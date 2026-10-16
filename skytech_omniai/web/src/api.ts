@@ -1,4 +1,11 @@
-import type { AskInput, AskResponse, ModelsResponse, StatusResponse } from './types'
+import type {
+  AskInput,
+  AskResponse,
+  ModelsResponse,
+  SettingsInput,
+  SettingsResponse,
+  StatusResponse,
+} from './types'
 
 /* Einziger Ort in der Oberfläche, an dem fetch aufgerufen wird. Basis, Header
    und Fehlerbehandlung liegen damit an genau einer Stelle.
@@ -49,9 +56,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const message =
       typeof detail === 'string' && detail.trim() !== '' ? detail : MESSAGE_GENERIC
     // Antwortcode und Rohantwort bleiben am Fehlerobjekt und im Log, nie im
-    // Text auf dem Bildschirm (eiserne Regel 12).
+    // Text auf dem Bildschirm (eiserne Regel 12). Am Fehlerobjekt hängt der
+    // ganze Rumpf, damit ein Formular etwa die Feldfehler daraus lesen kann.
     console.error('Fehlerantwort', response.status, path, detail)
-    throw new ApiError(message, response.status, detail)
+    throw new ApiError(message, response.status, body)
   }
 
   return body as T
@@ -63,4 +71,15 @@ export const api = {
   models: () => request<ModelsResponse>('models'),
   ask: (data: AskInput) =>
     request<AskResponse>('ask', { method: 'POST', body: JSON.stringify(data) }),
+  settings: () => request<SettingsResponse>('settings'),
+  saveSettings: (data: SettingsInput) =>
+    request<SettingsResponse>('settings', { method: 'PUT', body: JSON.stringify(data) }),
+}
+
+/** Feldfehler aus einer abgelehnten Speicherung, sonst ein leeres Objekt. */
+export function fieldErrorsOf(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError)) return {}
+  const details = error.details as { field_errors?: unknown } | undefined
+  const fields = details?.field_errors
+  return fields !== null && typeof fields === 'object' ? (fields as Record<string, string>) : {}
 }

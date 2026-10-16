@@ -326,7 +326,7 @@ select {
   background: linear-gradient(to bottom, transparent, var(--bg) 18%);
 }
 .hint-box { border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); padding: 12px 14px; color: var(--text-2); background: var(--surface-2); font-size: 13px; }
-.hint-box button { color: var(--primary); font-weight: 600; }
+.hint-box button, .hint-box a { color: var(--primary); font-weight: 600; }
 .advanced-card { margin-top: 18px; }
 .advanced-card summary { cursor: pointer; padding: 16px 20px; font-weight: 650; font-size: 14px; }
 .advanced-card[open] summary { border-bottom: 1px solid var(--border); }

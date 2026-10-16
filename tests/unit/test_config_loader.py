@@ -89,3 +89,24 @@ def test_read_addon_version_returns_none_without_file(tmp_path, monkeypatch):
     monkeypatch.setattr(config_loader, "CONFIG_PATH", tmp_path / "fehlt.yaml")
 
     assert read_addon_version() is None
+
+
+def test_apply_options_keeps_outside_values_at_startup(monkeypatch):
+    """Beim Start bleibt eine von außen gesetzte Variable stehen, wenn das Feld leer ist."""
+    monkeypatch.setenv("GEMINI_API_KEY", "von-aussen")
+
+    apply_options_to_env({"gemini_api_key": ""})
+
+    assert os.environ["GEMINI_API_KEY"] == "von-aussen"
+
+
+def test_apply_options_clears_removed_values_after_saving(monkeypatch):
+    """Nach dem Speichern verschwindet ein entfernter Zugang sofort aus der Umgebung."""
+    monkeypatch.setenv("GEMINI_API_KEY", "alt")
+    monkeypatch.setenv("OMNIAI_MODEL", "gemini-2.5-pro")
+
+    apply_options_to_env({"provider": "gemini", "model": "auto"}, clear_missing=True)
+
+    assert os.environ["AI_PROVIDER"] == "gemini"
+    assert "GEMINI_API_KEY" not in os.environ
+    assert "OMNIAI_MODEL" not in os.environ

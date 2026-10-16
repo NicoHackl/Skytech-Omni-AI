@@ -1,6 +1,7 @@
 """Tests der HTTP-Schnittstelle über den Testclient von Flask."""
 
 import json
+from typing import ClassVar
 
 import pytest
 
@@ -188,3 +189,141 @@ def test_without_a_built_interface_the_api_still_works(client, tmp_path, monkeyp
 
     assert client.get("/").status_code == 503
     assert client.get("/health").status_code == 200
+
+
+# --- Einstellungen ---------------------------------------------------------
+
+INGRESS = {"REMOTE_ADDR": app_module.INGRESS_PROXY_ADDR}
+
+
+class FakeSupervisor:
+    """Steht für den Supervisor: hält Optionen und merkt sich, was gespeichert wurde."""
+
+    stored: ClassVar[dict] = {}
+    saved: ClassVar[list] = []
+    valid = True
+
+    def __init__(self):
+        self.available = True
+
+    def get_self_options(self):
+        return dict(FakeSupervisor.stored)
+
+    def validate_options(self, options):
+        return FakeSupervisor.valid, "" if FakeSupervisor.valid else "unknown key"
+
+    def save_options(self, options):
+        FakeSupervisor.saved.append(options)
+        FakeSupervisor.stored = dict(options)
+
+
+@pytest.fixture
+def supervisor(monkeypatch):
+    FakeSupervisor.stored = {
+        "provider": "claude_sub",
+        "model": "auto",
+        "tool_access": "web",
+        "claude_oauth_token": "geheim-claude",
+        "gemini_api_key": "",
+    }
+    FakeSupervisor.saved = []
+    FakeSupervisor.valid = True
+    monkeypatch.setattr(app_module, "SupervisorClient", FakeSupervisor)
+    return FakeSupervisor
+
+
+def _revision(client):
+    return client.get("/settings", environ_base=INGRESS).get_json()["stored_revision"]
+
+
+def test_settings_show_no_credential_value(client, supervisor):
+    """Die Seite bekommt nur ja/nein zu den Zugängen und darf über den Ingress speichern."""
+    daten = client.get("/settings", environ_base=INGRESS).get_json()
+
+    assert daten["can_save"] is True
+    assert daten["secrets_set"]["claude_oauth_token"] is True
+    assert "geheim" not in json.dumps(daten)
+
+
+def test_settings_from_the_open_port_are_read_only(client, supervisor):
+    """Über Port 8000 lässt sich nichts ändern — auch nicht mit gefälschtem Ingress-Kopf."""
+    assert client.get("/settings").get_json()["can_save"] is False
+
+    antwort = client.put(
+        "/settings",
+        json={"options": {"tool_access": "full"}, "stored_revision": "x"},
+        headers={"X-Ingress-Path": "/api/hassio_ingress/abc"},
+    )
+
+    assert antwort.status_code == 403
+    assert supervisor.saved == []
+
+
+def test_settings_outside_home_assistant_cannot_be_saved(client):
+    """Ohne Supervisor zeigt die Seite den Stand nur an."""
+    assert client.get("/settings", environ_base=INGRESS).get_json()["can_save"] is False
+
+    antwort = client.put(
+        "/settings", json={"options": {}, "stored_revision": "x"}, environ_base=INGRESS
+    )
+
+    assert antwort.status_code == 503
+
+
+def test_saving_takes_effect_without_restart(client, supervisor):
+    """Normalfall: gespeichert, und die nächste Anfrage sieht den neuen Anbieter."""
+    antwort = client.put(
+        "/settings",
+        json={
+            "options": {"provider": "gemini", "model": "auto", "gemini_api_key": "neu"},
+            "stored_revision": _revision(client),
+        },
+        environ_base=INGRESS,
+    )
+
+    assert antwort.status_code == 200
+    assert supervisor.saved[0]["claude_oauth_token"] == "geheim-claude"
+    status = client.get("/status").get_json()
+    assert status["provider"] == "gemini"
+    assert status["credentials"]["gemini"] is True
+    assert "neu" not in json.dumps(antwort.get_json())
+
+
+def test_saving_an_outdated_state_is_refused(client, supervisor):
+    """Wurde inzwischen anderswo gespeichert, überschreibt ein alter Tab nichts."""
+    antwort = client.put(
+        "/settings",
+        json={"options": {"provider": "gemini"}, "stored_revision": "veraltet"},
+        environ_base=INGRESS,
+    )
+
+    assert antwort.status_code == 409
+    assert supervisor.saved == []
+
+
+def test_invalid_fields_are_marked(client, supervisor):
+    """Fehlerfall: das betroffene Feld bekommt einen eigenen Satz."""
+    antwort = client.put(
+        "/settings",
+        json={"options": {"tool_access": "alles"}, "stored_revision": _revision(client)},
+        environ_base=INGRESS,
+    )
+
+    assert antwort.status_code == 422
+    assert set(antwort.get_json()["field_errors"]) == {"tool_access"}
+    assert supervisor.saved == []
+
+
+def test_a_refusal_of_the_supervisor_stays_readable(client, supervisor):
+    """Fehlerfall: die englische Meldung des Supervisors landet nicht auf dem Bildschirm."""
+    supervisor.valid = False
+
+    antwort = client.put(
+        "/settings",
+        json={"options": {"provider": "gemini"}, "stored_revision": _revision(client)},
+        environ_base=INGRESS,
+    )
+
+    assert antwort.status_code == 422
+    assert "unknown" not in antwort.get_json()["error"]
+    assert supervisor.saved == []

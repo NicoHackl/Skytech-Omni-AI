@@ -11,6 +11,34 @@ Datei angefasst wurde.
 
 ## [Unveröffentlicht]
 
+## [0.9.0] — 16.10.2026
+
+### Hinzugefügt
+
+- **Einstellungen direkt in der Oberfläche.** Die neue Seite „Einstellungen“ in der Seitenleiste
+  von OmniAI ersetzt den Weg über den Reiter „Konfiguration“ des Add-ons: Anbieter,
+  Standardmodell, Werkzeuge und alle Zugänge lassen sich dort setzen. Beide Wege schreiben
+  dieselben Optionen und zeigen immer denselben Stand.
+- **Kein Neustart mehr nötig.** Gespeicherte Einstellungen gelten ab der nächsten Anfrage.
+- Das Standardmodell bietet nur Modelle des gewählten Anbieters an; ein unpassendes Modell wird
+  am Feld markiert, statt erst bei der nächsten Anfrage aufzufallen.
+- Hinterlegte Zugänge erscheinen nur als „Hinterlegt“. Ein leeres Feld behält den Zugang, der
+  Knopf „Entfernen“ löscht ihn.
+- Wurden die Einstellungen inzwischen anderswo geändert (etwa im Reiter „Konfiguration“), wird
+  nicht stillschweigend überschrieben — die Seite bietet an, den gespeicherten Stand zu laden.
+
+### Geändert
+
+- Die Hinweise auf der Übersicht führen jetzt direkt zu den Einstellungen.
+- Das Add-on fordert die Supervisor-Rolle „manager“ an; nur damit darf es seine eigenen Optionen
+  speichern. Home Assistant fragt beim Update einmal danach.
+- Die Oberfläche ist nur noch für Administratoren in der Seitenleiste sichtbar.
+
+### Sicherheit
+
+- Einstellungen lassen sich ausschließlich über die Seitenleiste von Home Assistant ändern, nicht
+  über den offenen Port 8000. Über den Port bleibt die Seite eine reine Anzeige.
+
 ## [0.8.0] — 18.08.2026
 
 ### Hinzugefügt

@@ -1,5 +1,5 @@
 name: "Skytech OmniAI"
-version: "0.8.0"
+version: "0.9.0"
 slug: "skytech_omniai"
 description: "Modulare KI-Brücke für Home Assistant — Claude und ChatGPT über das jeweilige Abo, dazu Google Gemini"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
@@ -15,6 +15,13 @@ ports:
   8000/tcp: 8000
 ports_description:
   8000/tcp: "Schnittstelle von Skytech OmniAI"
+# Die Seite „Einstellungen“ der Oberfläche liest und schreibt die eigenen
+# Optionen über die Supervisor-API. Speichern braucht die Manager-Rolle (D-015).
+hassio_api: true
+hassio_role: manager
+# Die Oberfläche ändert Zugänge und Werkzeugstufe — das ist eine Aufgabe für
+# Administratoren und wird hier ausdrücklich so markiert.
+panel_admin: true
 # Die Oberfläche wird von Home Assistant eingebettet; sie läuft im selben
 # Prozess wie die Schnittstelle und braucht deshalb keinen eigenen Port.
 ingress: true
@@ -25,6 +32,9 @@ panel_title: "OmniAI"
 watchdog: "http://[HOST]:[PORT:8000]/health"
 map:
   - data:rw
+# Bequemer als hier lassen sich alle Optionen auf der Seite „Einstellungen“ in
+# der Oberfläche (Seitenleiste „OmniAI“) setzen. Sie schreibt dieselben
+# Optionen über die Supervisor-API; beide Wege zeigen immer denselben Stand.
 options:
   provider: "claude_sub"
   # "auto" = kein Modell erzwingen, der jeweilige Provider entscheidet selbst.
