@@ -1,0 +1,243 @@
+# Prüfungen und Release für Skytech OmniAI.
+#
+# Jeder Push auf agent/main durchläuft alle Prüfungen. Sind sie grün und hat
+# sich seit dem letzten Tag etwas unter skytech_omniai/ geändert, hebt der Job
+# "release" die Version an, schreibt den Changelog fort, taggt und zieht main per
+# Fast-Forward nach. main ist der Stand, den Home Assistant installiert.
+# Ablauf und Regeln: docs/git-workflow.md, Begründung: D-016.
+#
+# Lokal laufen dieselben Prüfungen über scripts/check.sh (--docker für Bild und
+# Smoke-Test). Actions sind auf Commit-SHAs festgenagelt; Dependabot hebt sie an.
+
+name: CI
+
+on:
+  push:
+    branches: [agent/main]
+  pull_request:
+    branches: [agent/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Bei Pull Requests überholt ein neuerer Stand den laufenden Lauf. Auf
+# agent/main wird nie abgebrochen: ein laufender Release-Job darf nicht
+# mittendrin enden. Er hat zusätzlich eine eigene Gruppe, damit nie zwei
+# Releases gleichzeitig laufen.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 ist das Python im Add-on-Bild (Alpine 3.19), 3.14 das der Entwicklung.
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            skytech_omniai/requirements.txt
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r skytech_omniai/requirements.txt -r requirements-dev.txt
+
+      - name: Linting
+        run: ruff check --output-format=github .
+
+      - name: Formatierung
+        run: ruff format --check .
+
+      - name: Tests
+        run: >-
+          pytest -q --cov=skytech_omniai --cov=scripts
+          --cov-report=term:skip-covered --cov-report=markdown-append:"$GITHUB_STEP_SUMMARY"
+
+  frontend:
+    name: Oberfläche
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          # Node 20 entspricht dem nodejs aus Alpine 3.19, mit dem das Bild baut.
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: skytech_omniai/web/package-lock.json
+
+      - name: Abhängigkeiten installieren
+        run: npm ci --prefix skytech_omniai/web
+
+      # "build" führt zuerst tsc --noEmit aus — Typfehler brechen hier ab.
+      - name: Typprüfung und Bau
+        run: npm run build --prefix skytech_omniai/web
+
+  addon-lint:
+    name: Add-on, Workflows, Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Add-on-Konfiguration (Home Assistant)
+        uses: frenck/action-addon-linter@b9cfd1bc62ba60d2c4fc96317b5f7ada5923f4a7 # v2.21.1
+        with:
+          path: "./skytech_omniai"
+
+      - name: Workflows (actionlint)
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+      - name: Dockerfile (hadolint)
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: skytech_omniai/Dockerfile
+          config: .hadolint.yaml
+
+  docker:
+    name: Image und Smoke-Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Dasselbe Basisimage, das der Supervisor aus build.yaml nimmt.
+      - name: Basisimage aus build.yaml lesen
+        id: base
+        run: |
+          build_from="$(sed -n 's/^  amd64: "\(.*\)"$/\1/p' skytech_omniai/build.yaml)"
+          echo "build_from=${build_from}" >> "$GITHUB_OUTPUT"
+
+      - name: Image bauen (amd64)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: skytech_omniai
+          platforms: linux/amd64
+          build-args: BUILD_FROM=${{ steps.base.outputs.build_from }}
+          tags: skytech-omniai:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-Test
+        run: scripts/smoke_test.sh skytech-omniai:ci
+
+  security:
+    name: Sicherheit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Die ganze Historie: ein einmal committetes Secret bleibt gültig, auch
+          # wenn ein späterer Commit es wieder entfernt.
+          fetch-depth: 0
+
+      - name: Secrets in der Historie (gitleaks)
+        run: >-
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1
+          git /repo --redact --no-banner
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Python-Abhängigkeiten (pip-audit)
+        run: |
+          pip install pip-audit==2.10.1
+          pip-audit -r skytech_omniai/requirements.txt -r requirements-dev.txt
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      # Nur was im Bild landet; Werkzeuge zum Bauen laufen nie beim Nutzer.
+      - name: Abhängigkeiten der Oberfläche (npm audit)
+        run: npm audit --prefix skytech_omniai/web --omit=dev --audit-level=high
+
+  release-plan:
+    name: Release-Vorschau
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Zeigt, was ein Release jetzt täte, und warnt, wenn das Add-on sich
+      # geändert hat, der Abschnitt "Unveröffentlicht" aber leer ist.
+      - name: Versionssprung ermitteln
+        run: |
+          {
+            echo "### Release-Vorschau"
+            echo '```'
+            python3 scripts/release.py plan
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    name: Release
+    needs: [python, frontend, addon-lint, docker, security, release-plan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/agent/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      # Der Deploy-Key ist im Ruleset von main als einzige Ausnahme eingetragen.
+      # Seine Pushes lösen — anders als GITHUB_TOKEN — wieder die CI aus; der
+      # Release-Commit wird dadurch selbst noch einmal geprüft. Fehlt der Key,
+      # liest checkout mit GITHUB_TOKEN; scheitern soll der Job dann erst, wenn
+      # wirklich etwas zu veröffentlichen ist.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: agent/main
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+
+      - name: Nur den neuesten Stand releasen
+        id: current
+        run: |
+          if [ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ]; then
+            echo "latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::agent/main ist inzwischen weiter — der Lauf des neueren Stands übernimmt das Release."
+            echo "latest=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Version und Changelog fortschreiben
+        id: plan
+        if: steps.current.outputs.latest == 'true'
+        run: python3 scripts/release.py apply
+
+      - name: Commit, Tag und Fast-Forward nach main
+        if: steps.current.outputs.latest == 'true' && steps.plan.outputs.bump != 'none'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          HAS_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
+        run: |
+          if [ "$HAS_DEPLOY_KEY" != "true" ]; then
+            echo "::error::Secret RELEASE_DEPLOY_KEY fehlt — ohne ihn darf der Job nicht nach main pushen (docs/git-workflow.md)."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add skytech_omniai/config.yaml CHANGELOG.md
+          git commit -m "chore(release): Version ${VERSION}"
+          git tag -a "v${VERSION}" -m "Version ${VERSION}"
+          # Alles oder nichts: scheitert eins (etwa weil main kein Vorfahr mehr
+          # ist), bleiben agent/main, main und die Tags unverändert.
+          git push --atomic origin HEAD:refs/heads/agent/main HEAD:refs/heads/main "refs/tags/v${VERSION}"
+          echo "### Version ${VERSION} veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Kein Release
+        if: steps.current.outputs.latest == 'true' && steps.plan.outputs.bump == 'none'
+        run: echo "Seit dem letzten Tag keine Änderung am Add-on — main bleibt, wie es ist." >> "$GITHUB_STEP_SUMMARY"

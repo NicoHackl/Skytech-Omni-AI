@@ -13,6 +13,13 @@ wo nicht.
 
 ## Stolpersteine
 
+- **Nach jedem Release liegt ein fremder Commit auf `agent/main`.** Der Release-Job legt
+  `chore(release): Version X.Y.Z` an. Wer danach ohne `git pull --rebase` weiterarbeitet, wird
+  beim nächsten Push abgewiesen. Ein `--force` ist **nie** die Lösung — er nähme `main` den
+  Vorfahren und der nächste Fast-Forward schlüge fehl.
+- **Ein Push auf `agent/main` ist ein Release.** Ändert er etwas unter `skytech_omniai/` und ist
+  die CI grün, bekommen alle Installationen das Update angeboten. Halbfertiges gehört auf einen
+  `feature/`-Branch (D-016).
 - **Der Build-Kontext ist der Add-on-Ordner, nicht die Repo-Wurzel.** Eine Datei, die im
   `Dockerfile` mit `COPY` geholt wird, muss unter `skytech_omniai/` liegen. Deshalb steht `web/`
   dort und nicht in der Wurzel. Ein `COPY ../etwas` schlägt beim Supervisor fehl, auch wenn es
@@ -66,6 +73,8 @@ wo nicht.
 | Werkzeugstufe `full` zusammen mit dem offenen Port | Ein Prompt von außen kann Befehle im Container ausführen und käme damit an das Token unter `/data` | Bei `full` den Port schließen und nur den Ingress nutzen. Vorgabe ist `web`, dort tritt der Fall nicht auf — siehe [sicherheit-datenschutz.md](sicherheit-datenschutz.md) |
 | Googles Schrittformat ist nicht zugesichert | Benennt Google die Schritttypen um, findet `_extract_text` den Text nicht mehr am erwarteten Ort | Ein Notfallpfad sammelt dann alles ein, was Text enthält. Bleibt auch das leer, kommt eine verständliche Meldung statt eines Absturzes |
 | Die Pfade über die Befehlszeilen sind nur mit Attrappe getestet | Ein Verhaltenswechsel von `claude -p` oder `codex exec` fällt in den Tests nicht auf | Nach jedem Anheben einer CLI-Version einmal von Hand eine Anfrage über den betroffenen Anbieter stellen |
+| Das Image für `aarch64` wird in der CI nicht gebaut | Ein Fehler, der nur auf ARM auftritt (etwa ein fehlendes Binary der Codex-CLI), erreicht die Nutzer ungeprüft | `scripts/check.sh --docker` auf einem Apple-Silicon-Rechner baut und prüft genau dieses Image — vor Änderungen am Dockerfile von Hand ausführen |
+| Basisimage und Befehlszeilen hält Dependabot nicht aktuell | Die Alpine-Fassung in `build.yaml` und die Versionen der Claude- und Codex-CLI im Dockerfile veralten still | Von Hand anheben; bei den Befehlszeilen danach die Handprüfung aus der Zeile darüber |
 | Stufe `web` ist bei ChatGPT weiter gefasst als bei Claude | `--sandbox read-only` verhindert Schreiben und eigene Netzverbindungen, lesende Befehle im Container aber nicht | Wer das ausschließen will, stellt `tool_access` auf `off` oder nutzt `claude_sub` — siehe [sicherheit-datenschutz.md](sicherheit-datenschutz.md) |
 
 ## Bewusst nicht umgesetzt

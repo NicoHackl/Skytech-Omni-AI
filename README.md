@@ -1,5 +1,7 @@
 # Skytech OmniAI
 
+[![CI](https://github.com/NicoHackl/Skytech-Omni-AI/actions/workflows/ci.yaml/badge.svg?branch=agent%2Fmain)](https://github.com/NicoHackl/Skytech-Omni-AI/actions/workflows/ci.yaml)
+
 Home-Assistant-Add-on und modulare Brücke zwischen dem Smart Home und mehreren KI-Anbietern. Es
 nimmt Prompts über eine HTTP-Schnittstelle entgegen, leitet sie an **Claude** (über das
 Pro/Max-Abo), **ChatGPT** (über das ChatGPT-Abo) oder **Google Gemini** weiter und liefert

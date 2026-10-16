@@ -23,7 +23,10 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
 1. **Git:** Commit und Push erfolgen ausschließlich im Branch `agent/main` — nie direkt auf
    `main`. Existiert der Branch weder lokal noch remote, wird er beim ersten Arbeitspaket neu
    angelegt, nicht auf einen anderen Branch ausgewichen. Nach jeder abgeschlossenen Aufgabe wird
-   committet und gepusht. Details: [docs/git-workflow.md](docs/git-workflow.md).
+   committet und gepusht. **Version und Merge nach `main` macht ausschließlich die CI** — nie
+   von Hand, nie durch einen Agenten (D-016). Ein grüner Push mit Änderung unter
+   `skytech_omniai/` ist damit ein Release an alle Nutzer. Details:
+   [docs/git-workflow.md](docs/git-workflow.md).
 2. **Sprache Code:** Variablen, Funktionen, Klassen, Dateinamen **englisch**.
 3. **Sprache Text:** Kommentare, Commit-Messages, Log-Meldungen, UI-Texte, Labels und
    User-Hinweise **deutsch**.
@@ -91,11 +94,15 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
 | Zweck | Befehl |
 |---|---|
 | Abhängigkeiten installieren | `pip install -r skytech_omniai/requirements.txt -r requirements-dev.txt && npm ci --prefix skytech_omniai/web` |
+| pre-push-Hook aktivieren (einmalig) | `git config core.hooksPath .githooks` |
+| **Alle Prüfungen (wie CI)** | `scripts/check.sh` — mit `--docker` zusätzlich Image und Smoke-Test |
 | Tests | `pytest` |
 | Linting / Formatierung | `ruff check . && ruff format --check . && npm run typecheck --prefix skytech_omniai/web` |
 | Build | `docker build -t skytech-omniai skytech_omniai` |
+| Release-Trockenlauf | `python3 scripts/release.py plan` |
 
-Vor jedem Commit müssen Tests und Linting fehlerfrei durchlaufen.
+Vor jedem Commit muss `scripts/check.sh` fehlerfrei durchlaufen. Dieselben Prüfungen laufen in
+GitHub bei jedem Push auf `agent/main` ([docs/test-strategie.md](docs/test-strategie.md)).
 
 ## Wo steht was
 

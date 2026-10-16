@@ -1,0 +1,7 @@
+# Regeln für hadolint (Job "addon-lint" in .github/workflows/ci.yaml).
+failure-threshold: warning
+ignored:
+  # Paketversionen für apk festzunageln bricht den Bau, sobald Alpine eine
+  # Sicherheitskorrektur nachschiebt — die alte Fassung verschwindet dann vom
+  # Spiegel. Festgenagelt ist stattdessen die Alpine-Fassung in build.yaml.
+  - DL3018
