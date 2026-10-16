@@ -42,6 +42,11 @@ wo nicht.
   Websuche-Schalter im Aufruf **vor** dem Unterbefehl. Ein Test hält diese Reihenfolge fest.
 - **`codex exec` kennt kein `--append-system-prompt`.** Die Rolle „JSON-Endpunkt“ wird dem Prompt
   vorangestellt. Wer sie in ein eigenes Feld verschieben will, findet keines.
+- **Ohne `with-contenv` fehlt dem Prozess die Container-Umgebung.** Das Basisimage startet über
+  s6-overlay (`/init`) und reicht den `CMD` mit bereinigter Umgebung weiter. Dann fehlen
+  `SUPERVISOR_TOKEN` (die Seite „Einstellungen“ zeigt nur an) und das `TZ` aus dem Dockerfile
+  (Log-Zeitstempel in UTC). Der `CMD` beginnt deshalb mit `/usr/bin/with-contenv` — nicht
+  wegoptimieren. Fehlt der Token trotz Optionsdatei, warnt das Log beim Start.
 - **Speichern der Einstellungen hängt an der Absenderadresse des Ingress-Proxys.** `PUT /settings`
   prüft `172.30.32.2`, die feste Adresse des Supervisor-Ingress. Ändert Home Assistant diese
   Adresse, lehnt das Add-on jedes Speichern mit „nur über die Seitenleiste“ ab — dann die Konstante

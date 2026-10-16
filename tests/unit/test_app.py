@@ -241,13 +241,16 @@ def test_settings_show_no_credential_value(client, supervisor):
     daten = client.get("/settings", environ_base=INGRESS).get_json()
 
     assert daten["can_save"] is True
+    assert daten["read_only_reason"] is None
     assert daten["secrets_set"]["claude_oauth_token"] is True
     assert "geheim" not in json.dumps(daten)
 
 
 def test_settings_from_the_open_port_are_read_only(client, supervisor):
     """Über Port 8000 lässt sich nichts ändern — auch nicht mit gefälschtem Ingress-Kopf."""
-    assert client.get("/settings").get_json()["can_save"] is False
+    daten = client.get("/settings").get_json()
+    assert daten["can_save"] is False
+    assert daten["read_only_reason"] == "ingress"
 
     antwort = client.put(
         "/settings",
@@ -261,7 +264,11 @@ def test_settings_from_the_open_port_are_read_only(client, supervisor):
 
 def test_settings_outside_home_assistant_cannot_be_saved(client):
     """Ohne Supervisor zeigt die Seite den Stand nur an."""
-    assert client.get("/settings", environ_base=INGRESS).get_json()["can_save"] is False
+    daten = client.get("/settings", environ_base=INGRESS).get_json()
+    assert daten["can_save"] is False
+    # Ohne Supervisor-Zugang ist der Ingress nicht schuld — die Seite muss den
+    # richtigen Grund nennen.
+    assert daten["read_only_reason"] == "supervisor"
 
     antwort = client.put(
         "/settings", json={"options": {}, "stored_revision": "x"}, environ_base=INGRESS
