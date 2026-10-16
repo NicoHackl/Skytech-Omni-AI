@@ -11,6 +11,8 @@ Datei angefasst wurde.
 
 ## [Unveröffentlicht]
 
+## [0.9.2] — 16.10.2026
+
 ### Geändert
 
 - Home Assistant überwacht das Add-on nach dem aktuellen Verfahren und startet es neu, wenn es
