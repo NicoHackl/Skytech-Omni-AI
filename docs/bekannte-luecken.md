@@ -42,6 +42,13 @@ wo nicht.
   Websuche-Schalter im Aufruf **vor** dem Unterbefehl. Ein Test hält diese Reihenfolge fest.
 - **`codex exec` kennt kein `--append-system-prompt`.** Die Rolle „JSON-Endpunkt“ wird dem Prompt
   vorangestellt. Wer sie in ein eigenes Feld verschieben will, findet keines.
+- **Speichern der Einstellungen hängt an der Absenderadresse des Ingress-Proxys.** `PUT /settings`
+  prüft `172.30.32.2`, die feste Adresse des Supervisor-Ingress. Ändert Home Assistant diese
+  Adresse, lehnt das Add-on jedes Speichern mit „nur über die Seitenleiste“ ab — dann die Konstante
+  `INGRESS_PROXY_ADDR` in `app.py` nachziehen. Lokal (ohne Supervisor) ist die Seite nur Anzeige.
+- **Änderungen im Reiter „Konfiguration“ brauchen weiter einen Neustart.** Nur die Seite
+  „Einstellungen“ setzt die Umgebung des laufenden Prozesses neu. Wer im Reiter speichert und nicht
+  neu startet, sieht auf der Seite den neuen Wert, während die Anfragen noch mit dem alten laufen.
 - **Das Auswahlfeld `model` ist für alle Anbieter dasselbe.** Steht dort ein Claude-Alias und der
   Anbieter ist auf Gemini oder ChatGPT gestellt, lehnt der Provider die Anfrage ab — mit einer
   Meldung, die die gültigen Werte nennt. Das ist gewollt und kein Bug.
