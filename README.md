@@ -133,7 +133,7 @@ Vor dem ersten Commit lesen: [CONTRIBUTING.md](CONTRIBUTING.md).
 | Verbindliche Projektregeln (Menschen **und** KI-Agenten) | [AGENTS.md](AGENTS.md) |
 | Technische Referenz | [docs/README.md](docs/README.md) |
 | Beschreibung im Add-on-Store | [skytech_omniai/info.md](skytech_omniai/info.md) |
-| Änderungen je Version | [CHANGELOG.md](CHANGELOG.md) |
+| Änderungen je Version | [skytech_omniai/CHANGELOG.md](https://github.com/NicoHackl/Skytech-Omni-AI/blob/main/skytech_omniai/CHANGELOG.md) auf `main` — auch im Update-Dialog von Home Assistant |
 
 ## Lizenz
 

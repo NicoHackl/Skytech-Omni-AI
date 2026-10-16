@@ -13,7 +13,7 @@ npm run typecheck --prefix skytech_omniai/web       # Typprüfung der Oberfläch
 
 `scripts/check.sh` muss vor jedem Commit fehlerfrei durchlaufen — siehe
 [git-workflow.md](git-workflow.md). Als pre-push-Hook (`git config core.hooksPath .githooks`)
-läuft es vor jedem Push von selbst.
+läuft es vor jedem Push von selbst; der commit-msg-Hook prüft dazu jede Commit-Message.
 
 ## Testarten
 
@@ -22,8 +22,8 @@ läuft es vor jedem Push von selbst.
 | Unit | Eine Funktion oder Klasse, keine externen Zugriffe | `tests/unit/` |
 | Schnittstelle | Die Endpunkte über den Testclient von Flask, Anbieter als Attrappe | `tests/unit/test_app.py` |
 | Regression | Ein konkret aufgetretener Bug, damit er nicht wiederkehrt | beim jeweiligen Modul |
-| Konsistenz | Die von Hand gepflegten Dateien passen zueinander und zum Code: Optionen ↔ Schema ↔ `OPTION_ENV_MAP`, Auswahllisten ↔ Anbieter und Modelle, `build.yaml` ↔ `arch`, `COPY` im Dockerfile ↔ Module, Changelog ↔ Version | `tests/unit/test_addon_config.py` |
-| Werkzeuge | Versionssprung und Changelog des Release-Skripts | `tests/scripts/` |
+| Konsistenz | Die von Hand gepflegten Dateien passen zueinander und zum Code: Optionen ↔ Schema ↔ `OPTION_ENV_MAP`, Auswahllisten ↔ Anbieter und Modelle, `build.yaml` ↔ `arch`, `COPY` im Dockerfile ↔ Module; Version `dev` und kein Changelog auf dem Arbeitsbranch (D-017) | `tests/unit/test_addon_config.py` |
+| Werkzeuge | Versionssprung, Changelog-Trailer und Changelog des Release-Skripts; Prüfung der Commit-Messages | `tests/scripts/` |
 | Smoke-Test | Das fertige Image startet, liefert `/health`, `/models`, die Oberfläche über den Ingress und bringt beide Befehlszeilen mit | `scripts/smoke_test.sh` |
 
 Die Teststruktur spiegelt die Struktur des Quellcodes. Zu `skytech_omniai/providers/factory.py`
@@ -102,7 +102,7 @@ Release-Job startet ([git-workflow.md](git-workflow.md#release)).
 | Add-on, Workflows, Dockerfile | Add-on-Linter von Home Assistant für `config.yaml`/`build.yaml`, `actionlint` (mit shellcheck) für die Workflows, `hadolint` (Regeln in `.hadolint.yaml`) | — |
 | Image und Smoke-Test | Bau für `amd64` mit dem Basisimage aus `build.yaml`, danach `scripts/smoke_test.sh` | `scripts/check.sh --docker` (Architektur des eigenen Rechners) |
 | Sicherheit | `gitleaks` über die ganze Historie, `pip-audit`, `npm audit` (nur Laufzeit, ab „high“) | — |
-| Release-Vorschau | Zeigt den Versionssprung, warnt bei leerem `Unveröffentlicht` | `python3 scripts/release.py plan` |
+| Release-Vorschau | Commit-Messages seit dem letzten Release (nur Warnungen), Versionssprung und fertiger Changelog-Abschnitt in der Zusammenfassung; warnt, wenn ein Release keinen Trailer hat | `git fetch && python3 scripts/release.py plan`; die Messages prüft der commit-msg-Hook |
 
 Daneben laufen, ohne das Release zu blockieren: CodeQL für Python und TypeScript
 ([`codeql.yaml`](../.github/workflows/codeql.yaml), auch wöchentlich) und Dependabot für pip,

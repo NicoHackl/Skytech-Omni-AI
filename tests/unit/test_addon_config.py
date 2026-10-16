@@ -1,6 +1,6 @@
 """Konsistenz der Add-on-Dateien untereinander und mit dem Code.
 
-config.yaml, build.yaml, Dockerfile und CHANGELOG.md werden von Hand gepflegt,
+config.yaml, build.yaml und Dockerfile werden von Hand gepflegt,
 und jede davon wiederholt etwas, das auch im Python-Code steht. Läuft eine
 Stelle auseinander, merkt das kein Unit-Test der Module — erst der Nutzer, wenn
 Home Assistant eine Option ablehnt oder der Container ohne ein Modul startet.
@@ -86,18 +86,15 @@ def test_build_yaml_covers_exactly_the_supported_architectures(config):
     assert set(build["build_from"]) == set(config["arch"])
 
 
-def test_version_is_semver(config):
-    """Die Version ist MAJOR.MINOR.PATCH — das Release-Skript rechnet damit."""
-    assert re.fullmatch(r"\d+\.\d+\.\d+", config["version"])
+def test_version_is_the_dev_placeholder(config):
+    """Auf agent/main steht "dev" — die Version setzt nur der Release-Job (D-017)."""
+    assert config["version"] == "dev"
 
 
-def test_changelog_names_the_configured_version_as_latest(config):
-    """Die oberste Version im Changelog ist die, die das Add-on ausliefert."""
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    versions = re.findall(r"^## \[(\d+\.\d+\.\d+)\] — \d{2}\.\d{2}\.\d{4}$", changelog, re.M)
-
-    assert versions, "CHANGELOG.md enthält keine veröffentlichte Version"
-    assert versions[0] == config["version"]
+def test_no_changelog_on_the_working_branch():
+    """Der Changelog entsteht beim Release aus den Trailern, nicht als Datei hier."""
+    assert not (ROOT / "CHANGELOG.md").exists()
+    assert not (ADDON_DIR / "CHANGELOG.md").exists()
 
 
 def test_dockerfile_copies_every_python_module():

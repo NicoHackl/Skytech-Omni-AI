@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Prüft Betreff (Conventional Commits) und Changelog-Trailer, solange der
+# Commit noch lokal ist — danach lässt er sich nicht mehr ändern.
+# Aktivierung einmalig: git config core.hooksPath .githooks
+
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+python=python3
+[ -x "$root/.venv/bin/python" ] && python="$root/.venv/bin/python"
+exec "$python" "$root/scripts/commit_msg.py" "$1"
