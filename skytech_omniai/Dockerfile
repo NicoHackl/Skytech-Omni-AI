@@ -48,6 +48,13 @@ COPY providers ./providers
 
 EXPOSE 8000
 
+# Der Supervisor startet das Add-on neu, wenn Docker es als "unhealthy" meldet
+# (Ersatz für den früheren "watchdog" in config.yaml). curl bringt das
+# Basisimage mit. "|| exit 1", weil Docker nur 0 und 1 als Ergebnis kennt —
+# curl meldet einen Fehler mit eigenen Codes.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD ["sh", "-c", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
+
 # Das Basisimage startet über s6-overlay (/init), und das reicht den CMD mit
 # bereinigter Umgebung weiter: ohne with-contenv fehlen dem Prozess sowohl
 # SUPERVISOR_TOKEN (Seite „Einstellungen“ kann nicht speichern) als auch das

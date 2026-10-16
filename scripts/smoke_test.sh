@@ -72,6 +72,15 @@ case "$zone" in
   *) fail "Container läuft nicht in deutscher Zeit (date +%Z ergab $zone)." ;;
 esac
 
+# Den HEALTHCHECK wertet der Supervisor aus, um das Add-on neu zu starten. Er
+# muss gesetzt sein und jetzt schon gelingen — auf sein erstes Intervall zu
+# warten, hielte den Test eine halbe Minute auf.
+health_cmd="$(docker inspect -f '{{if .Config.Healthcheck}}{{join .Config.Healthcheck.Test " "}}{{end}}' "$name")"
+[ -n "$health_cmd" ] || fail "Image hat keinen HEALTHCHECK."
+docker exec "$name" curl -fsS http://127.0.0.1:8000/health >/dev/null \
+  || fail "HEALTHCHECK-Befehl schlägt im Container fehl."
+echo "✓ HEALTHCHECK gesetzt und erfolgreich"
+
 if docker logs "$name" 2>&1 | grep -q "Traceback"; then
   fail "Im Log steht ein Traceback."
 fi
