@@ -293,7 +293,7 @@ def addon():
             if SLUG_MUSTER.fullmatch(slug):
                 _addon_link.update(
                     name=str(info.get("name") or ADDON_FALLBACK_NAME),
-                    config_path=f"/hassio/addon/{slug}/config",
+                    config_path=f"/config/app/{slug}/config",
                 )
             elif info:
                 log.warning("Supervisor meldet keinen gültigen Add-on-Slug, Sidebar-Fuß ohne Link")
