@@ -66,7 +66,7 @@ neben Port 8000 wird:
   hat. Der Kopf `X-Ingress-Path` taugt dafür nicht, den kann jeder Aufrufer selbst schicken. Ohne
   diese Sperre könnte jeder, der Port 8000 erreicht, `full` einschalten und über einen Prompt die
   Zugänge auslesen.
-- **Nur für Administratoren.** `panel_admin: true` blendet die Oberfläche für andere Nutzer aus
+- **Nur für Administratoren.** `panel_admin` (Vorgabe `true`, deshalb nicht eigens in `config.yaml` gesetzt) blendet die Oberfläche für andere Nutzer aus
   der Seitenleiste aus.
 - **Zugänge nur schreiben.** `GET /settings` liefert jedes Zugangsfeld leer und dazu nur
   „hinterlegt ja/nein“ — dieselbe Auskunft wie `GET /status`. Ein Wert kommt nie zurück.

@@ -9,8 +9,6 @@ arch:
   - aarch64
   - amd64
 init: false
-startup: application
-boot: auto
 ports:
   8000/tcp: 8000
 ports_description:
@@ -19,19 +17,18 @@ ports_description:
 # Optionen über die Supervisor-API. Speichern braucht die Manager-Rolle (D-015).
 hassio_api: true
 hassio_role: manager
-# Die Oberfläche ändert Zugänge und Werkzeugstufe — das ist eine Aufgabe für
-# Administratoren und wird hier ausdrücklich so markiert.
-panel_admin: true
+# Die Oberfläche ändert Zugänge und Werkzeugstufe — eine Aufgabe für
+# Administratoren. Das ist die Vorgabe von panel_admin (true); der Linter von
+# Home Assistant verlangt, Vorgaben nicht zu wiederholen. Nie auf false setzen.
 # Die Oberfläche wird von Home Assistant eingebettet; sie läuft im selben
 # Prozess wie die Schnittstelle und braucht deshalb keinen eigenen Port.
 ingress: true
 ingress_port: 8000
 panel_icon: "mdi:robot"
 panel_title: "OmniAI"
-# Neustart, sobald das Add-on nicht mehr antwortet.
-watchdog: "http://[HOST]:[PORT:8000]/health"
-map:
-  - data:rw
+# Neustart bei Hängern: über den HEALTHCHECK im Dockerfile, nicht mehr über
+# den veralteten Schlüssel "watchdog". /data ist immer eingebunden und braucht
+# keinen Eintrag unter "map".
 # Bequemer als hier lassen sich alle Optionen auf der Seite „Einstellungen“ in
 # der Oberfläche (Seitenleiste „OmniAI“) setzen. Sie schreibt dieselben
 # Optionen über die Supervisor-API; beide Wege zeigen immer denselben Stand.
