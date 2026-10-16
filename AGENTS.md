@@ -119,8 +119,8 @@ passende Datei lesen, statt zu raten:
 | [docs/frontend.md](docs/frontend.md) | Frontend-Stack, Ordnerstruktur, Routing, API-Client, Seiten- und Formularmuster |
 | [docs/design-system.md](docs/design-system.md) | Design-Tokens, Klassenkatalog, Zustände, Responsiv, Icons, Barrierefreiheit |
 | [docs/nutzertexte.md](docs/nutzertexte.md) | Was der Nutzer zu sehen bekommt: Formatierung, Fehlermeldungen, Formulierung |
-| [docs/git-workflow.md](docs/git-workflow.md) | Branches, Commit-Format, Versionierung, Release |
-| [docs/test-strategie.md](docs/test-strategie.md) | Testarten, Pflicht-Testfälle, Coverage-Ziel |
+| [docs/git-workflow.md](docs/git-workflow.md) | Branches, Commit-Format, Changelog-Trailer, Hooks, Versionierung, automatisches Release |
+| [docs/test-strategie.md](docs/test-strategie.md) | Testarten, Pflicht-Testfälle, Coverage-Ziel, Jobs der CI |
 | [docs/design-entscheidungen.md](docs/design-entscheidungen.md) | Entscheidungs-Log — Quelle der Wahrheit fürs „warum" |
 | [docs/konfiguration.md](docs/konfiguration.md) | Env-Variablen, Config-Optionen, Secrets-Handhabung |
 | [docs/api-referenz.md](docs/api-referenz.md) | Endpunkte und öffentliche Schnittstellen |
@@ -133,9 +133,11 @@ passende Datei lesen, statt zu raten:
 1. Passende `docs/`-Datei lesen, bevor Code entsteht.
 2. [docs/bekannte-luecken.md](docs/bekannte-luecken.md) prüfen, bevor angenommen wird, eine in der
    Doku beschriebene Funktion sei tatsächlich implementiert.
-3. Implementieren, Tests und Linting laufen lassen.
-4. Changelog- und Doku-Einträge im selben Arbeitspaket nachziehen.
-5. Committen und pushen auf `agent/main`.
+3. Implementieren, dann `scripts/check.sh` grün bekommen (Tests, Linting, Bau — wie die CI).
+4. Betroffene `docs/`-Dateien im selben Arbeitspaket nachziehen.
+5. Committen — bei nutzerrelevanter Änderung mit `Changelog-<Kategorie>:`-Trailer (Regel 4) —
+   und pushen auf `agent/main`. Version, Changelog-Datei und `main` fasst nur die CI an; nach
+   dem Push ist nichts weiter zu tun, auch kein `git pull --rebase`.
 6. Neue Grundsatzentscheidung? → Eintrag in
    [docs/design-entscheidungen.md](docs/design-entscheidungen.md), ausführlich als ADR unter
    [docs/adr/](docs/adr/).

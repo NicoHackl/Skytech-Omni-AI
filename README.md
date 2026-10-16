@@ -118,13 +118,16 @@ npm ci --prefix skytech_omniai/web
 python skytech_omniai/app.py                    # Schnittstelle auf Port 8000
 npm run dev --prefix skytech_omniai/web         # Oberfläche auf Port 5174
 
-pytest                                          # Tests
-ruff check . && ruff format --check .           # Linting
-npm run typecheck --prefix skytech_omniai/web   # Typprüfung
-docker build -t skytech-omniai skytech_omniai   # Add-on-Bild bauen
+git config core.hooksPath .githooks             # einmalig: commit-msg- und pre-push-Hook
+scripts/check.sh                                # alle Prüfungen wie in der CI
+scripts/check.sh --docker                       # zusätzlich Bild bauen und Smoke-Test
 ```
 
-Vor dem ersten Commit lesen: [CONTRIBUTING.md](CONTRIBUTING.md).
+Gearbeitet wird auf `agent/main`. Jeder grüne Push mit Änderung am Add-on wird automatisch
+veröffentlicht: die CI setzt Version und Changelog und schreibt `main` — von Hand wird dort nichts
+geändert. Changelog-Einträge stehen als Trailer im Commit. Ablauf:
+[docs/git-workflow.md](docs/git-workflow.md). Vor dem ersten Commit lesen:
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Dokumentation
 
