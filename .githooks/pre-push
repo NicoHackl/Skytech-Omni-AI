@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Verhindert, dass ein Stand gepusht wird, der in der CI ohnehin scheitern
+# würde. Aktivierung einmalig: git config core.hooksPath .githooks
+# Im Notfall überspringen: git push --no-verify (die CI prüft trotzdem).
+
+set -euo pipefail
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"
