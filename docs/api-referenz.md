@@ -187,7 +187,7 @@ wird die Absenderadresse des Ingress-Proxys, nicht ein Kopf; Begründung als D-0
 ## `GET /addon`
 
 ```json
-{ "name": "Skytech OmniAI", "config_path": "/hassio/addon/b80e8355_skytech_omniai/config" }
+{ "name": "Skytech OmniAI", "config_path": "/config/app/b80e8355_skytech_omniai/config" }
 ```
 
 Name und Konfigurationsseite des Add-ons in Home Assistant für den Sidebar-Fuß (D-018). Antwortet
