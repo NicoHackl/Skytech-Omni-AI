@@ -370,7 +370,7 @@ def test_addon_links_to_the_config_page_with_repository_prefix(client, info_supe
     """Der Slug kommt vom Supervisor, samt Präfix des Add-on-Repositorys."""
     assert client.get("/addon").get_json() == {
         "name": "Skytech OmniAI",
-        "config_path": "/hassio/addon/b80e8355_skytech_omniai/config",
+        "config_path": "/config/app/b80e8355_skytech_omniai/config",
     }
 
 
