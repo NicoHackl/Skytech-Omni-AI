@@ -4,12 +4,11 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
-Kategorien: `Hinzugefügt`, `Geändert`, `Veraltet`, `Entfernt`, `Behoben`, `Sicherheit`.
+## [0.9.3] — 16.10.2026
 
-Einträge sind aus **Nutzersicht** formuliert — was sich für den Anwender ändert, nicht welche
-Datei angefasst wurde.
+### Geändert
 
-## [Unveröffentlicht]
+- Die Änderungen jeder Version erscheinen jetzt direkt im Update-Dialog von Home Assistant.
 
 ## [0.9.2] — 16.10.2026
 

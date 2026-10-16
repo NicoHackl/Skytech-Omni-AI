@@ -68,7 +68,7 @@ if [ "$with_docker" = true ]; then
 fi
 
 if [ "$(git config --get core.hooksPath || true)" != ".githooks" ]; then
-  printf '\nHinweis: pre-push-Hook nicht aktiv. Einmalig: git config core.hooksPath .githooks\n'
+  printf '\nHinweis: Hooks (commit-msg, pre-push) nicht aktiv. Einmalig: git config core.hooksPath .githooks\n'
 fi
 
 printf '\n\033[1;32m✓ Alle Prüfungen bestanden.\033[0m\n'

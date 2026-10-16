@@ -76,12 +76,17 @@ def test_apply_options_ignores_empty_values():
     assert "CLAUDE_CODE_OAUTH_TOKEN" not in os.environ
 
 
-def test_read_addon_version_reads_config_yaml():
-    """Die Version kommt aus config.yaml und wird nicht im Code gedoppelt."""
-    version = read_addon_version()
+def test_read_addon_version_reads_config_yaml(tmp_path, monkeypatch):
+    """Die Version kommt aus config.yaml und wird nicht im Code gedoppelt.
 
-    assert version is not None
-    assert version[0].isdigit()
+    Mit eigener Datei: im Repo steht "dev", die echte Nummer setzt erst der
+    Release-Job auf main (D-017).
+    """
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text('name: "x"\nversion: "0.9.3"\n', encoding="utf-8")
+    monkeypatch.setattr(config_loader, "CONFIG_PATH", config_file)
+
+    assert read_addon_version() == "0.9.3"
 
 
 def test_read_addon_version_returns_none_without_file(tmp_path, monkeypatch):

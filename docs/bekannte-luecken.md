@@ -13,13 +13,18 @@ wo nicht.
 
 ## Stolpersteine
 
-- **Nach jedem Release liegt ein fremder Commit auf `agent/main`.** Der Release-Job legt
-  `chore(release): Version X.Y.Z` an. Wer danach ohne `git pull --rebase` weiterarbeitet, wird
-  beim nächsten Push abgewiesen. Ein `--force` ist **nie** die Lösung — er nähme `main` den
-  Vorfahren und der nächste Fast-Forward schlüge fehl.
 - **Ein Push auf `agent/main` ist ein Release.** Ändert er etwas unter `skytech_omniai/` und ist
   die CI grün, bekommen alle Installationen das Update angeboten. Halbfertiges gehört auf einen
-  `feature/`-Branch (D-016).
+  `feature/`-Branch (D-017).
+- **`main` ist kein Vorfahr von `agent/main`.** Jeder Release-Commit trägt Version und Changelog,
+  die es auf `agent/main` nicht gibt. Nie von `main` abzweigen und nie `main` in `agent/main`
+  mergen — sonst landen `version: "0.x.y"` und `skytech_omniai/CHANGELOG.md` im Arbeitsbranch,
+  und der Konsistenztest schlägt an.
+- **Ein Changelog-Trailer ist nach dem Push endgültig.** `agent/main` verbietet das Umschreiben
+  der Historie. Ein falscher Eintrag bleibt stehen; ergänzt wird mit dem nächsten Commit. Der
+  commit-msg-Hook fängt Tippfehler in der Kategorie ab, den Wortlaut prüft er nicht.
+- **Die Oberfläche zeigt bei lokal gebautem Image „Version dev“.** Richtig so: die Nummer
+  entsteht erst beim Release auf `main`.
 - **Der Build-Kontext ist der Add-on-Ordner, nicht die Repo-Wurzel.** Eine Datei, die im
   `Dockerfile` mit `COPY` geholt wird, muss unter `skytech_omniai/` liegen. Deshalb steht `web/`
   dort und nicht in der Wurzel. Ein `COPY ../etwas` schlägt beim Supervisor fehl, auch wenn es
@@ -90,5 +95,5 @@ wo nicht.
 
 ---
 
-Wird ein Punkt behoben, wird er hier **gelöscht** und im [CHANGELOG.md](../CHANGELOG.md) vermerkt.
+Wird ein Punkt behoben, wird er hier **gelöscht** und mit einem Changelog-Trailer im Commit vermerkt.
 Eine Liste voller erledigter Einträge liest niemand mehr.
