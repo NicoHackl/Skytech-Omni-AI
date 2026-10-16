@@ -11,6 +11,8 @@ KI-Agenten gleichermaßen**. Diese Datei wiederholt sie nicht, sondern nennt nur
 4. [docs/entwicklerrichtlinien.md](docs/entwicklerrichtlinien.md) — Naming, Struktur, Kommentarstil.
 5. [docs/nutzertexte.md](docs/nutzertexte.md) — was der Nutzer zu sehen bekommt, und was nicht.
 6. [docs/test-strategie.md](docs/test-strategie.md) — was getestet werden muss.
+7. Einmalig den pre-push-Hook aktivieren: `git config core.hooksPath .githooks`. Er führt
+   `scripts/check.sh` vor jedem Push aus — dieselben Prüfungen wie die CI.
 
 ## Vor jedem Pull Request
 
