@@ -19,7 +19,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from waitress import serve
 from werkzeug.exceptions import NotFound
 
-from config_loader import apply_options_to_env, load_options, read_addon_version
+from config_loader import OPTIONS_PATH, apply_options_to_env, load_options, read_addon_version
 from providers.base_provider import resolve_tool_access
 from providers.claude_sub_provider import CLAUDE_MODELS
 from providers.codex_sub_provider import CODEX_MODELS
@@ -198,11 +198,19 @@ def settings_read():
 
     Zugänge kommen nur als „hinterlegt ja/nein“ zurück — dieselbe Auskunft,
     die ``/status`` ohnehin gibt. ``can_save`` sagt der Oberfläche, ob sie ein
-    Formular oder nur eine Anzeige rendert.
+    Formular oder nur eine Anzeige rendert; ``read_only_reason`` warum nicht:
+    ``supervisor`` (kein Zugang zu den Optionen) oder ``ingress`` (Aufruf über
+    den offenen Port). Die Oberfläche übersetzt das in einen Satz.
     """
     supervisor = SupervisorClient()
     options, from_supervisor = _stored_options(supervisor)
-    return jsonify({**public_view(options), "can_save": from_supervisor and _from_ingress()})
+    if not from_supervisor:
+        reason = "supervisor"
+    elif not _from_ingress():
+        reason = "ingress"
+    else:
+        reason = None
+    return jsonify({**public_view(options), "can_save": reason is None, "read_only_reason": reason})
 
 
 @app.route("/settings", methods=["PUT"])
@@ -250,7 +258,7 @@ def settings_save():
 
     apply_options_to_env(merged, clear_missing=True)
     log.info("Einstellungen über die Oberfläche gespeichert")
-    return jsonify({**public_view(merged), "can_save": True})
+    return jsonify({**public_view(merged), "can_save": True, "read_only_reason": None})
 
 
 @app.route("/health", methods=["GET"])
@@ -319,6 +327,15 @@ def spa_datei(datei: str) -> Response:
 
 
 if __name__ == "__main__":
+    # Liegt eine Optionsdatei vor, läuft das Add-on in Home Assistant — dann
+    # muss der Supervisor-Token da sein. Fehlt er, kann die Seite
+    # „Einstellungen“ nichts speichern; das soll im Log stehen, nicht erst
+    # auffallen, wenn jemand vergeblich speichern will.
+    if Path(OPTIONS_PATH).is_file() and not SupervisorClient().available:
+        log.warning(
+            "SUPERVISOR_TOKEN fehlt in der Umgebung — die Seite „Einstellungen“ "
+            "kann nichts speichern. Startbefehl im Dockerfile prüfen (with-contenv)."
+        )
     port = int(os.environ.get("PORT", 8000))
     log.info("Skytech OmniAI startet auf Port %s", port)
     serve(app, host="0.0.0.0", port=port, threads=8)

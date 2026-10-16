@@ -11,6 +11,23 @@ Datei angefasst wurde.
 
 ## [Unveröffentlicht]
 
+## [0.9.1] — 16.10.2026
+
+### Behoben
+
+- **Einstellungen ließen sich in Home Assistant nicht speichern.** Das Add-on bekam beim Start den
+  Zugang zu Home Assistant nicht mit, die Seite „Einstellungen“ zeigte deshalb alles nur an — mit
+  dem irreführenden Hinweis, sie sei nicht über die Seitenleiste geöffnet. Jetzt lässt sich dort
+  speichern.
+- Die Uhrzeiten im Protokoll des Add-ons stehen wieder in deutscher Zeit statt zwei Stunden
+  daneben.
+
+### Geändert
+
+- Kann die Seite „Einstellungen“ nicht speichern, nennt sie jetzt den tatsächlichen Grund.
+- Passt das gespeicherte Standardmodell nicht zum Anbieter (möglich über den Reiter
+  „Konfiguration“), ist das Feld gleich beim Öffnen markiert und nicht erst beim Speichern.
+
 ## [0.9.0] — 16.10.2026
 
 ### Hinzugefügt

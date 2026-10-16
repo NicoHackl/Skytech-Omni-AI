@@ -139,7 +139,8 @@ Die Einstellungen für die gleichnamige Seite der Oberfläche — dieselben Opti
     "gemini_api_key": false
   },
   "stored_revision": "<sha256>",
-  "can_save": true
+  "can_save": true,
+  "read_only_reason": null
 }
 ```
 
@@ -149,6 +150,8 @@ Die Einstellungen für die gleichnamige Seite der Oberfläche — dieselben Opti
   zurückgeschickt.
 - `can_save` ist nur `true`, wenn das Add-on in Home Assistant läuft **und** der Aufruf über den
   Ingress kam. Sonst zeigt die Oberfläche die Werte nur an.
+- `read_only_reason` sagt, warum nicht: `supervisor` (das Add-on kommt nicht an seine Optionen)
+  oder `ingress` (Aufruf über Port 8000); sonst `null`. Die Oberfläche macht daraus einen Satz.
 - Ohne Supervisor gilt die beim Start gelesene Datei `/data/options.json`.
 
 ## `PUT /settings`
