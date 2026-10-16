@@ -42,6 +42,7 @@ geprüft, nicht gegen die Absicht. Was hier „fertig" heißt, muss laufen.
 | Übersicht mit Anbieter und hinterlegten Zugängen | fertig | [frontend.md](frontend.md) |
 | Testanfrage in der Oberfläche | fertig | [frontend.md](frontend.md) |
 | Modellübersicht | fertig | [frontend.md](frontend.md) |
+| Einstellungen in der Oberfläche, ohne Neustart | fertig | D-015 |
 | Hell- und Dunkel-Modus mit Schalter | fertig | [design-system.md](design-system.md) |
 
 ### M4 — Betrieb

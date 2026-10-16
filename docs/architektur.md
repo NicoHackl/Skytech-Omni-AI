@@ -65,12 +65,15 @@ Testanfragen.
 
   config_loader.py liest beim Start /data/options.json und legt die Werte
   als Umgebungsvariablen ab, aus denen sich alle Komponenten bedienen.
+  PUT /settings speichert über supervisor_client und setzt die Umgebung neu.
 ```
 
 | Komponente | Verantwortung | Darf nicht |
 |---|---|---|
 | `app.py` | HTTP-Schnittstelle, Auslieferung der Oberfläche, Übersetzung von Fehlern in Sätze | Mit einem Anbieter reden oder Modellnamen kennen |
-| `config_loader.py` | Optionen lesen, in die Umgebung schreiben, Version aus `config.yaml` lesen | Entscheiden, welcher Anbieter genommen wird |
+| `config_loader.py` | Optionen lesen, in die Umgebung schreiben, Version aus `config.yaml` lesen | Entscheiden, welcher Anbieter genommen wird; `/data/options.json` beschreiben |
+| `settings.py` | Was die Seite „Einstellungen“ sieht, Entwurf mit gespeichertem Stand verschmelzen, Felder prüfen | HTTP sprechen oder speichern |
+| `supervisor_client.py` | Eigene Optionen über die Supervisor-API lesen, prüfen, speichern | Optionswerte oder das Token loggen |
 | `providers/factory.py` | Anhand des Namens die Umsetzung wählen | Prompts ausführen |
 | `providers/base_provider.py` | Gemeinsame Schnittstelle, Auswertung der Modellantwort, Auflösung der Werkzeugstufe | Einen bestimmten Anbieter kennen |
 | `providers/*_provider.py` | Genau einen Anbieter ansprechen und seine Fehler übersetzen | HTTP-Antwortcodes des eigenen Servers festlegen |
@@ -81,8 +84,10 @@ ist das eine Design-Entscheidung → [design-entscheidungen.md](design-entscheid
 
 ## Datenfluss
 
-1. Beim Start liest `config_loader` die Datei `/data/options.json`, die der Supervisor aus dem
-   Reiter „Konfiguration" schreibt, und legt die Werte als Umgebungsvariablen ab.
+1. Beim Start liest `config_loader` die Datei `/data/options.json`, die der Supervisor verwaltet,
+   und legt die Werte als Umgebungsvariablen ab. Speichert die Seite „Einstellungen“, schreibt
+   `PUT /settings` die Optionen über den Supervisor und setzt die Umgebung sofort neu — die
+   Provider lesen ihre Werte bei jeder Anfrage, ein Neustart ist deshalb nicht nötig (D-015).
 2. Eine Anfrage trifft als `POST /ask` ein. `app.py` prüft, ob ein Prompt dabei ist.
 3. `ProviderFactory` wählt die Umsetzung: Angabe in der Anfrage, sonst Konfiguration, sonst Claude.
 4. Der Provider löst das Modell auf, hängt die JSON-Anweisung an den Prompt und ruft seinen Anbieter
@@ -128,6 +133,8 @@ Skytech-Omni-AI/                  # Repo-Wurzel = Add-on-Repository
     ├── info.md                   # Text, den der Add-on-Store anzeigt
     ├── app.py                    # HTTP-Schnittstelle und Auslieferung der Oberfläche
     ├── config_loader.py          # Optionen → Umgebungsvariablen
+    ├── settings.py               # Fachlogik der Seite „Einstellungen“
+    ├── supervisor_client.py      # eigene Optionen über die Supervisor-API
     ├── providers/                # je Anbieter eine Datei
     └── web/                      # Weboberfläche (React + TypeScript + Vite)
 ```

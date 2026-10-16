@@ -1,8 +1,29 @@
 # Konfiguration
 
-Alles, was das Add-on braucht, wird in Home Assistant im Reiter **Konfiguration** eingetragen.
-Der Supervisor schreibt die Werte nach `/data/options.json`; `config_loader.py` liest sie beim
-Start und legt sie als Umgebungsvariablen ab. Im Code steht kein einziger Zugangsdatenwert.
+Alles, was das Add-on braucht, wird auf der Seite **Einstellungen** der Oberfläche eingetragen
+(Seitenleiste **OmniAI**). Der Reiter **Konfiguration** des Add-ons zeigt dieselben Werte und
+funktioniert weiterhin: beide Wege schreiben dieselben Optionen über den Supervisor, es gibt keine
+zweite Konfigurationsdatei (D-015).
+
+Der Supervisor legt die Werte in `/data/options.json` ab. `config_loader.py` liest sie beim Start
+und legt sie als Umgebungsvariablen ab; die Datei wird vom Add-on nie beschrieben. Im Code steht
+kein einziger Zugangsdatenwert.
+
+## Seite „Einstellungen“
+
+- **Gilt sofort.** Nach dem Speichern setzt das Add-on die Umgebung neu; die Provider lesen ihre
+  Werte bei jeder Anfrage. Ein Neustart ist nicht nötig. Eine Änderung im Reiter „Konfiguration“
+  braucht dagegen weiterhin einen Neustart, weil dort niemand dem laufenden Prozess Bescheid sagt.
+- **Zugänge** werden nie angezeigt, nur „Hinterlegt“ oder „Kein Zugang“. Ein leeres Feld behält
+  den gespeicherten Wert, „Entfernen“ löscht ihn.
+- **Standardmodell** bietet nur Modelle des gewählten Anbieters an.
+- **Speichern nur über die Seitenleiste.** Über Port 8000 geöffnet, zeigt die Seite die Werte nur
+  an — siehe [sicherheit-datenschutz.md](sicherheit-datenschutz.md).
+- **Konflikt.** Wurde inzwischen anderswo gespeichert, lehnt das Add-on den alten Stand ab und
+  die Seite bietet an, den gespeicherten Stand zu laden.
+- Außerhalb von Home Assistant (kein `SUPERVISOR_TOKEN`) zeigt die Seite die Vorgabewerte nur an.
+
+Endpunkte: `GET /settings`, `PUT /settings` in [api-referenz.md](api-referenz.md).
 
 ## Add-on-Optionen
 
@@ -42,6 +63,8 @@ Aus den Optionen abgeleitet. Beim Betrieb außerhalb von Home Assistant werden s
 | `PORT` | nein | `8000` | Port der Schnittstelle |
 | `LOG_LEVEL` | nein | `INFO` | `DEBUG`, `INFO`, `WARNING` oder `ERROR` |
 | `TZ` | nein | `Europe/Berlin` | Zeitzone der Log-Zeitstempel; im Bild fest gesetzt |
+| `SUPERVISOR_TOKEN` | nein | vom Supervisor injiziert | Zugang zur Supervisor-API. Fehlt er, lässt sich auf der Seite „Einstellungen“ nichts speichern |
+| `SUPERVISOR_URL` | nein | `http://supervisor` | Adresse der Supervisor-API; nur für Entwicklung und Tests zu ändern |
 
 `auto` im Feld `model` ist ein Sentinel und wird wie ein leeres Feld behandelt — er landet nicht
 in `OMNIAI_MODEL`.
@@ -56,8 +79,9 @@ Deshalb wird diese Datei einmalig eingefügt.
    Anmeldung erfolgt mit dem ChatGPT-Konto, nicht mit einem API-Schlüssel — nur so zählen die
    Anfragen später auf das Abo.
 2. Den vollständigen Inhalt der dabei entstandenen Datei `~/.codex/auth.json` kopieren.
-3. Im Add-on unter „Konfiguration“ in das Feld `codex_auth_json` einfügen, `provider` auf
-   `codex_sub` stellen und das Add-on neu starten.
+3. Auf der Seite „Einstellungen“ in das Feld „Anmeldung des ChatGPT-Abos“ einfügen, als Anbieter
+   „ChatGPT (Abo)“ wählen und speichern. (Im Reiter „Konfiguration“: Feld `codex_auth_json`,
+   `provider` auf `codex_sub`, danach neu starten.)
 
 Das Add-on legt den Inhalt unter `/data/.codex/auth.json` ab — aber **nur, wenn sich der
 eingetragene Wert geändert hat**. Der Grund: die CLI frischt ihre Tokens im Betrieb auf und
@@ -94,7 +118,8 @@ Warum `web` und nicht `full` die Vorgabe ist: D-012 in
 Die Option betrifft `claude_sub` und `codex_sub`. Der Gemini-Provider ruft die Schnittstelle
 direkt auf und hat keine Werkzeuge; er antwortet aus seinem Trainingswissen.
 
-Nach dem Ändern der Option das Add-on neu starten. Ein unbekannter Wert wird nicht übernommen,
+Auf der Seite „Einstellungen“ heißt die Option „Werkzeuge“ und gilt nach dem Speichern sofort; im
+Reiter „Konfiguration“ geändert, braucht sie einen Neustart. Ein unbekannter Wert wird nicht übernommen,
 sondern fällt auf die Vorgabe zurück und erscheint als Warnung im Log — ein Tippfehler soll den
 Provider nicht lahmlegen.
 
@@ -108,7 +133,7 @@ Provider nicht lahmlegen.
 | `requirements-dev.txt` | pytest und ruff, nur für Entwicklung | ja |
 | `.env.example` | Vorlage ohne echte Werte | ja |
 | `.env` | Lokale Werte, enthält Zugangsdaten | **nein** |
-| `/data/options.json` | Vom Supervisor geschrieben, liegt nur im Container | **nein** |
+| `/data/options.json` | Vom Supervisor geschrieben, liegt nur im Container. Das Add-on liest sie nur | **nein** |
 
 ## Zugangsdaten
 

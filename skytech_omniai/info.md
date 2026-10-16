@@ -26,6 +26,20 @@ nutzen — ohne zusätzliche Kosten pro Anfrage.
 - **Eine Oberfläche in Home Assistant.** Zustand ansehen, Testanfrage stellen, Modelle
   nachschlagen — mit Hell- und Dunkel-Modus.
 
+## Einstellungen
+
+Alles, was das Add-on braucht, lässt sich in seiner Oberfläche einstellen: in der Seitenleiste
+von Home Assistant **OmniAI** öffnen und links **Einstellungen** wählen. Dort stehen Anbieter,
+Standardmodell, Werkzeuge und alle Zugänge. Gespeichertes gilt ab der nächsten Anfrage — ein
+Neustart ist nicht nötig.
+
+Der Reiter **Konfiguration** des Add-ons zeigt dieselben Werte und funktioniert weiterhin; beide
+Wege schreiben an dieselbe Stelle. Hinterlegte Zugänge zeigt die Oberfläche nur als
+„Hinterlegt“ — ein leeres Feld behält sie, „Entfernen“ löscht sie.
+
+> Beim Update auf 0.9.0 fragt Home Assistant einmal nach der Berechtigung „manager“. Ohne sie darf
+> das Add-on seine eigenen Einstellungen nicht speichern.
+
 ## Einrichtung — Claude (Abo)
 
 Ein Add-on läuft **ohne Bildschirm**; der Anmeldevorgang von Claude über den Browser ist dort nicht
@@ -39,9 +53,8 @@ möglich. Stattdessen wird ein langlebiges **Token** deines Pro/Max-Abos verwend
    ```
 
    Die Anmeldung öffnet sich im Browser, anschließend wird ein Token ausgegeben.
-2. **Token eintragen** — im Add-on unter **Konfiguration → `claude_oauth_token`** einfügen und
-   speichern.
-3. **Add-on neu starten.**
+2. **Token eintragen** — in der Seitenleiste unter **OmniAI → Einstellungen** in das Feld „Token des Claude-Abos“
+   einfügen und speichern. Ein Neustart ist nicht nötig.
 
 > **Alternative (kostenpflichtig):** Statt des Abos kann unter `anthropic_api_key` ein
 > Anthropic-Schlüssel hinterlegt werden. Der wird nach Verbrauch abgerechnet und nutzt das Abo
@@ -65,11 +78,10 @@ eingefügt.
 
    Wichtig: mit dem **ChatGPT-Konto** anmelden, nicht mit einem API-Schlüssel — nur so zählen die
    Anfragen auf dein Abo.
-2. **Inhalt eintragen** — den vollständigen Inhalt von `auth.json` im Add-on unter
-   **Konfiguration → `codex_auth_json`** einfügen und speichern.
-3. **Anbieter wählen** — `provider` auf `codex_sub`, bei `model` einen `gpt-*`-Eintrag auswählen
-   oder `auto` für die Vorgabe.
-4. **Add-on neu starten.**
+2. **Inhalt eintragen** — den vollständigen Inhalt von `auth.json` in der Seitenleiste unter **OmniAI → Einstellungen** in das
+   Feld „Anmeldung des ChatGPT-Abos“ einfügen.
+3. **Anbieter wählen** — auf derselben Seite „ChatGPT (Abo)“ und ein Modell oder „Vorgabe des
+   Anbieters“ wählen und speichern.
 
 Das Add-on übernimmt den eingetragenen Wert nur, **wenn er sich geändert hat** — sonst würde jeder
 Neustart die zwischenzeitlich erneuerte Anmeldung durch den alten Stand ersetzen. Meldet das
@@ -93,10 +105,9 @@ Add-on später, die Anmeldung gelte nicht mehr: Schritt 1 und 2 wiederholen.
 Gemini wird über einen Schlüssel angebunden (nach Verbrauch abgerechnet, kein Abo-Modell).
 
 1. **Schlüssel erzeugen** unter <https://aistudio.google.com/apikey>.
-2. **Schlüssel eintragen** im Add-on unter **Konfiguration → `gemini_api_key`**.
-3. **Anbieter und Modell wählen** — `provider` auf `gemini`, bei `model` einen `gemini-*`-Eintrag
-   auswählen oder `auto` für die Vorgabe.
-4. **Add-on neu starten.**
+2. **Schlüssel eintragen** in der Seitenleiste unter **OmniAI → Einstellungen** in das Feld „Gemini-Schlüssel“.
+3. **Anbieter und Modell wählen** — auf derselben Seite „Google Gemini“ und ein Modell oder
+   „Vorgabe des Anbieters“ wählen und speichern.
 
 Der Verlauf wird bei Google ausdrücklich **nicht** gespeichert.
 
@@ -115,8 +126,9 @@ Der Verlauf wird bei Google ausdrücklich **nicht** gespeichert.
 
 ## Modellauswahl
 
-Das Feld `model` in der Konfiguration ist ein **gemeinsames Auswahlfeld** für alle Anbieter und
-legt nur den **add-on-weiten Standard** fest:
+Das Standardmodell legt nur den **add-on-weiten Standard** fest. In den Einstellungen stehen nur
+die Modelle des gewählten Anbieters zur Auswahl; im Reiter „Konfiguration“ ist `model` dagegen ein
+**gemeinsames Auswahlfeld** für alle Anbieter:
 
 - `auto` — kein Modell erzwingen, der Anbieter entscheidet selbst.
 - `sonnet` / `opus` / `haiku` — gehören zu `claude_sub`.
@@ -153,8 +165,8 @@ Gesteuert wird das über die Option **`tool_access`**:
 > unterbunden, lesende Befehle im Add-on bleiben möglich. Wer auch das ausschließen will, wählt
 > `off` oder nutzt `claude_sub`.
 
-Nach dem Ändern der Option das **Add-on neu starten**. Ein vertippter Wert wird nicht übernommen,
-sondern fällt auf `web` zurück.
+Die Stufe heißt in den Einstellungen „Werkzeuge“ und gilt nach dem Speichern sofort. Ein im
+Reiter „Konfiguration“ vertippter Wert wird nicht übernommen, sondern fällt auf `web` zurück.
 
 > **Hinweis:** `tool_access` betrifft `claude_sub` und `codex_sub`. Google Gemini hat keinen
 > Web-Zugriff und antwortet allein aus seinem Trainingswissen.

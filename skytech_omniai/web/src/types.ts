@@ -35,3 +35,41 @@ export interface AskInput {
 
 /** Die Antwort ist das JSON des Modells — der Aufbau steht vorher nicht fest. */
 export type AskResponse = Record<string, unknown>
+
+/** Die Felder der Seite „Einstellungen“ — dieselben wie im Reiter „Konfiguration“. */
+export interface SettingsOptions {
+  provider: string
+  /** `auto` heißt: der Anbieter entscheidet. */
+  model: string
+  tool_access: string
+  claude_oauth_token: string
+  anthropic_api_key: string
+  codex_auth_json: string
+  openai_api_key: string
+  gemini_api_key: string
+}
+
+/** Schlüssel der Zugänge. Sie kommen vom Server immer leer zurück. */
+export type SecretKey =
+  | 'claude_oauth_token'
+  | 'anthropic_api_key'
+  | 'codex_auth_json'
+  | 'openai_api_key'
+  | 'gemini_api_key'
+
+/** Antwort von `GET /settings` und `PUT /settings`. */
+export interface SettingsResponse {
+  options: SettingsOptions
+  /** Ob zu einem Zugang ein Wert hinterlegt ist — nie der Wert selbst. */
+  secrets_set: Record<SecretKey, boolean>
+  /** Stand, auf dem ein Entwurf beruht. Wird beim Speichern zurückgeschickt. */
+  stored_revision: string
+  /** Nur über Home Assistant lässt sich speichern. */
+  can_save: boolean
+}
+
+/** Was an `PUT /settings` geht. Zugang: `""` = unverändert, `null` = entfernen. */
+export interface SettingsInput {
+  options: Omit<SettingsOptions, SecretKey> & Record<SecretKey, string | null>
+  stored_revision: string
+}
