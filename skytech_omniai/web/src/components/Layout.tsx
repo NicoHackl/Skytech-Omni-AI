@@ -1,7 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { api } from '../api'
-import { providerLabel } from '../provider'
+import { AddonFoot } from './AddonFoot'
 import { Icon } from './Icon'
 import { ThemeSwitch } from './Theme'
 
@@ -10,40 +9,9 @@ import { ThemeSwitch } from './Theme'
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-item${isActive ? ' active' : ''}`
 
-/* Nach dem Speichern der Einstellungen muss der Fuß der Sidebar den neuen
-   Anbieter zeigen. Ein Ereignis am Fenster reicht dafür; ein eigener
-   Zustands-Container wäre für einen einzigen Wert zu viel. */
-const SETTINGS_CHANGED = 'omniai:settings-changed'
-
-/** Meldet dem Layout, dass sich die Einstellungen geändert haben. */
-export function notifySettingsChanged() {
-  window.dispatchEvent(new Event(SETTINGS_CHANGED))
-}
-
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [provider, setProvider] = useState<string | null>(null)
   const closeMobile = () => setMobileOpen(false)
-
-  /* Ein Sammelaufruf beim Montieren füllt den Fuß der Sidebar. Scheitert er,
-     bleibt dort ein Platzhalter stehen — die Navigation selbst hängt nicht
-     daran und verschwindet nicht. */
-  useEffect(() => {
-    let cancelled = false
-    const refresh = () =>
-      api
-        .status()
-        .then((status) => {
-          if (!cancelled) setProvider(providerLabel(status.provider))
-        })
-        .catch((cause: Error) => console.error('Zustand nicht abrufbar', cause))
-    void refresh()
-    window.addEventListener(SETTINGS_CHANGED, refresh)
-    return () => {
-      cancelled = true
-      window.removeEventListener(SETTINGS_CHANGED, refresh)
-    }
-  }, [])
 
   return (
     <div className="shell">
@@ -68,13 +36,7 @@ export function Layout() {
           <NavLink to="/einstellungen" className={navClass}><Icon name="settings" /><span>Einstellungen</span></NavLink>
         </nav>
 
-        <div className="sidebar-foot">
-          <span className="avatar"><Icon name="settings" size={15} /></span>
-          <div className="who">
-            <b>Aktiver Anbieter</b>
-            <span>{provider ?? '–'}</span>
-          </div>
-        </div>
+        <AddonFoot />
       </aside>
 
       <main className="main">

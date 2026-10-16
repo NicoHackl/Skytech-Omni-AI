@@ -1,4 +1,5 @@
 import type {
+  AddonInfo,
   AskInput,
   AskResponse,
   ModelsResponse,
@@ -68,6 +69,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 /* Jeder Endpunkt ist ein benannter Eintrag — kein roher Pfad in einer Seite. */
 export const api = {
   status: () => request<StatusResponse>('status'),
+  /* Name und HA-Konfigurationsseite des Add-ons für den Sidebar-Fuß (D-018). */
+  addon: () => request<AddonInfo>('addon'),
   models: () => request<ModelsResponse>('models'),
   ask: (data: AskInput) =>
     request<AskResponse>('ask', { method: 'POST', body: JSON.stringify(data) }),

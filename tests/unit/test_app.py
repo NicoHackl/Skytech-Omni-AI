@@ -334,3 +334,64 @@ def test_a_refusal_of_the_supervisor_stays_readable(client, supervisor):
     assert antwort.status_code == 422
     assert "unknown" not in antwort.get_json()["error"]
     assert supervisor.saved == []
+
+
+# --- Sidebar-Fuß (D-018) ---------------------------------------------------
+
+
+class InfoSupervisor:
+    """Liefert ``/addons/self/info``; zählt die Aufrufe über alle Instanzen."""
+
+    info: ClassVar[dict] = {}
+    fehler: ClassVar[Exception | None] = None
+    calls: ClassVar[int] = 0
+
+    def __init__(self, available: bool = True):
+        self.available = available
+
+    def get_self_info(self):
+        InfoSupervisor.calls += 1
+        if InfoSupervisor.fehler:
+            raise InfoSupervisor.fehler
+        return dict(InfoSupervisor.info)
+
+
+@pytest.fixture
+def info_supervisor(monkeypatch):
+    InfoSupervisor.info = {"slug": "b80e8355_skytech_omniai", "name": "Skytech OmniAI"}
+    InfoSupervisor.fehler = None
+    InfoSupervisor.calls = 0
+    monkeypatch.setattr(app_module, "SupervisorClient", InfoSupervisor)
+    monkeypatch.setattr(app_module, "_addon_link", {})
+    return InfoSupervisor
+
+
+def test_addon_links_to_the_config_page_with_repository_prefix(client, info_supervisor):
+    """Der Slug kommt vom Supervisor, samt Präfix des Add-on-Repositorys."""
+    assert client.get("/addon").get_json() == {
+        "name": "Skytech OmniAI",
+        "config_path": "/hassio/addon/b80e8355_skytech_omniai/config",
+    }
+
+
+def test_addon_remembers_only_success(client, info_supervisor):
+    """Ein Ausfall wird erneut versucht, ein Erfolg nicht mehr."""
+    info_supervisor.fehler = app_module.SupervisorUnavailable("weg")
+    assert client.get("/addon").get_json() == {"name": "Skytech OmniAI", "config_path": None}
+
+    info_supervisor.fehler = None
+    assert client.get("/addon").get_json()["config_path"] is not None
+    client.get("/addon")
+    assert info_supervisor.calls == 2
+
+
+def test_addon_without_supervisor_has_no_link(client, monkeypatch):
+    """Außerhalb von Home Assistant bleibt der Fuß ein Namensschild."""
+    monkeypatch.setattr(app_module, "_addon_link", {})
+    assert client.get("/addon").get_json() == {"name": "Skytech OmniAI", "config_path": None}
+
+
+def test_addon_rejects_an_invalid_slug(client, info_supervisor):
+    """Ein unerwarteter Slug wird nicht zu einem Pfad zusammengesetzt."""
+    info_supervisor.info = {"slug": "../../evil", "name": "Skytech OmniAI"}
+    assert client.get("/addon").get_json()["config_path"] is None

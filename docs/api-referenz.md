@@ -184,6 +184,18 @@ wird die Absenderadresse des Ingress-Proxys, nicht ein Kopf; Begründung als D-0
 
 **Antwort `200`** — wie `GET /settings`, mit dem neuen Stand.
 
+## `GET /addon`
+
+```json
+{ "name": "Skytech OmniAI", "config_path": "/hassio/addon/b80e8355_skytech_omniai/config" }
+```
+
+Name und Konfigurationsseite des Add-ons in Home Assistant für den Sidebar-Fuß (D-018). Antwortet
+immer mit 200. `name` und Slug kommen aus `GET /addons/self/info` des Supervisors; der Slug trägt
+das Präfix des Add-on-Repositorys und ist deshalb nicht fest verdrahtet. Ohne Supervisor oder bei
+einem Fehler: `name` = „Skytech OmniAI“, `config_path` = `null`. Ein Erfolg wird bis zum Neustart
+gemerkt.
+
 ## `GET /health`
 
 ```json
