@@ -19,6 +19,8 @@ Vorgehen:
 3. Formuliere je Änderung **eine** Zeile auf Deutsch, aus Sicht des Nutzers — was er jetzt anders
    erlebt, nicht wie es implementiert wurde.
 4. Trage die Zeilen in `CHANGELOG.md` unter `## [Unveröffentlicht]` in den passenden Abschnitt ein.
-   Fehlt der Abschnitt, lege ihn an.
+   Fehlt der Abschnitt, lege ihn an. **Keine Versionsnummer und kein Datum setzen** — daraus
+   macht der Release-Job der CI beim nächsten Release `## [X.Y.Z] — TT.MM.JJJJ`
+   (docs/git-workflow.md).
 
 Ergibt der Diff keine nutzerrelevante Änderung: sag das und ändere nichts.

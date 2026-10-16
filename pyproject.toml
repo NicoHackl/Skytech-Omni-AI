@@ -4,7 +4,7 @@
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["skytech_omniai", "tests"]
+src = ["skytech_omniai", "scripts", "tests"]
 extend-exclude = ["vorlage", "frontend", "bin", "skytech_omniai/web"]
 
 [tool.ruff.lint]
@@ -19,5 +19,6 @@ quote-style = "double"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Der Quellcode liegt im Add-on-Ordner und importiert sich selbst flach
-# (z. B. "from providers.factory import ..."), genau wie im Container.
-pythonpath = ["skytech_omniai"]
+# (z. B. "from providers.factory import ..."), genau wie im Container. Die
+# Werkzeuge unter scripts/ werden genauso flach importiert ("from release import ...").
+pythonpath = ["skytech_omniai", "scripts"]

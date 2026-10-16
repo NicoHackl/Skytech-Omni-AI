@@ -1,0 +1,56 @@
+# Wöchentliche Updates der festgenagelten Abhängigkeiten, als Pull Request
+# gegen agent/main. Die CI prüft jeden PR; nach dem Merge entscheidet der
+# Release-Job wie bei jedem anderen Push. Commit-Präfixe folgen Conventional
+# Commits, damit der Versionssprung stimmt (build → patch, ci → kein Release).
+#
+# Nicht abgedeckt, bleiben manuell: Claude- und Codex-CLI im Dockerfile (nach
+# jedem Anheben Handtest, docs/test-strategie.md) und das Basisimage in
+# build.yaml (liest Dependabot nicht). Siehe docs/bekannte-luecken.md.
+
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /skytech_omniai
+    target-branch: agent/main
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+
+  - package-ecosystem: pip
+    directory: /
+    target-branch: agent/main
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      dev-tools:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /skytech_omniai/web
+    target-branch: agent/main
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      web:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: agent/main
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]

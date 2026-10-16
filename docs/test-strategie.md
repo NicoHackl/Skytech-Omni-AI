@@ -3,14 +3,17 @@
 ## Befehle
 
 ```bash
+scripts/check.sh                                    # alles, was auch die CI prüft
+scripts/check.sh --docker                           # zusätzlich Image bauen und Smoke-Test
 pytest                                              # alle Tests
 pytest tests/unit/test_app.py                       # gezielt eine Datei
 ruff check . && ruff format --check .               # Linting und Formatprüfung
 npm run typecheck --prefix skytech_omniai/web       # Typprüfung der Oberfläche
 ```
 
-Alles davon muss vor jedem Commit fehlerfrei durchlaufen — siehe
-[git-workflow.md](git-workflow.md).
+`scripts/check.sh` muss vor jedem Commit fehlerfrei durchlaufen — siehe
+[git-workflow.md](git-workflow.md). Als pre-push-Hook (`git config core.hooksPath .githooks`)
+läuft es vor jedem Push von selbst.
 
 ## Testarten
 
@@ -19,9 +22,13 @@ Alles davon muss vor jedem Commit fehlerfrei durchlaufen — siehe
 | Unit | Eine Funktion oder Klasse, keine externen Zugriffe | `tests/unit/` |
 | Schnittstelle | Die Endpunkte über den Testclient von Flask, Anbieter als Attrappe | `tests/unit/test_app.py` |
 | Regression | Ein konkret aufgetretener Bug, damit er nicht wiederkehrt | beim jeweiligen Modul |
+| Konsistenz | Die von Hand gepflegten Dateien passen zueinander und zum Code: Optionen ↔ Schema ↔ `OPTION_ENV_MAP`, Auswahllisten ↔ Anbieter und Modelle, `build.yaml` ↔ `arch`, `COPY` im Dockerfile ↔ Module, Changelog ↔ Version | `tests/unit/test_addon_config.py` |
+| Werkzeuge | Versionssprung und Changelog des Release-Skripts | `tests/scripts/` |
+| Smoke-Test | Das fertige Image startet, liefert `/health`, `/models`, die Oberfläche über den Ingress und bringt beide Befehlszeilen mit | `scripts/smoke_test.sh` |
 
 Die Teststruktur spiegelt die Struktur des Quellcodes. Zu `skytech_omniai/providers/factory.py`
-gehört `tests/unit/providers/test_factory.py`. Die Module werden dabei flach importiert
+gehört `tests/unit/providers/test_factory.py`, zu `scripts/release.py` gehört
+`tests/scripts/test_release.py`. Die Module werden dabei flach importiert
 (`from providers.factory import …`) — genauso wie im Container; dafür sorgt `pythonpath` in
 `pyproject.toml`.
 
@@ -73,10 +80,30 @@ nachweislich fehlschlagen.
 ## Abdeckung
 
 Zielwert: Jede Funktion mit Verzweigungslogik ist abgedeckt; der reine Prozentwert wird nicht
-verfolgt. Abdeckung ist ein Warnsignal, kein Ziel an sich — 100 % ohne Zusicherungen im Test ist
+verfolgt. `scripts/check.sh` und die CI zeigen ihn trotzdem an (in GitHub in der
+Zusammenfassung des Laufs) — als Hinweis, wo Tests fehlen, nicht als Schwelle. Abdeckung ist ein Warnsignal, kein Ziel an sich — 100 % ohne Zusicherungen im Test ist
 wertlos.
 
 Ungetestet bleiben dürfen: die Verdrahtung in `main.tsx`, reine Anzeigekomponenten und der Aufruf
 der echten Claude- bzw. Codex-CLI. Letzterer ist als Lücke in
 [bekannte-luecken.md](bekannte-luecken.md) geführt — nach jedem Anheben einer CLI-Version wird
 über den betroffenen Anbieter von Hand eine Anfrage gestellt.
+
+## Automatische Prüfungen (CI)
+
+[`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) läuft bei jedem Push auf
+`agent/main` und bei jedem Pull Request dorthin. Alle Jobs müssen grün sein, bevor der
+Release-Job startet ([git-workflow.md](git-workflow.md#release)).
+
+| Job | Prüft | Lokal |
+|---|---|---|
+| Python 3.11 / 3.14 | `ruff check`, `ruff format --check`, `pytest` mit Abdeckung. 3.11 ist das Python im Image, 3.14 das der Entwicklung | `scripts/check.sh` |
+| Oberfläche | `tsc --noEmit` und `vite build` | `scripts/check.sh` |
+| Add-on, Workflows, Dockerfile | Add-on-Linter von Home Assistant für `config.yaml`/`build.yaml`, `actionlint` (mit shellcheck) für die Workflows, `hadolint` (Regeln in `.hadolint.yaml`) | — |
+| Image und Smoke-Test | Bau für `amd64` mit dem Basisimage aus `build.yaml`, danach `scripts/smoke_test.sh` | `scripts/check.sh --docker` (Architektur des eigenen Rechners) |
+| Sicherheit | `gitleaks` über die ganze Historie, `pip-audit`, `npm audit` (nur Laufzeit, ab „high“) | — |
+| Release-Vorschau | Zeigt den Versionssprung, warnt bei leerem `Unveröffentlicht` | `python3 scripts/release.py plan` |
+
+Daneben laufen, ohne das Release zu blockieren: CodeQL für Python und TypeScript
+([`codeql.yaml`](../.github/workflows/codeql.yaml), auch wöchentlich) und Dependabot für pip,
+npm und die Actions ([`dependabot.yml`](../.github/dependabot.yml)).
