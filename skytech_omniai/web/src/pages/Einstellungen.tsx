@@ -68,6 +68,9 @@ const SECRET_FIELDS: SecretField[] = [
 
 const SAVED_PLACEHOLDER = '•••••••• (gespeichert)'
 
+const MODEL_MISMATCH =
+  'Dieses Modell gehört nicht zum gewählten Anbieter. Bitte ein passendes wählen.'
+
 export function Einstellungen() {
   const [loaded, setLoaded] = useState<SettingsResponse | null>(null)
   const [catalog, setCatalog] = useState<ModelsResponse | null>(null)
@@ -175,11 +178,20 @@ export function Einstellungen() {
       ? [...providerModels, draft.model]
       : providerModels
 
+  // Ein unpassendes Modell (gesetzt im Reiter „Konfiguration“, dessen
+  // Auswahlfeld alle Anbieter mischt) wird gleich beim Laden markiert und
+  // nicht erst, wenn das Speichern scheitert.
+  const modelMismatch =
+    draft !== null && catalog !== null && draft.model !== MODEL_AUTO && !providerModels.includes(draft.model)
+  const errors: Record<string, string> = modelMismatch
+    ? { model: MODEL_MISMATCH, ...fieldErrors }
+    : fieldErrors
+
   const fieldClass = (key: string, wide = false) =>
-    `field${wide ? ' wide' : ''}${fieldErrors[key] ? ' invalid' : ''}`
+    `field${wide ? ' wide' : ''}${errors[key] ? ' invalid' : ''}`
 
   const fieldError = (key: string) =>
-    fieldErrors[key] ? <small className="field-error">{fieldErrors[key]}</small> : null
+    errors[key] ? <small className="field-error">{errors[key]}</small> : null
 
   return (
     <>
@@ -196,8 +208,9 @@ export function Einstellungen() {
 
         {readOnly ? (
           <div className="hint-box">
-            Die Einstellungen lassen sich nur ändern, wenn diese Seite in Home Assistant über die
-            Seitenleiste geöffnet ist.
+            {loaded?.read_only_reason === 'ingress'
+              ? 'Die Einstellungen lassen sich nur ändern, wenn diese Seite in Home Assistant über die Seitenleiste geöffnet ist.'
+              : 'Das Add-on kommt gerade nicht an seine Einstellungen in Home Assistant und zeigt sie deshalb nur an. Bitte das Add-on neu starten; hilft das nicht, steht die Ursache im Protokoll des Add-ons.'}
           </div>
         ) : null}
 
