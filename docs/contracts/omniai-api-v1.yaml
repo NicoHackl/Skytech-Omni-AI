@@ -1,0 +1,509 @@
+# =====================================================================
+# Skytech X ↔ Skytech OmniAI — contract v1
+#
+# MASTER COPY: Skytech-X-Backend/openapi/omniai-api-v1.yaml
+# Mirrored unchanged to Skytech-Omni-AI/docs/contracts/omniai-api-v1.yaml.
+# Change it here first, then copy it over in the same work package.
+# =====================================================================
+openapi: 3.0.3
+info:
+  title: Skytech OmniAI — Agent Runtime API
+  version: 1.0.0
+  description: >-
+    Contract between the Skytech X backend (client) and Skytech OmniAI, the
+    Home Assistant add-on that runs LLM work with several providers
+    (Claude and Codex via their CLIs, Gemini via API, open set). The backend
+    is the only caller of these endpoints: it owns automations, triggers,
+    approvals, budgets, credentials of all connected services and the run
+    history. OmniAI executes the work and streams events back.
+
+
+    Two kinds of work:
+
+    * **Completion** — one structured answer without tools (classify,
+      summarize, extract). Synchronous.
+
+    * **Run** — an agent run that may call tools. Tools are never configured
+      in OmniAI: the backend passes the MCP servers to use per run (normally
+      its own tool gateway `/mcp`) together with a short-lived run token.
+      OmniAI never sees Google, Microsoft or GitHub credentials. Approvals for
+      risky tool calls happen inside the backend's tool gateway; a tool call
+      simply takes longer or returns a rejection. OmniAI therefore has no
+      approval endpoints.
+
+
+    Transport: HTTP in the LAN (optionally HTTPS). Every `/v1/*` request
+    carries `Authorization: Bearer <OMNIAI_API_TOKEN>` (add-on option
+    `api_token`, at least 32 random bytes). Requests without a valid token are
+    rejected with 401. The pre-v1 endpoints of the add-on (`/ask`, `/models`,
+    `/status`, `/settings`, ...) are not part of this contract.
+
+
+    Compatibility: additive changes only within v1; both sides ignore unknown
+    fields, unknown providers and unknown event types. Breaking changes need
+    `/v2` and a new contract file.
+
+
+    Errors: JSON `{error, code}` — `error` is a German sentence safe to show
+    to an operator, `code` is stable and machine-readable. Technical causes
+    stay in the OmniAI log.
+servers:
+  - url: http://homeassistant.local:8000
+    description: OmniAI add-on port in the home network
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/health:
+    get:
+      summary: Liveness and version
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/capabilities:
+    get:
+      summary: Providers, models, features and limits of this instance
+      description: >-
+        The backend reads this to fill provider/model pickers and to decide
+        which work it may send. A provider with `available=false` (e.g. missing
+        credentials) must not be used.
+      responses:
+        '200':
+          description: Capabilities
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Capabilities' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/completions:
+    post:
+      summary: One structured answer without tools
+      description: >-
+        Synchronous. If `outputSchema` is given, OmniAI validates the model's
+        JSON against it (JSON Schema 2020-12) and answers 422 SCHEMA_MISMATCH
+        when it does not fit — after at most one internal retry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompletionRequest' }
+      responses:
+        '200':
+          description: Answer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompletionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+        '504': { $ref: '#/components/responses/Timeout' }
+
+  /v1/runs:
+    post:
+      summary: Start an agent run (idempotent per runId)
+      description: >-
+        Returns immediately with QUEUED or RUNNING. Repeating the same request
+        with the same `runId` returns the existing state; reusing a `runId`
+        with different input is 409. Progress is followed via the event stream.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StartRun' }
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunState' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+
+  /v1/runs/{runId}:
+    get:
+      summary: Current state of a run (polling fallback for the event stream)
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: State
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/runs/{runId}/events:
+    get:
+      summary: Live events of a run (Server-Sent Events)
+      description: >-
+        SSE stream. Each event has `id` = monotonic sequence number per run
+        (starting at 1), `event` = event type, `data` = JSON `RunEvent`.
+        `Last-Event-ID` resumes after that sequence number; OmniAI keeps the
+        events of a run for at least 24 hours after it ended. The stream sends
+        a comment line (`: ping`) at least every 20 seconds and closes after
+        the terminal `status` event.
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema: { type: integer, format: int64, minimum: 0 }
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              schema: { $ref: '#/components/schemas/RunEvent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/runs/{runId}/cancel:
+    post:
+      summary: Cancel a run
+      description: Idempotent; cancelling a finished run changes nothing.
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '202':
+          description: Cancellation accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    RunId:
+      name: runId
+      in: path
+      required: true
+      description: Chosen by the backend (UUID).
+      schema: { type: string, pattern: '^[A-Za-z0-9-]{1,64}$' }
+
+  responses:
+    Unauthorized:
+      description: Missing or wrong bearer token (code UNAUTHORIZED)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Malformed request (code VALIDATION_ERROR)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Unknown run (code NOT_FOUND)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: >-
+        BUSY (no free run slot) or RUN_ID_REUSED (same runId, different input)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unprocessable:
+      description: >-
+        UNKNOWN_PROVIDER, UNKNOWN_MODEL, TOOLS_NOT_SUPPORTED or SCHEMA_MISMATCH
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unavailable:
+      description: PROVIDER_UNAVAILABLE (credentials missing, quota, provider down)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Timeout:
+      description: TIMEOUT (provider did not answer within the limit)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+          description: German sentence, no status codes, paths or raw provider output.
+          example: Für diesen Anbieter sind keine Zugangsdaten hinterlegt.
+        code:
+          type: string
+          enum: [UNAUTHORIZED, VALIDATION_ERROR, NOT_FOUND, BUSY, RUN_ID_REUSED,
+                 UNKNOWN_PROVIDER, UNKNOWN_MODEL, TOOLS_NOT_SUPPORTED,
+                 SCHEMA_MISMATCH, PROVIDER_UNAVAILABLE, TIMEOUT, INTERNAL]
+
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [UP, DEGRADED], example: UP }
+        version: { type: string, example: 0.11.0 }
+
+    Capabilities:
+      type: object
+      required: [providers]
+      properties:
+        providers:
+          type: array
+          items: { $ref: '#/components/schemas/Provider' }
+        limits:
+          type: object
+          properties:
+            maxConcurrentRuns: { type: integer, minimum: 1, example: 2 }
+            maxRunMinutes: { type: integer, minimum: 1, example: 30 }
+            maxPromptLength: { type: integer, example: 100000 }
+        mcp:
+          type: object
+          description: MCP client support of this instance (for runs with tools).
+          properties:
+            protocolVersions:
+              type: array
+              items: { type: string }
+              example: ['2025-11-25', '2026-07-28']
+            transports:
+              type: array
+              items: { type: string, enum: [streamable-http] }
+
+    Provider:
+      type: object
+      required: [id, available]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9_-]{1,32}$'
+          description: claude_sub | codex_sub | gemini | ... (open set)
+          example: claude_sub
+        name: { type: string, example: Claude (Abo) }
+        available:
+          type: boolean
+          description: false when credentials are missing or the provider is down.
+        models:
+          type: array
+          items: { type: string }
+          example: [sonnet, opus, haiku]
+        defaultModel: { type: string, nullable: true, example: sonnet }
+        features:
+          type: object
+          properties:
+            tools: { type: boolean, description: Can call MCP tools in runs. }
+            structuredOutput: { type: boolean, description: outputSchema is enforced. }
+            usage: { type: boolean, description: Reports token usage / cost. }
+
+    CompletionRequest:
+      type: object
+      required: [input]
+      properties:
+        provider: { type: string, description: Default is the add-on setting. }
+        model: { type: string, description: Default is the provider default. }
+        instructions:
+          type: string
+          maxLength: 20000
+          description: System-level instructions (role, rules, language).
+        input:
+          type: string
+          maxLength: 100000
+          description: The task text including any data to work on.
+        outputSchema:
+          type: object
+          additionalProperties: true
+          description: >-
+            JSON Schema 2020-12 the answer must satisfy. Without it any JSON
+            object or array is accepted.
+        timeoutSeconds: { type: integer, minimum: 5, maximum: 600, default: 120 }
+
+    CompletionResponse:
+      type: object
+      required: [output, provider, model]
+      properties:
+        output:
+          description: Parsed JSON answer (object or array).
+        provider: { type: string, example: gemini }
+        model: { type: string, example: gemini-flash-latest }
+        usage: { $ref: '#/components/schemas/Usage' }
+
+    StartRun:
+      type: object
+      required: [runId, provider, prompt]
+      properties:
+        runId: { type: string, pattern: '^[A-Za-z0-9-]{1,64}$' }
+        provider: { type: string, pattern: '^[a-z0-9_-]{1,32}$' }
+        model: { type: string, nullable: true }
+        instructions: { type: string, maxLength: 20000, nullable: true }
+        prompt: { type: string, minLength: 1, maxLength: 100000 }
+        tools: { $ref: '#/components/schemas/ToolAccess' }
+        outputSchema:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: >-
+            JSON Schema 2020-12 for the final `result` event. Without it the
+            run ends with a text summary only.
+        limits: { $ref: '#/components/schemas/Limits' }
+        metadata:
+          type: object
+          description: Opaque to OmniAI; echoed in logs for correlation.
+          properties:
+            automationId: { type: string, nullable: true }
+            trigger: { type: string, nullable: true, example: schedule }
+
+    ToolAccess:
+      type: object
+      description: >-
+        MCP servers the run may use. Omitted or empty = no tools. A provider
+        without `features.tools` answers 422 TOOLS_NOT_SUPPORTED when servers
+        are given.
+      properties:
+        mcpServers:
+          type: array
+          maxItems: 8
+          items: { $ref: '#/components/schemas/McpServer' }
+        allowedTools:
+          type: array
+          description: >-
+            Optional allow-list of tool names across all servers. The backend
+            gateway enforces its own list anyway; this narrows what the model
+            is offered.
+          items: { type: string }
+          example: [github.issue_list, github.pull_request_list]
+
+    McpServer:
+      type: object
+      required: [name, url]
+      properties:
+        name: { type: string, pattern: '^[a-z0-9_-]{1,32}$', example: skytech }
+        url:
+          type: string
+          description: Streamable HTTP endpoint.
+          example: http://192.168.10.18:8090/mcp
+        headers:
+          type: object
+          additionalProperties: { type: string }
+          description: >-
+            Sent on every MCP request, typically `Authorization: Bearer
+            <run token>`. Secret — OmniAI must not log or persist it beyond the
+            run and must drop it when the run ends.
+
+    Limits:
+      type: object
+      properties:
+        maxMinutes: { type: integer, minimum: 1, example: 30 }
+        maxCostUsd: { type: number, nullable: true, example: 2.5 }
+        maxToolCalls: { type: integer, minimum: 0, example: 50 }
+
+    RunStatus:
+      type: string
+      enum: [QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED]
+
+    RunState:
+      type: object
+      required: [runId, status]
+      properties:
+        runId: { type: string }
+        status: { $ref: '#/components/schemas/RunStatus' }
+        summary: { type: string, nullable: true }
+        output:
+          nullable: true
+          description: Final structured result (only with outputSchema).
+        error:
+          type: string
+          nullable: true
+          description: German sentence when FAILED.
+        costUsd: { type: number, nullable: true }
+        startedAt: { type: string, format: date-time, nullable: true }
+        finishedAt: { type: string, format: date-time, nullable: true }
+
+    RunEvent:
+      type: object
+      required: [seq, type]
+      description: >-
+        `data` per type — log {level, message}; status {status, summary?,
+        error?}; tool_call {callId, server, tool, phase, durationMs?};
+        artifact {kind, title, content|url}; result {output}; usage
+        {inputTokens?, outputTokens?, costUsd?}. Tool arguments and tool
+        results are deliberately not part of events (they may contain personal
+        data); the backend gateway keeps its own audit.
+      properties:
+        seq: { type: integer, format: int64, minimum: 1 }
+        type:
+          type: string
+          enum: [log, status, tool_call, artifact, result, usage]
+        at: { type: string, format: date-time }
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/LogData'
+            - $ref: '#/components/schemas/StatusData'
+            - $ref: '#/components/schemas/ToolCallData'
+            - $ref: '#/components/schemas/ArtifactData'
+            - $ref: '#/components/schemas/ResultData'
+            - $ref: '#/components/schemas/Usage'
+
+    LogData:
+      type: object
+      required: [level, message]
+      properties:
+        level: { type: string, enum: [debug, info, warn, error] }
+        message: { type: string }
+
+    StatusData:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: '#/components/schemas/RunStatus' }
+        summary: { type: string, nullable: true }
+        error: { type: string, nullable: true }
+
+    ToolCallData:
+      type: object
+      required: [callId, tool, phase]
+      properties:
+        callId: { type: string }
+        server: { type: string, example: skytech }
+        tool: { type: string, example: github.issue_list }
+        phase: { type: string, enum: [started, finished, failed] }
+        durationMs: { type: integer, nullable: true }
+
+    ArtifactData:
+      type: object
+      required: [kind, title]
+      properties:
+        kind: { type: string, enum: [text, markdown, json, file, url] }
+        title: { type: string }
+        content: { type: string, nullable: true }
+        url: { type: string, nullable: true }
+
+    ResultData:
+      type: object
+      required: [output]
+      properties:
+        output:
+          description: Final JSON result matching the run's outputSchema.
+
+    Usage:
+      type: object
+      properties:
+        inputTokens: { type: integer, nullable: true }
+        outputTokens: { type: integer, nullable: true }
+        costUsd:
+          type: number
+          nullable: true
+          description: >-
+            Only when the provider reports a price (API keys). Subscription
+            CLIs report tokens only; the backend budgets those by tokens.

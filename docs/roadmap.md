@@ -60,12 +60,29 @@ geprüft, nicht gegen die Absicht. Was hier „fertig" heißt, muss laufen.
 | Bild für `aarch64` in der CI prüfen | offen | [bekannte-luecken.md](bekannte-luecken.md) |
 | Anfragen und Antwortzeiten in der Oberfläche sichtbar | offen | |
 
+### M5 — Agent-Laufzeit für Skytech X
+
+**Ziel:** Das Backend von Skytech X kann über den Vertrag v1 Antworten und ganze Agent-Läufe
+anfordern; die Werkzeuge liefert das Backend über MCP (D-019,
+[contracts/omniai-api-v1.yaml](contracts/omniai-api-v1.yaml)).
+
+| Punkt | Status | Verweis |
+|---|---|---|
+| Vertrag v1 als OpenAPI-Datei abgestimmt | fertig | D-019 |
+| Option `api_token`, Token-Pflicht für `/v1/…` | fertig | D-019 |
+| `GET /v1/health`, `GET /v1/capabilities` | fertig | |
+| `POST /v1/completions` mit Schema-Prüfung | fertig | D-020 |
+| Nutzungsdaten (Tokens) in Antworten | offen | |
+| `POST /v1/runs` + Ereignisstrom für `claude_sub` (Kommandozeile mit MCP-Konfiguration) | offen | |
+| Agent-Läufe für `codex_sub` und `gemini` | offen | |
+| Alt-Endpunkte nur noch über den Ingress, sobald Skytech X umgestellt ist | offen | [bekannte-luecken.md](bekannte-luecken.md) |
+
 ## Zurückgestellt
 
 | Thema | Warum zurückgestellt | Bedingung für Wiederaufnahme |
 |---|---|---|
 | Geräte-Anmeldung für ChatGPT aus der Oberfläche | Der Zugang wird einmalig eingefügt; ein eigener Anmeldevorgang mit zwei Endpunkten lohnt für einen einmaligen Schritt nicht (D-013) | Sobald die eingefügte Anmeldung im Betrieb wiederholt abläuft |
-| Authentifizierung des offenen Ports | Automatisierungen bräuchten ein zusätzliches Token; im Heimnetz kein Gewinn | Sobald jemand das Add-on außerhalb des Heimnetzes erreichbar machen will |
+| Authentifizierung der Alt-Endpunkte | Bestehende HA-Automatisierungen bräuchten ein zusätzliches Token; der neue Vertrag v1 bekommt die Token-Pflicht (M5) | Sobald Skytech X auf v1 umgestellt ist oder jemand das Add-on außerhalb des Heimnetzes erreichbar machen will |
 | Verlauf über mehrere Anfragen | Hieße Persistenz und ein Datenschutzthema, das keiner gefordert hat | Sobald ein Anwendungsfall mehr als eine Runde braucht |
 
 ---

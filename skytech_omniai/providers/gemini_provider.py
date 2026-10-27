@@ -13,7 +13,7 @@ import os
 import urllib.error
 import urllib.request
 
-from providers.base_provider import JSON_INSTRUCTION, BaseProvider
+from providers.base_provider import JSON_INSTRUCTION, BaseProvider, ProviderTimeout, UnknownModel
 
 log = logging.getLogger("omniai.gemini")
 
@@ -126,7 +126,7 @@ class GeminiProvider(BaseProvider):
         # Jede „gemini-*“-Kennung wird durchgelassen, damit neue Modelle von
         # Google ohne Codeänderung genutzt werden können.
         if chosen not in GEMINI_MODELS and not chosen.startswith("gemini-"):
-            raise ValueError(
+            raise UnknownModel(
                 f"„{chosen}“ ist kein Modell von Google Gemini. Zur Auswahl stehen: "
                 + ", ".join(GEMINI_MODELS)
                 + ". Weitere „gemini-“-Modelle sind ebenfalls erlaubt."
@@ -204,7 +204,7 @@ class GeminiProvider(BaseProvider):
         )
         return RuntimeError(HTTP_FEHLERTEXTE.get(exc.code, FEHLER_ALLGEMEIN))
 
-    def execute(self, prompt: str, model: str | None = None) -> dict:
+    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
         api_key = self._build_api_key()
         chosen_model = self._resolve_model(model)
 
@@ -237,11 +237,14 @@ class GeminiProvider(BaseProvider):
         log.info("Anfrage an Gemini, Modell: %s", chosen_model)
 
         try:
-            with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+            with urllib.request.urlopen(request, timeout=timeout or REQUEST_TIMEOUT) as response:
                 payload = json.loads(response.read().decode("utf-8", errors="replace"))
         except urllib.error.HTTPError as fehler:
             raise self._http_fehler(fehler) from fehler
-        except (TimeoutError, urllib.error.URLError) as fehler:
+        except TimeoutError as fehler:
+            log.error("Gemini hat nicht rechtzeitig geantwortet: %s", fehler)
+            raise ProviderTimeout(FEHLER_NICHT_ERREICHBAR) from fehler
+        except urllib.error.URLError as fehler:
             log.error("Gemini nicht erreichbar oder Zeitüberschreitung: %s", fehler)
             raise RuntimeError(FEHLER_NICHT_ERREICHBAR) from fehler
         except ValueError as fehler:

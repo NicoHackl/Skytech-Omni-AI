@@ -124,6 +124,7 @@ passende Datei lesen, statt zu raten:
 | [docs/design-entscheidungen.md](docs/design-entscheidungen.md) | Entscheidungs-Log — Quelle der Wahrheit fürs „warum" |
 | [docs/konfiguration.md](docs/konfiguration.md) | Env-Variablen, Config-Optionen, Secrets-Handhabung |
 | [docs/api-referenz.md](docs/api-referenz.md) | Endpunkte und öffentliche Schnittstellen |
+| [docs/contracts/omniai-api-v1.yaml](docs/contracts/omniai-api-v1.yaml) | Vertrag v1 mit Skytech X (OpenAPI, Kopie; Master im Backend-Repo) |
 | [docs/sicherheit-datenschutz.md](docs/sicherheit-datenschutz.md) | Secrets, personenbezogene Daten, externe Dienste |
 | [docs/bekannte-luecken.md](docs/bekannte-luecken.md) | Abweichungen Spec ↔ Code, Stolpersteine, offene Bugs |
 | [docs/roadmap.md](docs/roadmap.md) | Meilensteine und Umsetzungsstand |

@@ -97,3 +97,13 @@ def test_merge_accepts_a_matching_model_and_valid_chatgpt_access():
     assert errors == {}
     assert merged["model"] == "gpt-5.6-luna"
     assert merged["codex_auth_json"] == '{"tokens": {}}'
+
+
+def test_short_api_token_is_rejected():
+    """Ein neu eingetragenes Token für Skytech X braucht mindestens 32 Zeichen."""
+    _, errors = merge_update(STORED, {"api_token": "zu-kurz"})
+    merged, ok = merge_update(STORED, {"api_token": "x" * 32})
+
+    assert errors["api_token"] == "Das Token braucht mindestens 32 Zeichen."
+    assert ok == {}
+    assert merged["api_token"] == "x" * 32

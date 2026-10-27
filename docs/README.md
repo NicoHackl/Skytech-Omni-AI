@@ -31,6 +31,7 @@ nicht stillschweigend schöngeschrieben.
 | [adr/](adr/) | Ausführliche Architecture Decision Records zu einzelnen Entscheidungen |
 | [konfiguration.md](konfiguration.md) | Env-Variablen, Config-Optionen, Secrets-Handhabung |
 | [api-referenz.md](api-referenz.md) | Endpunkte und öffentliche Schnittstellen |
+| [contracts/omniai-api-v1.yaml](contracts/omniai-api-v1.yaml) | Vertrag v1 mit Skytech X (OpenAPI, Kopie; Master im Backend-Repo) |
 | [sicherheit-datenschutz.md](sicherheit-datenschutz.md) | Secrets, personenbezogene Daten, externe Dienste, Audit |
 | [bekannte-luecken.md](bekannte-luecken.md) | Abweichungen Spec ↔ Code, Stolpersteine, offene Bugs |
 | [roadmap.md](roadmap.md) | Meilensteine und realistischer Umsetzungsstand |

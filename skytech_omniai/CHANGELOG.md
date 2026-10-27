@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.11.0] — 27.10.2026
+
+### Hinzugefügt
+
+- Schnittstelle für Skytech X: Anbieter und Modelle abfragen und Antworten in einer vorgegebenen Form anfordern, geschützt durch ein eigenes Token
+- Einstellung „Token für Skytech X“
+
 ## [0.10.1] — 16.10.2026
 
 ### Behoben

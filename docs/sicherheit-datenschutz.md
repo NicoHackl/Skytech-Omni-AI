@@ -52,6 +52,11 @@ Anfragen stellen und damit fremdes Abo-Kontingent oder Guthaben verbrauchen. Das
 weil Automatisierungen in Home Assistant sonst ein zusätzliches Token bräuchten — es ist aber eine
 bekannte Lücke und in [bekannte-luecken.md](bekannte-luecken.md) geführt.
 
+**Ausnahme: die Schnittstelle v1** (`/v1/…`, für Skytech X, D-019) verlangt bei jedem Aufruf
+`Authorization: Bearer <api_token>`. Der Vergleich läuft in konstanter Zeit; ist kein Token
+eingerichtet, ist `/v1` geschlossen. Das Token steht nur in den Add-on-Optionen und in Skytech X
+(dort verschlüsselt), nie im Log.
+
 Empfehlung an den Betreiber: den Port nicht ins Internet weiterleiten. Wer nur die Oberfläche
 braucht, kann die Zeilen `ports` und `ports_description` aus `config.yaml` entfernen — der Ingress
 funktioniert ohne veröffentlichten Port weiter.
