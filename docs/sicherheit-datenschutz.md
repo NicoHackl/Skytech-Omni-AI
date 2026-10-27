@@ -139,6 +139,12 @@ Läufe (D-021) folgen **nicht** der Stufe `tool_access`, sondern sind enger:
   Ergebnisse. Die Texte des Modells (Zwischenstände, Übergabe) können Inhalte aus den Werkzeugen
   wiedergeben; sie liegen bis 24 Stunden nach Laufende unter `/data/runs`.
 
+## Embeddings für Skytech X
+
+`POST /v1/embeddings` (D-023) schickt die übergebenen Texte — Wissenseinträge und
+Suchanfragen aus Skytech X — mit dem Gemini-Schlüssel an Google (`gemini-embedding-001`).
+Das Add-on speichert weder Texte noch Vektoren; im Log stehen nur Anzahl und Dimensionen.
+
 ## Personenbezogene Daten
 
 | Datenart | Wird verarbeitet? | Wo gespeichert | Löschfrist |

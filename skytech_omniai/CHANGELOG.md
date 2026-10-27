@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.13.0] — 27.10.2026
+
+### Hinzugefügt
+
+- Skytech X kann über OmniAI im gemeinsamen Wissen nach Bedeutung suchen (nutzt den Gemini-Schlüssel mit dem günstigen Embedding-Modell von Google)
+
 ## [0.12.0] — 27.10.2026
 
 ### Hinzugefügt

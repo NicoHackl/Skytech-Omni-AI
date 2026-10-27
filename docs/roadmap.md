@@ -77,6 +77,7 @@ anfordern; die Werkzeuge liefert das Backend über MCP (D-019,
 | `POST /v1/runs` + Ereignisstrom für `claude_sub` (Kommandozeile mit MCP-Konfiguration), Übergabe am Laufende | fertig | D-021 |
 | Läufe ohne Werkzeuge für `codex_sub` und `gemini` (Einzelanfrage) | fertig | D-021 |
 | Werkzeuge in Läufen für `codex_sub` und `gemini` | offen | |
+| Embeddings für die Suche nach Bedeutung in Skytech X (`gemini-embedding-001`) | fertig | D-023 |
 | Alt-Endpunkte nur noch über den Ingress, sobald Skytech X umgestellt ist | offen | [bekannte-luecken.md](bekannte-luecken.md) |
 
 ## Zurückgestellt
