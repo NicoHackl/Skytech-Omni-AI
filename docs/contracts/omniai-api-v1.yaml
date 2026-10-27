@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: Skytech OmniAI — Agent Runtime API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Contract between the Skytech X backend (client) and Skytech OmniAI, the
     Home Assistant add-on that runs LLM work with several providers
@@ -37,6 +37,17 @@ info:
     `api_token`, at least 32 random bytes). Requests without a valid token are
     rejected with 401. The pre-v1 endpoints of the add-on (`/ask`, `/models`,
     `/status`, `/settings`, ...) are not part of this contract.
+
+
+    Hand-over: every run ends with a structured hand-over (summary,
+    decisions, open points, artifacts) so a later run — possibly with another
+    provider or model — can continue the work. The backend stores it and
+    passes the hand-overs of earlier runs back in `StartRun.context`.
+
+
+    Changes: 1.1.0 (27.10.2026) — `StartRun.context`, `metadata.workItemId`,
+    `Handover` (`RunState.handover`, event `handover`), `RunState.output`
+    for every run, `RunState.usage`, tool names in `tool_call`.
 
 
     Compatibility: additive changes only within v1; both sides ignore unknown
@@ -347,6 +358,15 @@ components:
         provider: { type: string, pattern: '^[a-z0-9_-]{1,32}$' }
         model: { type: string, nullable: true }
         instructions: { type: string, maxLength: 20000, nullable: true }
+        context:
+          type: string
+          maxLength: 40000
+          nullable: true
+          description: >-
+            Background assembled by the backend: hand-overs of earlier runs of
+            the same work item and relevant knowledge entries (Markdown).
+            OmniAI gives it to the model as context, clearly separated from the
+            task, and never treats it as instructions. Since 1.1.0.
         prompt: { type: string, minLength: 1, maxLength: 100000 }
         tools: { $ref: '#/components/schemas/ToolAccess' }
         outputSchema:
@@ -362,6 +382,7 @@ components:
           description: Opaque to OmniAI; echoed in logs for correlation.
           properties:
             automationId: { type: string, nullable: true }
+            workItemId: { type: string, nullable: true, description: Since 1.1.0. }
             trigger: { type: string, nullable: true, example: schedule }
 
     ToolAccess:
@@ -421,7 +442,17 @@ components:
         summary: { type: string, nullable: true }
         output:
           nullable: true
-          description: Final structured result (only with outputSchema).
+          description: >-
+            Final structured result. Matches `outputSchema` when one was given;
+            otherwise a provider-specific JSON value or null.
+        handover:
+          allOf: [{ $ref: '#/components/schemas/Handover' }]
+          nullable: true
+          description: Set once the run ended and the model produced one. Since 1.1.0.
+        usage:
+          allOf: [{ $ref: '#/components/schemas/Usage' }]
+          nullable: true
+          description: Totals of the run so far. Since 1.1.0.
         error:
           type: string
           nullable: true
@@ -437,14 +468,15 @@ components:
         `data` per type — log {level, message}; status {status, summary?,
         error?}; tool_call {callId, server, tool, phase, durationMs?};
         artifact {kind, title, content|url}; result {output}; usage
-        {inputTokens?, outputTokens?, costUsd?}. Tool arguments and tool
+        {inputTokens?, outputTokens?, costUsd?}; handover (Handover, since
+        1.1.0, sent before the terminal status event). Tool arguments and tool
         results are deliberately not part of events (they may contain personal
         data); the backend gateway keeps its own audit.
       properties:
         seq: { type: integer, format: int64, minimum: 1 }
         type:
           type: string
-          enum: [log, status, tool_call, artifact, result, usage]
+          enum: [log, status, tool_call, artifact, result, usage, handover]
         at: { type: string, format: date-time }
         data:
           oneOf:
@@ -454,13 +486,43 @@ components:
             - $ref: '#/components/schemas/ArtifactData'
             - $ref: '#/components/schemas/ResultData'
             - $ref: '#/components/schemas/Usage'
+            - $ref: '#/components/schemas/Handover'
+
+    Handover:
+      type: object
+      required: [summary]
+      description: >-
+        What the next run needs to continue: written by the model at the end
+        of the run (structured output), in the language of the task.
+      properties:
+        summary: { type: string, maxLength: 4000, description: What was done and the outcome. }
+        decisions:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 500 }
+          description: Decisions taken, with the reason when relevant.
+        openPoints:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 500 }
+          description: What is still to do, open questions, known problems.
+        artifacts:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [kind, ref]
+            properties:
+              kind: { type: string, enum: [pr, branch, commit, issue, file, url, note] }
+              title: { type: string, maxLength: 200, nullable: true }
+              ref: { type: string, maxLength: 500, description: 'URL, path, branch name or id.' }
 
     LogData:
       type: object
       required: [level, message]
       properties:
         level: { type: string, enum: [debug, info, warn, error] }
-        message: { type: string }
+        message: { type: string, description: 'Short, at most 2000 characters.' }
 
     StatusData:
       type: object
@@ -476,7 +538,13 @@ components:
       properties:
         callId: { type: string }
         server: { type: string, example: skytech }
-        tool: { type: string, example: github.issue_list }
+        tool:
+          type: string
+          example: github.issue_list
+          description: >-
+            Tool name as offered by the MCP server. CLIs may rename tools
+            internally (e.g. `mcp__skytech__github_issue_list`); OmniAI maps
+            back to the server's name when it can.
         phase: { type: string, enum: [started, finished, failed] }
         durationMs: { type: integer, nullable: true }
 

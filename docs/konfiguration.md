@@ -139,6 +139,7 @@ Provider nicht lahmlegen.
 | `.env.example` | Vorlage ohne echte Werte | ja |
 | `.env` | Lokale Werte, enthält Zugangsdaten | **nein** |
 | `/data/options.json` | Vom Supervisor geschrieben, liegt nur im Container. Das Add-on liest sie nur | **nein** |
+| `/data/runs/` | Zustand und Ereignisse der Agent-Läufe (D-021), 24 Stunden nach Laufende gelöscht; ohne Lauf-Token | **nein** |
 
 ## Zugangsdaten
 

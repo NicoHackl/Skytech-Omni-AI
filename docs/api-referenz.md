@@ -16,7 +16,7 @@
   **Ausnahme:** `PUT /settings` nimmt nur Aufrufe über den Ingress an (siehe unten).
 - Format: JSON, UTF-8.
 
-## Vertrag v1 für Skytech X (geplant)
+## Vertrag v1 für Skytech X
 
 Für das Backend von Skytech X gibt es einen eigenen, versionierten Vertrag unter `/v1/…`
 (D-019): Gesundheit, Fähigkeiten, Einmal-Antworten mit Schema-Prüfung und Agent-Läufe mit
@@ -30,9 +30,13 @@ Umsetzungsstand (Einzelheiten im Vertrag):
 | Endpunkt | Stand |
 |---|---|
 | Token-Pflicht (`api_token`, Fehler `401 UNAUTHORIZED`) | umgesetzt |
-| `GET /v1/health`, `GET /v1/capabilities` | umgesetzt; `tools` und `usage` melden noch `false` |
+| `GET /v1/health`, `GET /v1/capabilities` | umgesetzt; `tools` und `usage` nur bei `claude_sub` |
 | `POST /v1/completions` | umgesetzt: Schema-Prüfung mit einem zweiten Versuch, Zeitlimit je Anfrage, Fehlercodes; Nutzungsdaten fehlen noch |
-| `/v1/runs` (Agent-Läufe) | noch nicht — antwortet `404 NOT_FOUND` (M5) |
+| `POST /v1/runs`, `GET /v1/runs/{id}`, `…/events` (SSE), `…/cancel` | umgesetzt (D-021): `claude_sub` mit MCP-Werkzeugen des Backends; andere Anbieter nur ohne Werkzeuge als einzelne Anfrage. Höchstens 2 Läufe gleichzeitig, höchstens 120 Minuten, Übergabe am Ende jedes Laufs |
+
+Läufe liegen als Dateien unter `/data/runs` (Zustand und Ereignisse, ohne Lauf-Token) und werden
+24 Stunden nach ihrem Ende gelöscht. Ein Lauf, der bei einem Neustart des Add-ons noch lief,
+gilt danach als gescheitert.
 
 Jeder `/v1`-Fehler hat die Form `{"error": "<deutscher Satz>", "code": "<STABIL>"}`; unbekannte
 Pfade unter `/v1` antworten ebenso, nicht mit der Oberfläche.

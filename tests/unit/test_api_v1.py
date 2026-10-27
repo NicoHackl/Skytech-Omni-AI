@@ -112,13 +112,15 @@ def test_capabilities_report_availability_without_secrets(client, monkeypatch):
     assert by_id["claude_sub"]["available"] is False
     assert by_id["gemini"]["defaultModel"] == "gemini-flash-latest"
     assert by_id["gemini"]["features"] == {"tools": False, "structuredOutput": True, "usage": False}
+    assert by_id["claude_sub"]["features"]["tools"] is True
+    assert daten["mcp"]["protocolVersions"] == ["2025-11-25"]
     assert daten["limits"]["maxPromptLength"] == 100_000
     assert "geheimer-schluessel" not in json.dumps(daten)
     assert TOKEN not in json.dumps(daten)
 
 
 def test_unknown_v1_path_answers_in_contract_format(client):
-    antwort = client.post("/v1/runs", headers=AUTH, json={})
+    antwort = client.post("/v1/gibt-es-nicht", headers=AUTH, json={})
 
     assert antwort.status_code == 404
     assert antwort.get_json()["code"] == "NOT_FOUND"

@@ -5,16 +5,17 @@ Skytech-X-Backend). Anders als ``/ask`` ist jeder Aufruf hier mit einem Token
 geschützt, Fehler tragen zusätzlich einen stabilen Code, und Antworten lassen
 sich gegen ein JSON-Schema prüfen.
 
-Umgesetzt sind Gesundheit, Fähigkeiten und Einmal-Antworten. Agent-Läufe
-(``/v1/runs``) folgen in einem späteren Schritt (Roadmap M5).
+Umgesetzt sind Gesundheit, Fähigkeiten, Einmal-Antworten und Agent-Läufe
+(``/v1/runs``, Ausführung in ``runs.py``, D-021).
 """
 
 import hmac
 import json
 import logging
 import os
+import re
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request, stream_with_context
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
@@ -25,6 +26,7 @@ from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER, ProviderFactory
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
+from runs import MAX_CONCURRENT_RUNS, MAX_RUN_MINUTES, RunConflict, RunManager
 
 log = logging.getLogger("omniai.v1")
 
@@ -44,6 +46,18 @@ PROVIDERS = {
     "gemini": {"name": "Google Gemini", "models": GEMINI_MODELS, "default": GEMINI_DEFAULT_MODEL},
 }
 
+# Anbieter, die in Läufen Werkzeuge (MCP) aufrufen können.
+TOOL_PROVIDERS = {"claude_sub"}
+MCP_PROTOCOL_VERSIONS = ["2025-11-25"]
+MAX_CONTEXT_LENGTH = 40_000
+SSE_PING_SECONDS = 15
+
+_RUN_ID = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+_PROVIDER_ID = re.compile(r"^[a-z0-9_-]{1,32}$")
+_SERVER_NAME = re.compile(r"^[a-z0-9_-]{1,32}$")
+
+runs = RunManager()
+
 # Anweisung an das Modell, englisch wie die übrigen Modell-Anweisungen.
 SCHEMA_INSTRUCTION = (
     "\n\nThe JSON you return MUST validate against this JSON Schema (2020-12):\n{schema}"
@@ -61,6 +75,8 @@ FEHLER_SCHEMA_PASST_NICHT = (
     "Die Antwort des Modells passte auch nach einem zweiten Versuch nicht zum verlangten Schema."
 )
 FEHLER_UNBEKANNT = "Die Anfrage konnte nicht bearbeitet werden. Bitte später erneut versuchen."
+FEHLER_KEINE_WERKZEUGE = "Dieser Anbieter kann in Läufen keine Werkzeuge benutzen."
+FEHLER_LAUF_UNBEKANNT = "Diesen Lauf gibt es nicht."
 
 
 def credentials_present() -> dict[str, bool]:
@@ -113,8 +129,8 @@ def health():
 def capabilities():
     """Anbieter, Modelle und Fähigkeiten für die Auswahl in Skytech X.
 
-    Werkzeuge (MCP) gibt es erst mit den Agent-Läufen; bis dahin meldet jeder
-    Anbieter ``tools: false``. Nutzungsdaten werden noch nicht erhoben.
+    Werkzeuge (MCP) in Läufen kann bisher nur Claude; Nutzungsdaten liefert
+    ebenfalls nur Claude, und zwar in Läufen.
     """
     present = credentials_present()
     providers = [
@@ -124,15 +140,23 @@ def capabilities():
             "available": present[key],
             "models": meta["models"],
             "defaultModel": meta["default"],
-            "features": {"tools": False, "structuredOutput": True, "usage": False},
+            "features": {
+                "tools": key in TOOL_PROVIDERS,
+                "structuredOutput": True,
+                "usage": key in TOOL_PROVIDERS,
+            },
         }
         for key, meta in PROVIDERS.items()
     ]
     return jsonify(
         {
             "providers": providers,
-            "limits": {"maxPromptLength": MAX_INPUT_LENGTH},
-            "mcp": {"protocolVersions": [], "transports": []},
+            "limits": {
+                "maxPromptLength": MAX_INPUT_LENGTH,
+                "maxConcurrentRuns": MAX_CONCURRENT_RUNS,
+                "maxRunMinutes": MAX_RUN_MINUTES,
+            },
+            "mcp": {"protocolVersions": MCP_PROTOCOL_VERSIONS, "transports": ["streamable-http"]},
         }
     )
 
@@ -259,9 +283,176 @@ def completions():
     return jsonify({"output": output, "provider": provider_name, "model": model_name})
 
 
+# --- Agent-Läufe -------------------------------------------------------------
+
+
+def _is_text(value, max_length: int, required: bool = False) -> bool:
+    if value is None:
+        return not required
+    return isinstance(value, str) and (value.strip() or not required) and len(value) <= max_length
+
+
+def _validate_run(payload) -> dict | None:
+    """Prüft den Rumpf von POST /v1/runs gegen den Vertrag. None = ungültig."""
+    if not isinstance(payload, dict):
+        return None
+    if not isinstance(payload.get("runId"), str) or not _RUN_ID.match(payload["runId"]):
+        return None
+    if not isinstance(payload.get("provider"), str) or not _PROVIDER_ID.match(payload["provider"]):
+        return None
+    if not _is_text(payload.get("prompt"), MAX_INPUT_LENGTH, required=True):
+        return None
+    if not _is_text(payload.get("instructions"), MAX_INSTRUCTIONS_LENGTH):
+        return None
+    if not _is_text(payload.get("context"), MAX_CONTEXT_LENGTH):
+        return None
+    if payload.get("model") is not None and not isinstance(payload["model"], str):
+        return None
+    schema = payload.get("outputSchema")
+    if schema is not None:
+        if not isinstance(schema, dict):
+            return None
+        try:
+            Draft202012Validator.check_schema(schema)
+        except SchemaError:
+            return None
+    tools = payload.get("tools") or {}
+    if not isinstance(tools, dict):
+        return None
+    servers = tools.get("mcpServers") or []
+    allowed = tools.get("allowedTools") or []
+    if not isinstance(servers, list) or len(servers) > 8 or not isinstance(allowed, list):
+        return None
+    if not all(isinstance(t, str) and 0 < len(t) <= 128 for t in allowed):
+        return None
+    for server in servers:
+        if not isinstance(server, dict) or not isinstance(server.get("name"), str):
+            return None
+        if not _SERVER_NAME.match(server["name"]):
+            return None
+        url = server.get("url")
+        if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+            return None
+        headers = server.get("headers") or {}
+        if not isinstance(headers, dict) or not all(
+            isinstance(k, str) and isinstance(v, str) for k, v in headers.items()
+        ):
+            return None
+    limits = payload.get("limits") or {}
+    if not isinstance(limits, dict):
+        return None
+    for key in ("maxMinutes", "maxToolCalls"):
+        value = limits.get(key)
+        if value is not None and (
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+        ):
+            return None
+    return {
+        "runId": payload["runId"],
+        "provider": payload["provider"],
+        "model": payload.get("model") or None,
+        "instructions": payload.get("instructions"),
+        "context": payload.get("context"),
+        "prompt": payload["prompt"],
+        "outputSchema": schema,
+        "tools": {"mcpServers": servers, "allowedTools": allowed},
+        "limits": limits,
+        "metadata": payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
+    }
+
+
+@api_v1.route("/runs", methods=["POST"])
+def start_run():
+    """Startet einen Agent-Lauf; dieselbe Anfrage noch einmal liefert den
+    bestehenden Lauf (Idempotenz je ``runId``)."""
+    values = _validate_run(request.get_json(silent=True))
+    if values is None:
+        return _error(400, "VALIDATION_ERROR", FEHLER_EINGABE)
+    if values["provider"] not in PROVIDERS:
+        return _error(
+            422, "UNKNOWN_PROVIDER", f"Der Anbieter „{values['provider']}“ ist nicht verfügbar."
+        )
+    if values["tools"]["mcpServers"] and values["provider"] not in TOOL_PROVIDERS:
+        return _error(422, "TOOLS_NOT_SUPPORTED", FEHLER_KEINE_WERKZEUGE)
+    try:
+        ProviderFactory.create(values["provider"]).effective_model(values["model"])
+    except UnknownModel as fehler:
+        return _error(422, "UNKNOWN_MODEL", str(fehler))
+    except ValueError as fehler:
+        return _error(422, "UNKNOWN_PROVIDER", str(fehler))
+    if not credentials_present()[values["provider"]]:
+        return _error(
+            503, "PROVIDER_UNAVAILABLE", "Für diesen Anbieter sind keine Zugangsdaten hinterlegt."
+        )
+    try:
+        run, created = runs.start(values["runId"], values)
+    except RunConflict as konflikt:
+        return _error(409, konflikt.code, konflikt.message)
+    if created:
+        log.info(
+            "Lauf %s angenommen: Anbieter %s, %s Werkzeug-Server, Vorgang %s",
+            run.run_id,
+            values["provider"],
+            len(values["tools"]["mcpServers"]),
+            values["metadata"].get("workItemId") or "-",
+        )
+    return jsonify(run.state()), 202
+
+
+@api_v1.route("/runs/<run_id>", methods=["GET"])
+def run_state(run_id: str):
+    run = runs.get(run_id)
+    if run is None:
+        return _error(404, "NOT_FOUND", FEHLER_LAUF_UNBEKANNT)
+    return jsonify(run.state())
+
+
+@api_v1.route("/runs/<run_id>/cancel", methods=["POST"])
+def cancel_run(run_id: str):
+    run = runs.cancel(run_id)
+    if run is None:
+        return _error(404, "NOT_FOUND", FEHLER_LAUF_UNBEKANNT)
+    return jsonify(run.state()), 202
+
+
+@api_v1.route("/runs/<run_id>/events", methods=["GET"])
+def run_events(run_id: str):
+    """Ereignisse eines Laufs als Server-Sent Events, fortsetzbar über
+    ``Last-Event-ID``; endet nach dem abschließenden Status."""
+    run = runs.get(run_id)
+    if run is None:
+        return _error(404, "NOT_FOUND", FEHLER_LAUF_UNBEKANNT)
+    try:
+        after = max(int(request.headers.get("Last-Event-ID", "0")), 0)
+    except ValueError:
+        after = 0
+
+    def stream():
+        seq = after
+        while True:
+            events = runs.events_after(run, seq, SSE_PING_SECONDS)
+            if not events:
+                if run.terminal and seq >= len(run.events):
+                    return
+                yield ": ping\n\n"
+                continue
+            for event in events:
+                seq = event["seq"]
+                payload = json.dumps(event, ensure_ascii=False)
+                yield f"id: {event['seq']}\nevent: {event['type']}\ndata: {payload}\n\n"
+            if run.terminal and seq >= len(run.events):
+                return
+
+    return Response(
+        stream_with_context(stream()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @api_v1.route("/<path:rest>", methods=["GET", "POST", "PUT", "DELETE"])
 def not_found(rest: str):
     """Unbekannte /v1-Pfade antworten im Fehlerformat des Vertrags, statt auf
-    die Oberfläche zu fallen. Betrifft bis M5 auch /v1/runs."""
+    die Oberfläche zu fallen."""
     log.info("Unbekannter Endpunkt /v1/%s angefragt", rest)
     return _error(404, "NOT_FOUND", "Diesen Endpunkt gibt es in dieser Version noch nicht.")

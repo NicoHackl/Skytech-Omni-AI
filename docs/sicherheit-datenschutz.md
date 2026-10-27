@@ -123,6 +123,22 @@ Der Prompt selbst ist in **jeder** Stufe die Eingabe eines Aufrufers und wird ni
 Was darin steht, ist eine Anweisung an das Modell — und in Stufe `full` mittelbar eine Anweisung
 an den Container.
 
+## Agent-Läufe für Skytech X
+
+Läufe (D-021) folgen **nicht** der Stufe `tool_access`, sondern sind enger:
+
+- Die eingebauten Werkzeuge der Claude-CLI (Befehle, Dateien) sind in Läufen immer abgeschaltet
+  (`--tools`), auch bei `full`. Unter `/data` liegt der Zugang des Abos; ein Lauf kann ihn nicht
+  lesen. Websuche und Seitenabruf gibt es nur, wenn `tool_access` nicht `off` ist.
+- Werkzeuge kommen ausschließlich vom Backend über MCP. Das Lauf-Token des Backends steht nur in
+  einer Datei mit Rechten `600` im Arbeitsverzeichnis des Laufs, nie in der Befehlszeile, im Log
+  oder in den gespeicherten Laufdaten; Datei und Verzeichnis werden nach dem Lauf gelöscht.
+- Einstellungen, Hooks und `CLAUDE.md` von außen werden nicht geladen, Sitzungen nicht
+  gespeichert.
+- In Ereignissen stehen Name, Dauer und Ausgang eines Werkzeugaufrufs, nie Argumente oder
+  Ergebnisse. Die Texte des Modells (Zwischenstände, Übergabe) können Inhalte aus den Werkzeugen
+  wiedergeben; sie liegen bis 24 Stunden nach Laufende unter `/data/runs`.
+
 ## Personenbezogene Daten
 
 | Datenart | Wird verarbeitet? | Wo gespeichert | Löschfrist |
