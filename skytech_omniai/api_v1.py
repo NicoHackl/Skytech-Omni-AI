@@ -19,6 +19,7 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
+import embeddings
 from config_loader import read_addon_version
 from providers.base_provider import NotJson, ProviderTimeout, UnknownModel
 from providers.claude_sub_provider import CLAUDE_MODELS
@@ -157,6 +158,11 @@ def capabilities():
                 "maxRunMinutes": MAX_RUN_MINUTES,
             },
             "mcp": {"protocolVersions": MCP_PROTOCOL_VERSIONS, "transports": ["streamable-http"]},
+            "embeddings": {
+                "available": embeddings.available(),
+                "model": embeddings.MODEL,
+                "dimensions": embeddings.DEFAULT_DIMENSIONS,
+            },
         }
     )
 
@@ -281,6 +287,45 @@ def completions():
     # Nutzungsdaten liefern die Anbieter hier noch nicht; das Feld fehlt dann
     # ganz, statt mit einem Leerwert zu erscheinen.
     return jsonify({"output": output, "provider": provider_name, "model": model_name})
+
+
+# --- Embeddings ---------------------------------------------------------------
+
+
+@api_v1.route("/embeddings", methods=["POST"])
+def create_embeddings():
+    """Vektoren für Texte, ausschließlich mit ``gemini-embedding-001`` (D-023)."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _error(400, "VALIDATION_ERROR", FEHLER_EINGABE)
+    texts = payload.get("input")
+    task_type = payload.get("taskType", "RETRIEVAL_DOCUMENT")
+    dimensions = payload.get("dimensions", embeddings.DEFAULT_DIMENSIONS)
+    if (
+        not isinstance(texts, list)
+        or not 1 <= len(texts) <= embeddings.MAX_INPUTS
+        or not all(
+            isinstance(t, str) and t.strip() and len(t) <= embeddings.MAX_INPUT_LENGTH
+            for t in texts
+        )
+        or task_type not in embeddings.TASK_TYPES
+        or isinstance(dimensions, bool)
+        or dimensions not in embeddings.DIMENSIONS
+    ):
+        return _error(400, "VALIDATION_ERROR", FEHLER_EINGABE)
+    try:
+        vectors, tokens = embeddings.embed(texts, task_type, dimensions)
+    except embeddings.EmbeddingTimeout as fehler:
+        return _error(504, "TIMEOUT", str(fehler))
+    except RuntimeError as fehler:
+        return _error(503, "PROVIDER_UNAVAILABLE", str(fehler))
+    log.info(
+        "Embeddings für Skytech X geliefert: %s Text(e), %s Dimensionen", len(texts), dimensions
+    )
+    answer = {"model": embeddings.MODEL, "dimensions": dimensions, "embeddings": vectors}
+    if tokens is not None:
+        answer["usage"] = {"inputTokens": tokens}
+    return jsonify(answer)
 
 
 # --- Agent-Läufe -------------------------------------------------------------

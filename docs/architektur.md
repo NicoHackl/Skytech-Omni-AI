@@ -75,6 +75,7 @@ Testanfragen.
 | `settings.py` | Was die Seite „Einstellungen“ sieht, Entwurf mit gespeichertem Stand verschmelzen, Felder prüfen | HTTP sprechen oder speichern |
 | `supervisor_client.py` | Eigene Optionen über die Supervisor-API lesen, prüfen, speichern | Optionswerte oder das Token loggen |
 | `api_v1.py` | Vertrag v1 für Skytech X: Token, Prüfung der Anfragen, Fehlercodes, Ereignisstrom | Eine Befehlszeile selbst starten |
+| `embeddings.py` | Vektoren über `gemini-embedding-001` für `/v1/embeddings` | Ein anderes Modell wählen; Texte speichern oder loggen |
 | `runs.py` | Agent-Läufe: Annahme, Grenzen, Ausführung mit der Claude-CLI bzw. als Einzelanfrage, Ereignisse, Ablage unter `/data/runs` | HTTP sprechen; das Lauf-Token speichern oder loggen |
 | `providers/factory.py` | Anhand des Namens die Umsetzung wählen | Prompts ausführen |
 | `providers/base_provider.py` | Gemeinsame Schnittstelle, Auswertung der Modellantwort, Auflösung der Werkzeugstufe | Einen bestimmten Anbieter kennen |

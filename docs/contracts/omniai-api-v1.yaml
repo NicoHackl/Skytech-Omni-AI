@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: Skytech OmniAI — Agent Runtime API
-  version: 1.1.0
+  version: 1.2.0
   description: >-
     Contract between the Skytech X backend (client) and Skytech OmniAI, the
     Home Assistant add-on that runs LLM work with several providers
@@ -48,6 +48,11 @@ info:
     Changes: 1.1.0 (27.10.2026) — `StartRun.context`, `metadata.workItemId`,
     `Handover` (`RunState.handover`, event `handover`), `RunState.output`
     for every run, `RunState.usage`, tool names in `tool_call`.
+
+
+    Changes: 1.2.0 (27.10.2026) — `POST /v1/embeddings` (Gemini
+    `gemini-embedding-001`, for semantic search in the backend's knowledge) and
+    `Capabilities.embeddings`.
 
 
     Compatibility: additive changes only within v1; both sides ignore unknown
@@ -112,6 +117,29 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+        '504': { $ref: '#/components/responses/Timeout' }
+
+  /v1/embeddings:
+    post:
+      summary: Embedding vectors for texts (semantic search); since 1.2.0
+      description: >-
+        Always uses Google `gemini-embedding-001` with the add-on's Gemini API key
+        (owner decision: only this inexpensive model). Texts are sent to Google.
+        Vectors are not normalised; callers use cosine similarity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmbeddingRequest' }
+      responses:
+        '200':
+          description: One vector per input, same order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmbeddingResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '503': { $ref: '#/components/responses/Unavailable' }
         '504': { $ref: '#/components/responses/Timeout' }
 
@@ -281,6 +309,13 @@ components:
             maxConcurrentRuns: { type: integer, minimum: 1, example: 2 }
             maxRunMinutes: { type: integer, minimum: 1, example: 30 }
             maxPromptLength: { type: integer, example: 100000 }
+        embeddings:
+          type: object
+          description: Embedding support (since 1.2.0)
+          properties:
+            available: { type: boolean, description: false without Gemini API key }
+            model: { type: string, example: gemini-embedding-001 }
+            dimensions: { type: integer, example: 768 }
         mcp:
           type: object
           description: MCP client support of this instance (for runs with tools).
@@ -348,6 +383,32 @@ components:
           description: Parsed JSON answer (object or array).
         provider: { type: string, example: gemini }
         model: { type: string, example: gemini-flash-latest }
+        usage: { $ref: '#/components/schemas/Usage' }
+
+    EmbeddingRequest:
+      type: object
+      required: [input]
+      properties:
+        input:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { type: string, minLength: 1, maxLength: 8000 }
+        taskType:
+          type: string
+          enum: [RETRIEVAL_DOCUMENT, RETRIEVAL_QUERY]
+          default: RETRIEVAL_DOCUMENT
+        dimensions: { type: integer, enum: [768, 1536, 3072], default: 768 }
+
+    EmbeddingResponse:
+      type: object
+      required: [model, dimensions, embeddings]
+      properties:
+        model: { type: string, example: gemini-embedding-001 }
+        dimensions: { type: integer }
+        embeddings:
+          type: array
+          items: { type: array, items: { type: number } }
         usage: { $ref: '#/components/schemas/Usage' }
 
     StartRun:
