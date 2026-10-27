@@ -37,6 +37,7 @@ Endpunkte: `GET /settings`, `PUT /settings` in [api-referenz.md](api-referenz.md
 | `codex_auth_json` | nein | leer | Anmeldung des ChatGPT-Abos: vollständiger Inhalt der Datei `auth.json`, die `codex login` anlegt |
 | `openai_api_key` | nein | leer | Alternative zum Abo: nach Verbrauch abgerechneter OpenAI-Schlüssel |
 | `gemini_api_key` | nein | leer | Schlüssel aus Google AI Studio |
+| `api_token` | nein | leer | Token der Schnittstelle v1 für Skytech X, mindestens 32 Zeichen (z. B. `openssl rand -base64 32`). Leer = `/v1` lehnt jede Anfrage ab. Dasselbe Token in Skytech X unter „Anbindungen“ eintragen |
 
 Für den aktiven Anbieter muss **einer** der passenden Zugänge gesetzt sein — sonst antwortet
 `/ask` mit einer Meldung, die sagt, welches Feld fehlt. Die Übersicht der Oberfläche zeigt
@@ -58,6 +59,7 @@ Aus den Optionen abgeleitet. Beim Betrieb außerhalb von Home Assistant werden s
 | `OPENAI_API_KEY` | nein | — | OpenAI-Schlüssel als Alternative zum Abo |
 | `GEMINI_API_KEY` | nein | — | Schlüssel für Google Gemini |
 | `GOOGLE_API_KEY` | nein | — | Wird als zweiter gängiger Name ebenfalls akzeptiert |
+| `OMNIAI_API_TOKEN` | nein | — | Token der Schnittstelle v1 (aus der Option `api_token`) |
 | `HOME` | nein | `/data` | Die Claude-CLI legt ihren Zustand unter `$HOME/.claude` ab; über `/data` übersteht er einen Neustart |
 | `CODEX_HOME` | nein | `/data/.codex` | Dasselbe für die Codex-CLI. Sie erneuert ihre Tokens dort selbst |
 | `PORT` | nein | `8000` | Port der Schnittstelle |

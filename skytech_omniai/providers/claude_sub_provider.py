@@ -14,6 +14,7 @@ from providers.base_provider import (
     TOOL_ACCESS_OFF,
     TOOL_ACCESS_WEB,
     BaseProvider,
+    ProviderTimeout,
     resolve_tool_access,
 )
 
@@ -160,7 +161,7 @@ class ClaudeSubProvider(BaseProvider):
             chosen = os.environ.get("OMNIAI_MODEL", "").strip()
         return chosen
 
-    def execute(self, prompt: str, model: str | None = None) -> dict:
+    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
         env = self._build_env()
         full_prompt = prompt + JSON_INSTRUCTION
 
@@ -183,7 +184,7 @@ class ClaudeSubProvider(BaseProvider):
                 command,
                 capture_output=True,
                 text=True,
-                timeout=TIMEOUT_SEKUNDEN,
+                timeout=timeout or TIMEOUT_SEKUNDEN,
                 env=env,
                 # Aus dem dauerhaften Datenverzeichnis heraus starten, nicht aus
                 # dem Quellbaum des Add-ons: sonst liest die CLI eine CLAUDE.md
@@ -194,8 +195,8 @@ class ClaudeSubProvider(BaseProvider):
             log.error("Die Claude-CLI wurde im Container nicht gefunden: %s", fehler)
             raise RuntimeError(FEHLER_CLI_FEHLT) from fehler
         except subprocess.TimeoutExpired as fehler:
-            log.error("Claude-CLI nach %s s abgebrochen", TIMEOUT_SEKUNDEN)
-            raise RuntimeError(FEHLER_ZEITUEBERSCHREITUNG) from fehler
+            log.error("Claude-CLI nach %s s abgebrochen", timeout or TIMEOUT_SEKUNDEN)
+            raise ProviderTimeout(FEHLER_ZEITUEBERSCHREITUNG) from fehler
 
         if result.returncode != 0:
             # Die Ausgabe der CLI kann Pfade und Stacktraces enthalten und geht

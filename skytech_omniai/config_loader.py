@@ -85,6 +85,8 @@ def read_addon_version() -> str | None:
 # - openai_api_key: Alternative zum Abo, nach Verbrauch abgerechnet.
 # - gemini_api_key: Google-AI-Studio-Schlüssel, unter
 #   https://aistudio.google.com/apikey erzeugt und nach Verbrauch abgerechnet.
+# - api_token: Token, das Skytech X bei jedem Aufruf der Schnittstelle v1
+#   mitschickt (D-019). Ohne Token lehnt /v1 jede Anfrage ab.
 OPTION_ENV_MAP = {
     "provider": "AI_PROVIDER",
     "model": "OMNIAI_MODEL",
@@ -94,6 +96,7 @@ OPTION_ENV_MAP = {
     "codex_auth_json": "CODEX_AUTH_JSON",
     "openai_api_key": "OPENAI_API_KEY",
     "gemini_api_key": "GEMINI_API_KEY",
+    "api_token": "OMNIAI_API_TOKEN",
 }
 
 # Zugänge: werden nie angezeigt, nie geloggt und an der Oberfläche nur als
@@ -104,6 +107,7 @@ SECRET_OPTIONS = {
     "codex_auth_json": "ChatGPT-Abo",
     "openai_api_key": "OpenAI-API",
     "gemini_api_key": "Gemini",
+    "api_token": "Schnittstelle v1",
 }
 
 # „auto“ ist der Sentinel des Auswahlfelds „model“ und bedeutet „kein Modell

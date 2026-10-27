@@ -64,6 +64,11 @@ const SECRET_FIELDS: SecretField[] = [
     label: 'Gemini-Schlüssel',
     hint: 'Aus Google AI Studio, wird nach Verbrauch abgerechnet.',
   },
+  {
+    key: 'api_token',
+    label: 'Token für Skytech X',
+    hint: 'Mindestens 32 zufällige Zeichen. Dasselbe Token in Skytech X unter „Anbindungen“ eintragen.',
+  },
 ]
 
 const SAVED_PLACEHOLDER = '•••••••• (gespeichert)'

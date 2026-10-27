@@ -33,6 +33,8 @@ FEHLER_ANBIETER = "Bitte einen der angebotenen Anbieter wählen."
 FEHLER_MODELL = "Dieses Modell gehört nicht zum gewählten Anbieter."
 FEHLER_WERKZEUGE = "Bitte eine der angebotenen Stufen wählen."
 FEHLER_TEXT = "Hier wird ein Text erwartet."
+FEHLER_API_TOKEN = "Das Token braucht mindestens 32 Zeichen."
+API_TOKEN_MIN_LENGTH = 32
 FEHLER_CHATGPT_ZUGANG = (
     "Das ist nicht der Inhalt der Datei „auth.json“. Bitte die Datei vollständig kopieren."
 )
@@ -132,5 +134,9 @@ def merge_update(current: dict, draft: dict) -> tuple[dict, dict[str, str]]:
             parsed = None
         if not isinstance(parsed, dict):
             errors.setdefault("codex_auth_json", FEHLER_CHATGPT_ZUGANG)
+
+    token = draft.get("api_token")
+    if isinstance(token, str) and token.strip() and len(token.strip()) < API_TOKEN_MIN_LENGTH:
+        errors.setdefault("api_token", FEHLER_API_TOKEN)
 
     return merged, errors

@@ -41,6 +41,7 @@ RUN npm run build --prefix /app/web \
 
 COPY config.yaml ./config.yaml
 COPY app.py ./app.py
+COPY api_v1.py ./api_v1.py
 COPY config_loader.py ./config_loader.py
 COPY settings.py ./settings.py
 COPY supervisor_client.py ./supervisor_client.py

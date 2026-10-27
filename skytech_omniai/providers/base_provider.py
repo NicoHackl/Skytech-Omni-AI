@@ -31,6 +31,23 @@ _FENCE_RE = re.compile(r"^```[a-zA-Z0-9]*\s*\n?(.*?)\n?```$", re.DOTALL)
 # Das erste in Prosa eingebettete Objekt bzw. die erste eingebettete Liste.
 _EMBEDDED_JSON_RE = re.compile(r"(\{.*\}|\[.*\])", re.DOTALL)
 
+
+class ProviderTimeout(RuntimeError):
+    """Der Anbieter hat nicht innerhalb des Zeitlimits geantwortet.
+
+    Unterklasse von ``RuntimeError``, damit ``/ask`` unverändert antwortet;
+    der Vertrag v1 unterscheidet den Fall (``TIMEOUT``).
+    """
+
+
+class UnknownModel(ValueError):
+    """Das angefragte Modell gehört nicht zu diesem Anbieter."""
+
+
+class NotJson(ValueError):
+    """Die Antwort des Modells war kein auswertbares JSON."""
+
+
 FEHLER_KEIN_JSON = (
     "Die Antwort des Modells war kein auswertbares JSON. Bitte die Anfrage "
     "erneut stellen oder den Prompt genauer formulieren."
@@ -82,14 +99,28 @@ class BaseProvider(ABC):
     """Schnittstelle, die jeder Provider (Claude, Gemini, …) erfüllen muss."""
 
     @abstractmethod
-    def execute(self, prompt: str, model: str | None = None) -> dict:
+    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
         """Führt den Prompt gegen den Provider aus und gibt geparstes JSON zurück.
 
         ``model`` wählt optional ein bestimmtes Modell innerhalb des Providers.
         Ohne Angabe greift der Standard des Providers oder das add-on-weite
         Standardmodell aus der Umgebungsvariablen ``OMNIAI_MODEL``.
+        ``timeout`` begrenzt die Dauer in Sekunden; ohne Angabe gilt die
+        Vorgabe des Providers.
+
+        :raises ProviderTimeout: bei Zeitüberschreitung.
+        :raises UnknownModel: wenn das Modell nicht zum Provider gehört.
+        :raises NotJson: wenn die Antwort kein JSON ist.
         """
         raise NotImplementedError
+
+    def _resolve_model(self, model: str | None) -> str:
+        return (model or "").strip()
+
+    def effective_model(self, model: str | None = None) -> str:
+        """Name des Modells, das tatsächlich angefragt wird — ``auto``, wenn
+        der Anbieter selbst entscheidet."""
+        return self._resolve_model(model) or "auto"
 
     @staticmethod
     def parse_json(raw_output: str) -> dict:
@@ -123,4 +154,4 @@ class BaseProvider(ABC):
                 continue
 
         log.error("Antwort ohne auswertbares JSON. Rohausgabe: %s", raw_output)
-        raise ValueError(FEHLER_KEIN_JSON)
+        raise NotJson(FEHLER_KEIN_JSON)

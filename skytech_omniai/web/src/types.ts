@@ -47,6 +47,7 @@ export interface SettingsOptions {
   codex_auth_json: string
   openai_api_key: string
   gemini_api_key: string
+  api_token: string
 }
 
 /** Schlüssel der Zugänge. Sie kommen vom Server immer leer zurück. */
@@ -56,6 +57,7 @@ export type SecretKey =
   | 'codex_auth_json'
   | 'openai_api_key'
   | 'gemini_api_key'
+  | 'api_token'
 
 /** Antwort von `GET /settings` und `PUT /settings`. */
 export interface SettingsResponse {

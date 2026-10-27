@@ -19,6 +19,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from waitress import serve
 from werkzeug.exceptions import NotFound
 
+from api_v1 import api_v1
 from config_loader import OPTIONS_PATH, apply_options_to_env, load_options, read_addon_version
 from providers.base_provider import resolve_tool_access
 from providers.claude_sub_provider import CLAUDE_MODELS
@@ -78,6 +79,8 @@ FEHLER_OHNE_OBERFLAECHE = (
 )
 
 app = Flask(__name__)
+# Schnittstelle v1 für Skytech X mit Token-Pflicht (D-019), eigenes Modul.
+app.register_blueprint(api_v1)
 
 
 # --- Schnittstelle ---------------------------------------------------------

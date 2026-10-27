@@ -17,6 +17,8 @@ from providers.base_provider import (
     TOOL_ACCESS_FULL,
     TOOL_ACCESS_OFF,
     BaseProvider,
+    ProviderTimeout,
+    UnknownModel,
     resolve_tool_access,
 )
 
@@ -265,7 +267,7 @@ class CodexSubProvider(BaseProvider):
         # Jede „gpt-“-Kennung wird durchgelassen, damit neue Modelle ohne
         # Codeänderung genutzt werden können.
         if chosen not in CODEX_MODELS and not chosen.startswith("gpt-"):
-            raise ValueError(
+            raise UnknownModel(
                 f"„{chosen}“ ist kein Modell von ChatGPT. Zur Auswahl stehen: "
                 + ", ".join(CODEX_MODELS)
                 + ". Weitere „gpt-“-Modelle sind ebenfalls erlaubt."
@@ -289,7 +291,7 @@ class CodexSubProvider(BaseProvider):
             return FEHLER_ANMELDUNG_ABGELAUFEN
         return FEHLER_CLI_ABGEBROCHEN
 
-    def execute(self, prompt: str, model: str | None = None) -> dict:
+    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
         chosen_model = self._resolve_model(model)
         env = self._build_env()
         full_prompt = SYSTEM_PROMPT + "\n\n" + prompt + JSON_INSTRUCTION
@@ -331,15 +333,15 @@ class CodexSubProvider(BaseProvider):
                 input=full_prompt,
                 capture_output=True,
                 text=True,
-                timeout=TIMEOUT_SEKUNDEN,
+                timeout=timeout or TIMEOUT_SEKUNDEN,
                 env=env,
             )
         except FileNotFoundError as fehler:
             log.error("Die Codex-CLI wurde im Container nicht gefunden: %s", fehler)
             raise RuntimeError(FEHLER_CLI_FEHLT) from fehler
         except subprocess.TimeoutExpired as fehler:
-            log.error("Codex-CLI nach %s s abgebrochen", TIMEOUT_SEKUNDEN)
-            raise RuntimeError(FEHLER_ZEITUEBERSCHREITUNG) from fehler
+            log.error("Codex-CLI nach %s s abgebrochen", timeout or TIMEOUT_SEKUNDEN)
+            raise ProviderTimeout(FEHLER_ZEITUEBERSCHREITUNG) from fehler
 
         if result.returncode != 0:
             # Die Ausgabe der CLI kann Pfade und Stacktraces enthalten und geht

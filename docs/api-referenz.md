@@ -22,8 +22,20 @@ Für das Backend von Skytech X gibt es einen eigenen, versionierten Vertrag unte
 (D-019): Gesundheit, Fähigkeiten, Einmal-Antworten mit Schema-Prüfung und Agent-Läufe mit
 Ereignisstrom und MCP-Werkzeugen des Backends, alle mit Token-Pflicht. Er ist als OpenAPI-Datei
 festgelegt und wird hier nicht wiederholt: [contracts/omniai-api-v1.yaml](contracts/omniai-api-v1.yaml).
-Masterkopie ist `openapi/omniai-api-v1.yaml` im Repo Skytech-X-Backend. **Noch nicht umgesetzt** —
-siehe [roadmap.md](roadmap.md) (M5). Die Endpunkte unten bleiben davon unberührt.
+Masterkopie ist `openapi/omniai-api-v1.yaml` im Repo Skytech-X-Backend. Die Endpunkte unten
+bleiben davon unberührt.
+
+Umsetzungsstand (Einzelheiten im Vertrag):
+
+| Endpunkt | Stand |
+|---|---|
+| Token-Pflicht (`api_token`, Fehler `401 UNAUTHORIZED`) | umgesetzt |
+| `GET /v1/health`, `GET /v1/capabilities` | umgesetzt; `tools` und `usage` melden noch `false` |
+| `POST /v1/completions` | umgesetzt: Schema-Prüfung mit einem zweiten Versuch, Zeitlimit je Anfrage, Fehlercodes; Nutzungsdaten fehlen noch |
+| `/v1/runs` (Agent-Läufe) | noch nicht — antwortet `404 NOT_FOUND` (M5) |
+
+Jeder `/v1`-Fehler hat die Form `{"error": "<deutscher Satz>", "code": "<STABIL>"}`; unbekannte
+Pfade unter `/v1` antworten ebenso, nicht mit der Oberfläche.
 
 ## Fehlerformat
 

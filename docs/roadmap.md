@@ -69,9 +69,10 @@ anfordern; die Werkzeuge liefert das Backend über MCP (D-019,
 | Punkt | Status | Verweis |
 |---|---|---|
 | Vertrag v1 als OpenAPI-Datei abgestimmt | fertig | D-019 |
-| Option `api_token`, Token-Pflicht für `/v1/…` | offen | D-019 |
-| `GET /v1/health`, `GET /v1/capabilities` | offen | |
-| `POST /v1/completions` mit Schema-Prüfung und Nutzungsdaten | offen | |
+| Option `api_token`, Token-Pflicht für `/v1/…` | fertig | D-019 |
+| `GET /v1/health`, `GET /v1/capabilities` | fertig | |
+| `POST /v1/completions` mit Schema-Prüfung | fertig | D-020 |
+| Nutzungsdaten (Tokens) in Antworten | offen | |
 | `POST /v1/runs` + Ereignisstrom für `claude_sub` (Kommandozeile mit MCP-Konfiguration) | offen | |
 | Agent-Läufe für `codex_sub` und `gemini` | offen | |
 | Alt-Endpunkte nur noch über den Ingress, sobald Skytech X umgestellt ist | offen | [bekannte-luecken.md](bekannte-luecken.md) |

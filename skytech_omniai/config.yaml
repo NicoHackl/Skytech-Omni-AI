@@ -47,6 +47,9 @@ options:
   codex_auth_json: ""
   openai_api_key: ""
   gemini_api_key: ""
+  # Token für die Schnittstelle v1 (Skytech X, D-019). Leer = /v1 lehnt alles ab.
+  # Mindestens 32 zufällige Zeichen, z. B. openssl rand -base64 32.
+  api_token: ""
 schema:
   provider: "list(claude_sub|codex_sub|gemini)"
   # Gemeinsame Liste für alle Provider: die ersten Einträge gehören zu
@@ -61,3 +64,4 @@ schema:
   codex_auth_json: "password?"
   openai_api_key: "password?"
   gemini_api_key: "password?"
+  api_token: "password?"
