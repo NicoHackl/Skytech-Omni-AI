@@ -72,9 +72,11 @@ anfordern; die Werkzeuge liefert das Backend über MCP (D-019,
 | Option `api_token`, Token-Pflicht für `/v1/…` | fertig | D-019 |
 | `GET /v1/health`, `GET /v1/capabilities` | fertig | |
 | `POST /v1/completions` mit Schema-Prüfung | fertig | D-020 |
-| Nutzungsdaten (Tokens) in Antworten | offen | |
-| `POST /v1/runs` + Ereignisstrom für `claude_sub` (Kommandozeile mit MCP-Konfiguration) | offen | |
-| Agent-Läufe für `codex_sub` und `gemini` | offen | |
+| Nutzungsdaten (Tokens) in Läufen (`claude_sub`) | fertig | D-021 |
+| Nutzungsdaten in `/v1/completions` | offen | |
+| `POST /v1/runs` + Ereignisstrom für `claude_sub` (Kommandozeile mit MCP-Konfiguration), Übergabe am Laufende | fertig | D-021 |
+| Läufe ohne Werkzeuge für `codex_sub` und `gemini` (Einzelanfrage) | fertig | D-021 |
+| Werkzeuge in Läufen für `codex_sub` und `gemini` | offen | |
 | Alt-Endpunkte nur noch über den Ingress, sobald Skytech X umgestellt ist | offen | [bekannte-luecken.md](bekannte-luecken.md) |
 
 ## Zurückgestellt

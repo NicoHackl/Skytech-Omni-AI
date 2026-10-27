@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.12.0] — 27.10.2026
+
+### Hinzugefügt
+
+- Skytech X kann Aufgaben an OmniAI übergeben, die Claude selbstständig mit den Werkzeugen von Skytech X erledigt; der Fortschritt ist in Skytech X live zu sehen
+
 ## [0.11.0] — 27.10.2026
 
 ### Hinzugefügt
