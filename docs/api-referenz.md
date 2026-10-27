@@ -16,6 +16,15 @@
   **Ausnahme:** `PUT /settings` nimmt nur Aufrufe über den Ingress an (siehe unten).
 - Format: JSON, UTF-8.
 
+## Vertrag v1 für Skytech X (geplant)
+
+Für das Backend von Skytech X gibt es einen eigenen, versionierten Vertrag unter `/v1/…`
+(D-019): Gesundheit, Fähigkeiten, Einmal-Antworten mit Schema-Prüfung und Agent-Läufe mit
+Ereignisstrom und MCP-Werkzeugen des Backends, alle mit Token-Pflicht. Er ist als OpenAPI-Datei
+festgelegt und wird hier nicht wiederholt: [contracts/omniai-api-v1.yaml](contracts/omniai-api-v1.yaml).
+Masterkopie ist `openapi/omniai-api-v1.yaml` im Repo Skytech-X-Backend. **Noch nicht umgesetzt** —
+siehe [roadmap.md](roadmap.md) (M5). Die Endpunkte unten bleiben davon unberührt.
+
 ## Fehlerformat
 
 Jeder Fehler antwortet mit demselben Rumpf:

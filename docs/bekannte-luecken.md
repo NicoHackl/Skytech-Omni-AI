@@ -10,6 +10,7 @@ wo nicht.
 |---|---|---|---|
 | API-Pfade | [frontend.md](frontend.md) beschreibt `/api/…` als Präfix | Die Endpunkte heißen `/ask`, `/models`, `/status`, `/health` ohne Präfix | Bewusst so, D-010. Beim Anlegen eines neuen Endpunkts kein `/api` voranstellen |
 | Auslieferung | [frontend.md](frontend.md) nennt einen Webserver mit SPA-Fallback | Flask liefert das Bündel selbst aus | Bewusst so, D-009. Kein nginx im Bild |
+| Vertrag v1 | [contracts/omniai-api-v1.yaml](contracts/omniai-api-v1.yaml) beschreibt `/v1/…` | Noch nicht umgesetzt (M5) | Nicht annehmen, dass ein `/v1`-Endpunkt existiert. Die Datei ist eine Kopie — geändert wird zuerst im Repo Skytech-X-Backend |
 
 ## Stolpersteine
 
