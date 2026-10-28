@@ -2,7 +2,7 @@
    wider — weicht der Server ab, wird hier nachgezogen, nicht mit `any` umgangen. */
 
 /** Technischer Name eines Anbieters, so wie er in der Konfiguration steht. */
-export type ProviderName = 'claude_sub' | 'codex_sub' | 'gemini'
+export type ProviderName = 'claude_sub' | 'codex_sub' | 'gemini' | 'gemini_sub'
 
 /** Was ein Anbieter an Modellen anbietet. `default` = null heißt: er entscheidet selbst. */
 export interface ProviderModels {
@@ -83,4 +83,18 @@ export interface SettingsInput {
 export interface AddonInfo {
   name: string
   config_path: string | null
+}
+
+/** Antwort von `GET /auth/gemini` und der Aktionen darunter: Stand der Anmeldung bei Google. */
+export interface GeminiLoginStatus {
+  /** Ob die Google-Befehlszeile im Add-on vorhanden ist. */
+  available: boolean
+  signed_in: boolean
+  /** `waiting` = Adresse da, Code fehlt; `checking` = Code übergeben, Google prüft. */
+  state: 'idle' | 'waiting' | 'checking'
+  /** Nur im Zustand `waiting` und nur über Home Assistant. */
+  url: string | null
+  seconds_left: number | null
+  /** Grund, warum die letzte Anmeldung nicht geklappt hat, als fertiger Satz. */
+  error: string | null
 }

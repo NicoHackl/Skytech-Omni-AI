@@ -29,14 +29,18 @@ Endpunkte: `GET /settings`, `PUT /settings` in [api-referenz.md](api-referenz.md
 
 | Option | Pflicht | Vorgabe | Bedeutung |
 |---|---|---|---|
-| `provider` | ja | `claude_sub` | Aktiver Anbieter: `claude_sub`, `codex_sub` oder `gemini` |
+| `provider` | ja | `claude_sub` | Aktiver Anbieter: `claude_sub`, `codex_sub`, `gemini` (Schlüssel) oder `gemini_sub` (Google-AI-Pro-Abo) |
 | `model` | ja | `auto` | Add-on-weites Standardmodell. `auto` heißt: der Anbieter entscheidet |
-| `tool_access` | ja | `web` | Welche Werkzeuge die beiden Befehlszeilen benutzen dürfen: `off`, `web` oder `full` |
+| `tool_access` | ja | `web` | Welche Werkzeuge die Befehlszeilen benutzen dürfen: `off`, `web` oder `full` |
 | `claude_oauth_token` | nein | leer | Langlebiges Token des Claude-Pro/Max-Abos, erzeugt mit `claude setup-token` |
 | `anthropic_api_key` | nein | leer | Alternative zum Abo: nach Verbrauch abgerechneter Anthropic-Schlüssel |
 | `codex_auth_json` | nein | leer | Anmeldung des ChatGPT-Abos: vollständiger Inhalt der Datei `auth.json`, die `codex login` anlegt |
 | `openai_api_key` | nein | leer | Alternative zum Abo: nach Verbrauch abgerechneter OpenAI-Schlüssel |
 | `gemini_api_key` | nein | leer | Schlüssel aus Google AI Studio |
+
+`gemini_sub` hat **keine Option**: seine Anmeldung entsteht auf der Seite „Einstellungen“ (siehe
+unten) und liegt als Datei unter `/data`, nicht in den Optionen. Auch das Standardmodell bleibt bei
+diesem Anbieter `auto`; ein Modell lässt sich pro Anfrage über das Feld `model` nennen.
 | `api_token` | nein | leer | Token der Schnittstelle v1 für Skytech X, mindestens 32 Zeichen (z. B. `openssl rand -base64 32`). Leer = `/v1` lehnt jede Anfrage ab. Dasselbe Token in Skytech X unter „Anbindungen“ eintragen |
 
 Für den aktiven Anbieter muss **einer** der passenden Zugänge gesetzt sein — sonst antwortet
@@ -62,6 +66,7 @@ Aus den Optionen abgeleitet. Beim Betrieb außerhalb von Home Assistant werden s
 | `OMNIAI_API_TOKEN` | nein | — | Token der Schnittstelle v1 (aus der Option `api_token`) |
 | `HOME` | nein | `/data` | Die Claude-CLI legt ihren Zustand unter `$HOME/.claude` ab; über `/data` übersteht er einen Neustart |
 | `CODEX_HOME` | nein | `/data/.codex` | Dasselbe für die Codex-CLI. Sie erneuert ihre Tokens dort selbst |
+| `OMNIAI_GEMINI_HOME` | nein | `/data` | Heimatverzeichnis der Antigravity-CLI (`gemini_sub`): Anmeldung und Zustand liegen darunter in `.gemini/`. Nur für Entwicklung und Tests zu ändern |
 | `PORT` | nein | `8000` | Port der Schnittstelle |
 | `LOG_LEVEL` | nein | `INFO` | `DEBUG`, `INFO`, `WARNING` oder `ERROR` |
 | `TZ` | nein | `Europe/Berlin` | Zeitzone der Log-Zeitstempel; im Bild fest gesetzt |
@@ -96,9 +101,33 @@ Meldet das Add-on später, die Anmeldung gelte nicht mehr: Schritt 1 bis 3 wiede
 `openai_api_key` ist der Rückfall ohne Abo; er wird nach Verbrauch abgerechnet und nur benutzt,
 wenn `codex_auth_json` leer ist.
 
+## So kommt der Google-Zugang ins Add-on (Abo)
+
+Die Antigravity-CLI kennt weder ein Token (wie Claude) noch eine Datei zum Einfügen (wie Codex).
+Die Anmeldung geschieht deshalb **im Add-on selbst**, auf der Seite „Einstellungen“:
+
+1. In der Karte „Google-Anmeldung (Abo)“ auf „Mit Google anmelden“ klicken.
+2. „Google-Seite öffnen“ und dort mit dem Konto anmelden, das Google AI Pro hat. Am besten ist der
+   Browser vorher schon bei Google angemeldet.
+3. Den Code kopieren, den Google danach anzeigt, hier einfügen und „Anmeldung abschließen“. Google
+   lässt dafür etwa eine Minute Zeit (der Rest der Zeit steht neben dem Feld). Wer stattdessen die
+   ganze Adresse der Zielseite kopiert, kommt ebenfalls zum Ziel.
+4. Das Add-on prüft die Anmeldung mit einem kurzen Probeauftrag und danach in einem neuen Prozess.
+   Erst dann steht dort „Angemeldet“, und der Anbieter „Google Gemini (Abo)“ ist nutzbar.
+
+Die Anmeldung liegt unter `/data/.gemini/antigravity-cli/` (Rechte `0600`), samt einer Sicherung.
+Die CLI erneuert sie selbst; das Add-on überschreibt sie nie. „Abmelden“ löscht sie aus dem Add-on.
+Den Zugriff widerrufen lässt sich zusätzlich im Google-Konto unter „Sicherheit“. Gilt die
+Anmeldung später nicht mehr, meldet das Add-on es bei der nächsten Anfrage; dann erneut anmelden.
+
+**Google unterstützt diesen Weg bei privaten Abos nicht** und kann Konten dafür einschränken oder
+sperren (Hintergrund: D-022 und [erweiterungen/gemini-provider/](erweiterungen/gemini-provider/README.md)).
+Die Karte weist darauf hin. Der unterstützte Weg ist der Schlüssel aus Google AI Studio
+(`gemini_api_key`, Anbieter `gemini`).
+
 ## Werkzeuge der Befehlszeilen
 
-Beide CLIs laufen im Add-on ohne Bildschirm (`claude -p`, `codex exec`). In diesem Modus gibt es keine interaktive
+Die CLIs laufen im Add-on ohne Bildschirm (`claude -p`, `codex exec`, `agy -p`). In diesem Modus gibt es keine interaktive
 Rückfrage — und **ohne ausdrückliche Freigabe lehnt die CLI jedes genehmigungspflichtige Werkzeug
 automatisch ab**, auch `WebSearch` und `WebFetch`. Es ist also nie etwas blockiert; es war nur nie
 freigegeben. `tool_access` steuert diese Freigabe:
@@ -114,11 +143,17 @@ Liste einzeln freigegebener Werkzeuge (`--allowedTools`), bei Codex eine Sandbox
 (`--sandbox`) plus Schalter für die Websuche (`--search`). Was das für die Reichweite bedeutet,
 steht in [sicherheit-datenschutz.md](sicherheit-datenschutz.md).
 
+Bei Google Gemini (Abo) sind es Regeln in der `settings.json` der CLI, die das Add-on bei jedem Lauf
+prüft: `web` erlaubt das Lesen von Webseiten, `off` nicht. **Befehle gibt das Add-on nie frei**, auch
+bei `full` nicht — dort wirkt `full` wie `web`. Eine eingebaute Websuche der CLI lässt sich nicht
+über diese Regeln abschalten; bei `off` bittet das Add-on das Modell nur, keine Werkzeuge zu nutzen.
+
 Warum `web` und nicht `full` die Vorgabe ist: D-012 in
 [design-entscheidungen.md](design-entscheidungen.md).
 
-Die Option betrifft `claude_sub` und `codex_sub`. Der Gemini-Provider ruft die Schnittstelle
-direkt auf und hat keine Werkzeuge; er antwortet aus seinem Trainingswissen.
+Die Option betrifft `claude_sub`, `codex_sub` und `gemini_sub`. Der Gemini-Provider mit Schlüssel
+(`gemini`) ruft die Schnittstelle direkt auf und hat keine Werkzeuge; er antwortet aus seinem
+Trainingswissen.
 
 Auf der Seite „Einstellungen“ heißt die Option „Werkzeuge“ und gilt nach dem Speichern sofort; im
 Reiter „Konfiguration“ geändert, braucht sie einen Neustart. Ein unbekannter Wert wird nicht übernommen,

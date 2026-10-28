@@ -68,6 +68,23 @@ wo nicht.
 - **Änderungen im Reiter „Konfiguration“ brauchen weiter einen Neustart.** Nur die Seite
   „Einstellungen“ setzt die Umgebung des laufenden Prozesses neu. Wer im Reiter speichert und nicht
   neu startet, sieht auf der Seite den neuen Wert, während die Anfragen noch mit dem alten laufen.
+- **Die Antigravity-CLI hat keinen Anmeldebefehl, und ihre Eingabe entscheidet über ihr Verhalten.**
+  Mit `/dev/null` als Eingabe druckt sie die Google-Adresse und wartet 60 Sekunden, ohne zu
+  lesen; mit einer Pipe gibt sie sofort auf; erst eine **Pty** lässt sie den Code lesen. Die
+  Anmeldung in `gemini_sub_login.py` läuft deshalb über `pty.openpty()` — nicht auf eine Pipe
+  „vereinfachen“. Gemessen mit Version 1.4.8 (D-022).
+- **Die CLI wählt den Speicher ihrer Anmeldung selbst.** Schlüsselbund, Datei bei SSH-Sitzung oder im
+  Container. Das Add-on setzt in **jedem** Aufruf `SSH_CONNECTION`, `SSH_CLIENT`, `SSH_TTY`
+  (`FORCED_FILE_STORAGE_ENV`), bei Anmeldung wie Anfrage. Fehlt es in einem von beiden, schreiben und
+  lesen sie womöglich verschiedene Orte — das ist der Fehler, über den Berichte zu `agy` in Containern
+  klagen.
+- **Ohne gültige Anmeldung wartet die CLI 60 Sekunden auf einen Code, den niemand eingibt.** Der Lauf
+  bricht deshalb sofort ab, sobald „authentication required“ auf der Fehlerausgabe steht
+  (`AUTH_REQUIRED_MARKER`). Das hängt am englischen Text der CLI; bei einer neuen Fassung prüfen.
+- **Die CLI legt Gespräche auf der Platte ab** (`conversations`, `brain`, `implicit`, eine
+  Zusammenfassungs-Datenbank, Protokolle). Aufbau und Namen sind nicht zugesichert; aufgeräumt wird
+  deshalb alles, was ein Lauf **neu** angelegt hat, nicht nach Namen. Das setzt voraus, dass immer nur
+  ein Lauf zur Zeit läuft (`RUN_LOCK`) — die Sperre nicht entfernen.
 - **Das Auswahlfeld `model` ist für alle Anbieter dasselbe.** Steht dort ein Claude-Alias und der
   Anbieter ist auf Gemini oder ChatGPT gestellt, lehnt der Provider die Anfrage ab — mit einer
   Meldung, die die gültigen Werte nennt. Das ist gewollt und kein Bug.
@@ -79,9 +96,14 @@ wo nicht.
 | Port 8000 ist unauthentifiziert | Wer den Port erreicht, kann Anfragen stellen und Kontingent verbrauchen | Port nicht ins Internet weiterleiten; wer nur die Oberfläche braucht, kann `ports` aus `config.yaml` entfernen und ausschließlich den Ingress nutzen |
 | Werkzeugstufe `full` zusammen mit dem offenen Port | Ein Prompt von außen kann Befehle im Container ausführen und käme damit an das Token unter `/data` | Bei `full` den Port schließen und nur den Ingress nutzen. Vorgabe ist `web`, dort tritt der Fall nicht auf — siehe [sicherheit-datenschutz.md](sicherheit-datenschutz.md) |
 | Googles Schrittformat ist nicht zugesichert | Benennt Google die Schritttypen um, findet `_extract_text` den Text nicht mehr am erwarteten Ort | Ein Notfallpfad sammelt dann alles ein, was Text enthält. Bleibt auch das leer, kommt eine verständliche Meldung statt eines Absturzes |
-| Die Pfade über die Befehlszeilen sind nur mit Attrappe getestet | Ein Verhaltenswechsel von `claude -p` oder `codex exec` fällt in den Tests nicht auf | Nach jedem Anheben einer CLI-Version einmal von Hand eine Anfrage über den betroffenen Anbieter stellen |
-| Das Image für `aarch64` wird in der CI nicht gebaut | Ein Fehler, der nur auf ARM auftritt (etwa ein fehlendes Binary der Codex-CLI), erreicht die Nutzer ungeprüft | `scripts/check.sh --docker` auf einem Apple-Silicon-Rechner baut und prüft genau dieses Image — vor Änderungen am Dockerfile von Hand ausführen |
-| Basisimage und Befehlszeilen hält Dependabot nicht aktuell | Die Alpine-Fassung in `build.yaml` und die Versionen der Claude- und Codex-CLI im Dockerfile veralten still | Von Hand anheben; bei den Befehlszeilen danach die Handprüfung aus der Zeile darüber |
+| Die Pfade über die Befehlszeilen sind nur mit Attrappe getestet | Ein Verhaltenswechsel von `claude -p`, `codex exec` oder `agy -p` fällt in den Tests nicht auf | Nach jedem Anheben einer CLI-Version einmal von Hand eine Anfrage über den betroffenen Anbieter stellen |
+| Das Image für `aarch64` wird in der CI nicht gebaut | Ein Fehler, der nur auf ARM auftritt (etwa ein fehlendes Binary der Codex- oder Antigravity-CLI), erreicht die Nutzer ungeprüft. Das `amd64`-Binary der Antigravity-CLI wurde nur gehasht und auf seinen ELF-Kopf geprüft, nie ausgeführt | `scripts/check.sh --docker` auf einem Apple-Silicon-Rechner baut und prüft genau dieses Image — vor Änderungen am Dockerfile von Hand ausführen |
+| Basisimage und Befehlszeilen hält Dependabot nicht aktuell | Die Alpine-Fassung in `build.yaml` und die Versionen der Claude-, Codex- und Antigravity-CLI im Dockerfile veralten still (bei der Antigravity-CLI zusätzlich zwei SHA-512-Summen aus dem Manifest) | Von Hand anheben; bei den Befehlszeilen danach die Handprüfung aus der Zeile darüber |
+| Google unterstützt `agy` in fremden Anwendungen bei privaten Abos nicht | Das Konto, das sich für `gemini_sub` anmeldet, kann eingeschränkt oder gesperrt werden; Googles Bedingungen nennen die Nutzung von Fremdwerkzeugen als Grund | Nur mit einem Konto anmelden, dessen Verlust nicht schmerzt. Unterstützter Weg: `gemini` mit Schlüssel aus Google AI Studio — D-022, [erweiterungen/gemini-provider/](erweiterungen/gemini-provider/README.md) |
+| Anmeldung bei Google nur gegen die Attrappe getestet | Der Ablauf ist in einem Container der Zielarchitektur bis zum Austausch des Codes geprüft; dass eine **echte** Anmeldung Neustarts, Erneuerung des Zugriffstokens und Updates übersteht, ist nicht belegt | Handprüfung H1 bis H10 in D-022 nach der ersten Anmeldung durchgehen |
+| Google Gemini (Abo) hat keine feste Modellliste | Die CLI nennt ihre Modelle erst nach der Anmeldung; das Auswahlfeld der Konfiguration enthält dafür nur `auto` | Nach der Anmeldung stehen die Namen im Protokoll des Add-ons; pro Anfrage über `model` setzen. Eine feste Liste ist nachzutragen, sobald die Namen bekannt sind (`config.yaml`, `GEMINI_SUB_MODELS`) |
+| Eingebaute Websuche der Antigravity-CLI lässt sich nicht abschalten | Bei `tool_access: off` bittet das Add-on das Modell nur, keine Werkzeuge zu nutzen | Wer sicher keine Suche will, nimmt `gemini` mit Schlüssel — siehe [sicherheit-datenschutz.md](sicherheit-datenschutz.md) |
+| Verbrauch von Google Gemini (Abo) je Anfrage unbekannt | Die CLI arbeitet als Agent (denkt, plant, ruft Werkzeuge); Automationen können das 5-Stunden-Kontingent leeren, das auch die eigene Nutzung von AI Pro braucht. Anfragen laufen nacheinander | Anfragen sparsam stellen; Handprüfung H7 liefert die Größenordnung |
 | Stufe `web` ist bei ChatGPT weiter gefasst als bei Claude | `--sandbox read-only` verhindert Schreiben und eigene Netzverbindungen, lesende Befehle im Container aber nicht | Wer das ausschließen will, stellt `tool_access` auf `off` oder nutzt `claude_sub` — siehe [sicherheit-datenschutz.md](sicherheit-datenschutz.md) |
 
 ## Bewusst nicht umgesetzt
@@ -91,8 +113,8 @@ wo nicht.
 | Authentifizierung des offenen Ports | Automatisierungen in Home Assistant bräuchten dann ein zusätzliches Token; der Nutzen steht im Heimnetz nicht dafür | [roadmap.md](roadmap.md) |
 | Verlauf über mehrere Anfragen | Jede Anfrage steht für sich. Ein Verlauf hieße Persistenz und ein Datenschutzthema, das keiner gefordert hat | [architektur.md](architektur.md) |
 | Lokale Modelle über Ollama | Die Fabrik ist darauf vorbereitet, der Bedarf war bisher nicht da | [roadmap.md](roadmap.md) |
-| Geräte-Anmeldung für ChatGPT in der Oberfläche | Der Zugang wird einmalig eingefügt; ein eigener Anmeldevorgang lohnt für einen einmaligen Schritt nicht | D-013 |
-| 32-Bit-Architekturen | Die Codex-CLI gibt es nur für x86_64 und aarch64 | D-014 |
+| Geräte-Anmeldung für ChatGPT in der Oberfläche | Der Zugang wird einmalig eingefügt; ein eigener Anmeldevorgang lohnt für einen einmaligen Schritt nicht. (Bei Google Gemini ist es umgekehrt: dort gibt es nichts zum Einfügen, deshalb entsteht die Anmeldung im Add-on — D-022) | D-013 |
+| 32-Bit-Architekturen | Die Codex- und die Antigravity-CLI gibt es nur für 64 Bit | D-014, D-022 |
 | Antwort gegen ein Schema prüfen | Das Add-on weiß nicht, welche Form der Aufrufer erwartet | — |
 
 ---

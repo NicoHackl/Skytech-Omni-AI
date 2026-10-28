@@ -27,7 +27,9 @@ def test_models_lists_every_provider(client):
     """Normalfall: Automatisierungen können die gültigen Werte abfragen."""
     daten = client.get("/models").get_json()
 
-    assert set(daten["providers"]) == {"claude_sub", "codex_sub", "gemini"}
+    assert set(daten["providers"]) == {"claude_sub", "codex_sub", "gemini", "gemini_sub"}
+    # Die Modelle kennt die Google-Befehlszeile erst nach der Anmeldung.
+    assert daten["providers"]["gemini_sub"] == {"models": [], "default": None}
     assert daten["providers"]["gemini"]["default"] == "gemini-flash-latest"
     assert daten["providers"]["claude_sub"]["default"] is None
     # Ohne Angabe entscheidet die Codex-CLI selbst.
@@ -41,7 +43,12 @@ def test_status_reports_credentials_as_yes_or_no(client, monkeypatch):
 
     daten = client.get("/status").get_json()
 
-    assert daten["credentials"] == {"claude_sub": False, "codex_sub": False, "gemini": True}
+    assert daten["credentials"] == {
+        "claude_sub": False,
+        "codex_sub": False,
+        "gemini": True,
+        "gemini_sub": False,
+    }
     # Der Wert selbst taucht nirgends in der Antwort auf.
     assert "geheim" not in json.dumps(daten, ensure_ascii=False)
 
@@ -50,7 +57,12 @@ def test_status_without_credentials(client):
     """Leerzustand: frisch installiert ist noch nichts hinterlegt."""
     daten = client.get("/status").get_json()
 
-    assert daten["credentials"] == {"claude_sub": False, "codex_sub": False, "gemini": False}
+    assert daten["credentials"] == {
+        "claude_sub": False,
+        "codex_sub": False,
+        "gemini": False,
+        "gemini_sub": False,
+    }
     assert daten["default_model"] is None
 
 
@@ -395,3 +407,124 @@ def test_addon_rejects_an_invalid_slug(client, info_supervisor):
     """Ein unerwarteter Slug wird nicht zu einem Pfad zusammengesetzt."""
     info_supervisor.info = {"slug": "../../evil", "name": "Skytech OmniAI"}
     assert client.get("/addon").get_json()["config_path"] is None
+
+
+# --- Anmeldung bei Google (gemini_sub) ---------------------------------------
+
+
+class FakeLogin:
+    """Steht für die Anmeldung: merkt sich Aufrufe, wirft auf Wunsch einen Fehler."""
+
+    def __init__(self):
+        self.calls = []
+        self.error = None
+
+    def _answer(self, name, *args):
+        self.calls.append((name, *args))
+        if self.error:
+            raise self.error
+        return {"state": "waiting", "url": "https://accounts.google.com/x", "signed_in": False}
+
+    def status(self, include_url=False):
+        self.calls.append(("status", include_url))
+        return {"state": "idle", "url": "https://accounts.google.com/x" if include_url else None}
+
+    def start(self):
+        return self._answer("start")
+
+    def submit(self, code):
+        return self._answer("submit", code)
+
+    def cancel(self):
+        return self._answer("cancel")
+
+    def logout(self):
+        return self._answer("logout")
+
+
+@pytest.fixture
+def login(monkeypatch):
+    fake = FakeLogin()
+    monkeypatch.setattr(app_module, "gemini_login", fake)
+    return fake
+
+
+def test_the_login_status_hides_the_address_from_the_open_port(client, login):
+    assert client.get("/auth/gemini").get_json()["url"] is None
+    assert client.get("/auth/gemini", environ_base=INGRESS).get_json()["url"].startswith("https://")
+
+
+@pytest.mark.parametrize(
+    ("methode", "pfad"),
+    [
+        ("post", "/auth/gemini/start"),
+        ("post", "/auth/gemini/code"),
+        ("post", "/auth/gemini/cancel"),
+        ("delete", "/auth/gemini"),
+    ],
+)
+def test_the_login_cannot_be_changed_from_the_open_port(client, login, methode, pfad):
+    """Wer Port 8000 erreicht, soll weder anmelden noch abmelden können."""
+    antwort = getattr(client, methode)(pfad, json={"code": "4/0Acode-12345"})
+
+    assert antwort.status_code == 403
+    assert "Seitenleiste" in antwort.get_json()["error"]
+    assert login.calls == []
+
+
+def test_the_login_can_be_started_and_ended_through_the_ingress(client, login):
+    assert client.post("/auth/gemini/start", environ_base=INGRESS).get_json()["state"] == "waiting"
+    assert client.post("/auth/gemini/cancel", environ_base=INGRESS).status_code == 200
+    assert client.delete("/auth/gemini", environ_base=INGRESS).status_code == 200
+    assert [aufruf[0] for aufruf in login.calls] == ["start", "cancel", "logout"]
+
+
+def test_the_code_is_handed_over(client, login):
+    antwort = client.post(
+        "/auth/gemini/code", json={"code": "4/0Acode-12345"}, environ_base=INGRESS
+    )
+
+    assert antwort.status_code == 200
+    assert ("submit", "4/0Acode-12345") in login.calls
+
+
+@pytest.mark.parametrize("rumpf", [{}, {"code": ""}, {"code": "   "}, {"code": 5}, None])
+def test_a_missing_code_is_marked_at_the_field(client, login, rumpf):
+    antwort = client.post("/auth/gemini/code", json=rumpf, environ_base=INGRESS)
+
+    assert antwort.status_code == 422
+    assert "code" in antwort.get_json()["field_errors"]
+    assert login.calls == []
+
+
+def test_an_unusable_code_is_marked_at_the_field(client, login):
+    from providers.gemini_sub_login import LoginError
+
+    login.error = LoginError("Das sieht nicht nach dem Code aus.", invalid=True)
+
+    antwort = client.post("/auth/gemini/code", json={"code": "kurz"}, environ_base=INGRESS)
+
+    assert antwort.status_code == 422
+    assert antwort.get_json()["field_errors"]["code"] == "Das sieht nicht nach dem Code aus."
+
+
+def test_a_busy_cli_answers_with_a_conflict(client, login):
+    from providers.gemini_sub_login import LoginError
+
+    login.error = LoginError("Gerade läuft eine Anfrage.", busy=True)
+
+    antwort = client.post("/auth/gemini/start", environ_base=INGRESS)
+
+    assert antwort.status_code == 409
+    assert antwort.get_json() == {"error": "Gerade läuft eine Anfrage."}
+
+
+def test_an_unexpected_failure_of_the_login_gets_a_generic_sentence(client, login):
+    login.error = RuntimeError("/data/.gemini/x kaputt, Traceback")
+
+    antwort = client.post("/auth/gemini/start", environ_base=INGRESS)
+
+    assert antwort.status_code == 500
+    text = antwort.get_json()["error"]
+    assert "/data" not in text
+    assert "Traceback" not in text

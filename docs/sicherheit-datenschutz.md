@@ -13,6 +13,11 @@
   Add-on-Prozess lesbar (`0600`, Verzeichnis `0700`). Sie wird aus der Konfiguration nur dann neu
   geschrieben, wenn sich der eingetragene Wert geändert hat — sonst überschriebe ein Neustart die
   von der CLI erneuerten Tokens.
+- Die Anmeldung bei Google (`gemini_sub`) liegt als Datei unter `/data/.gemini/antigravity-cli/`
+  (Rechte `0600`), dazu eine Sicherung daneben. Sie entsteht im Add-on und erscheint nie in einer
+  Antwort. Der **Code**, den der Nutzer von Google kopiert, und die **Anmeldeadresse** (sie trägt
+  Zufallswerte der Sitzung) stehen nie im Log; der Code geht nur in die Eingabe der CLI. Die
+  Adresse liefert das Add-on ausschließlich über den Ingress aus.
 - `GET /status` meldet zu jedem Zugang nur `true` oder `false`. Weder der Wert noch ein Ausschnitt
   noch seine Länge verlässt das Add-on.
 - Vor jedem Commit `git diff --staged` prüfen.
@@ -26,8 +31,11 @@
 - Pfade unterhalb der Wurzel werden von `send_from_directory` aufgelöst; Ausbruchsversuche mit
   `..` weist es ab, und die Anfrage landet auf der Auffangroute.
 - `provider` und `model` werden gegen bekannte Werte geprüft, bevor irgendetwas damit geschieht.
-  `model` fließt bei Claude und ChatGPT als Argument in einen Unterprozess — der wird ohne Shell
-  gestartet (`subprocess.run` mit Argumentliste), es gibt also keine Shell-Auswertung.
+  `model` fließt bei Claude, ChatGPT und Gemini (Abo) als Argument in einen Unterprozess — der wird
+  ohne Shell gestartet (Argumentliste), es gibt also keine Shell-Auswertung. Ein Prompt, der mit
+  `/` beginnt, wird bei Gemini (Abo) nicht als Befehl der CLI gedeutet (`--disable-slash-commands`).
+  Der eingefügte Code der Google-Anmeldung wird gegen ein Muster geprüft (Zeichen eines Codes,
+  höchstens 2048), bevor er in die Eingabe der CLI geschrieben wird.
 - Der Prompt selbst wird nicht geprüft: er ist der Inhalt der Anfrage und geht unverändert an das
   Modell.
 
@@ -73,6 +81,10 @@ neben Port 8000 wird:
   Zugänge auslesen.
 - **Nur für Administratoren.** `panel_admin` (Vorgabe `true`, deshalb nicht eigens in `config.yaml` gesetzt) blendet die Oberfläche für andere Nutzer aus
   der Seitenleiste aus.
+- **Anmeldung bei Google nur über den Ingress.** Starten, Code einreichen, Abbrechen und Abmelden
+  (`/auth/gemini…`) gelten wie `PUT /settings`: nur von der Absenderadresse des Ingress-Proxys.
+  Sonst könnte jeder, der Port 8000 erreicht, die Anmeldung des Betreibers entfernen oder eine
+  fremde Anmeldung anstoßen.
 - **Zugänge nur schreiben.** `GET /settings` liefert jedes Zugangsfeld leer und dazu nur
   „hinterlegt ja/nein“ — dieselbe Auskunft wie `GET /status`. Ein Wert kommt nie zurück.
 - **Manager-Rolle.** Das Add-on fordert `hassio_role: manager` an, weil der Supervisor das
@@ -92,12 +104,24 @@ sich **sicherheitlich**, nicht nur im Komfort:
 | `web` | Lesender Zugriff auf öffentliche Webseiten. Was das Modell abruft, bestimmt der Prompt |
 | `full` | Zusätzlich Befehle und Dateizugriff **im Add-on-Container** |
 
-**Die Stufen sind nicht bei beiden Befehlszeilen gleich scharf.** Bei Claude ist `web` eine Liste
+**Die Stufen sind nicht bei allen Befehlszeilen gleich scharf.** Bei Claude ist `web` eine Liste
 einzeln freigegebener Werkzeuge (`WebSearch`, `WebFetch`) — es gibt in dieser Stufe schlicht kein
 Werkzeug, mit dem sich eine Datei lesen ließe. Bei Codex gibt es diese Liste nicht, sondern eine
 Sandbox-Stufe: `read-only` verhindert Schreibzugriffe und eigenständige Netzverbindungen, **lesende
 Befehle im Container bleiben aber möglich**. In der Vorgabestufe kann ChatGPT damit prinzipiell
 Dateien unter `/data` lesen — Claude kann das dort nicht.
+
+**Gemini (Abo)** kennt weder die Liste noch die Sandbox. Die CLI ist ein Programmierassistent mit
+Datei-, Befehls- und Webwerkzeugen. Das Add-on schränkt sie dreifach ein: (1) ein eigener, leerer
+Arbeitsbereich unter `/data` — außerhalb davon ist der Dateizugriff der CLI aus, die Optionen mit
+allen Zugängen sind also nicht lesbar; (2) Regeln in ihrer `settings.json`, die **Befehle, URL-Ausführung
+und MCP in jeder Stufe verbieten** (auch bei `full`) und das Lesen von Webseiten nur bei `web` und
+`full` erlauben; (3) eine schmale Umgebung ohne die Zugänge der anderen Anbieter. Nicht abschaltbar
+ist eine eventuell eingebaute Websuche der CLI — bei `off` steht nur die Bitte an das Modell, keine
+Werkzeuge zu nutzen. Fehlt die `settings.json` oder lässt sie sich nicht schreiben, läuft die CLI
+nicht. Das ist enger als Claude mit `full` und vergleichbar mit Claude in `web`; ein Rest bleibt, weil
+Anweisungen aus abgerufenen Webseiten das Modell erreichen können — es kann damit höchstens im
+leeren Arbeitsbereich schreiben, dessen Inhalt nach jedem Lauf gelöscht wird.
 
 Das ist deutlich weniger als `full` (kein Schreiben, kein freier Netzzugang; hinausgehen könnte
 Gelesenes allenfalls über eine Suchanfrage), aber mehr als bei Claude in derselben Stufe. Wer das
@@ -153,6 +177,8 @@ Das Add-on speichert weder Texte noch Vektoren; im Log stehen nur Anzahl und Dim
 | Antwort des Modells | ja, im Durchlauf | nicht gespeichert | entfällt |
 | Anmeldezustand der Claude-CLI | ja | `/data/.claude` im Container | bis zur Deinstallation |
 | Anmeldezustand der Codex-CLI | ja | `/data/.codex` im Container | bis zur Deinstallation |
+| Anmeldung bei Google (Gemini-Abo) | ja | `/data/.gemini/antigravity-cli/` im Container, mit Sicherung | bis „Abmelden“ bzw. zur Deinstallation |
+| Gespräche der Antigravity-CLI (Prompt, Antwort, Zusammenfassung) | während eines Laufs | unter `/data/.gemini/…` — die CLI legt sie selbst an | werden nach **jedem Lauf** gelöscht; von den Protokollen der CLI bleiben die jüngsten fünf |
 | Abgerufene Webseiten (Stufe `web`/`full`) | nur im Durchlauf | nicht gespeichert | entfällt |
 | Zugangsdaten | ja | `/data/options.json`, vom Supervisor verwaltet — geschrieben über den Reiter „Konfiguration“ oder die Seite „Einstellungen“ | bis zum Leeren bzw. „Entfernen“ |
 
@@ -170,6 +196,7 @@ Aufgabe nötig ist.
 | Anthropic | Prompt, gewähltes Modell, Abo-Token bzw. Schlüssel | Der Prompt wird dort beantwortet |
 | OpenAI | Prompt, gewähltes Modell, Anmeldung des ChatGPT-Abos bzw. Schlüssel | Dasselbe für ChatGPT. Kein Verlauf: jeder Lauf ist eigenständig (`--ephemeral`) |
 | Google | Prompt, gewähltes Modell, Schlüssel | Dasselbe für Gemini. `store: false` unterbindet das Speichern des Verlaufs |
+| Google (Abo) | Prompt, gewähltes Modell, Anmeldung des Google-Kontos, abgerufene Webseiten | Dasselbe für Gemini über Google AI Pro. **Anders als beim Schlüssel** gelten die Bedingungen für private Konten: nach den Zusatzbedingungen der Antigravity-Dienste werden Eingaben erfasst und können zur Verbesserung genutzt werden, Löschung nur auf Antrag ([Recherche](erweiterungen/gemini-provider/recherche.md)). Smart-Home-Daten im Prompt verlassen das Haus unter diesen Bedingungen |
 
 Ein neuer externer Dienst ist eine Design-Entscheidung → Eintrag in
 [design-entscheidungen.md](design-entscheidungen.md), inklusive der Frage, welche Daten das Haus
@@ -191,11 +218,14 @@ verlassen.
 
 ## Abhängigkeiten
 
-- Die Versionen von Flask, waitress, der beiden Befehlszeilen und der Basisimages sind festgenagelt. Ein
+- Die Versionen von Flask, waitress, der Befehlszeilen und der Basisimages sind festgenagelt. Die
+  Antigravity-CLI (Version und SHA-512 je Architektur im `Dockerfile`) aktualisiert sich sonst selbst;
+  das ist abgeschaltet (`AGY_CLI_DISABLE_AUTO_UPDATE`). Wer sie anhebt, holt beide Prüfsummen neu aus
+  dem Manifest und wiederholt die Handprüfung aus D-022. Ein
   Update ist damit ein sichtbarer Commit und kein stiller Seiteneffekt. Dependabot schlägt
   Updates wöchentlich als PR gegen `agent/main` vor; Befehlszeilen und Basisimage hebt er nicht an.
-- Sicherheitsupdates zeitnah einspielen. Beim Anheben einer der Befehlszeilen prüfen, ob `claude -p`
-  bzw. `codex exec` sich noch gleich verhält — das Verhalten des Add-ons hängt daran.
+- Sicherheitsupdates zeitnah einspielen. Beim Anheben einer der Befehlszeilen prüfen, ob `claude -p`,
+  `codex exec` bzw. `agy -p` sich noch gleich verhält — das Verhalten des Add-ons hängt daran.
 - Neue Abhängigkeiten vor Aufnahme prüfen: Wartungsstand, Verbreitung, Lizenz. Für die Oberfläche
   gilt zusätzlich die Liste der ausgeschlossenen Pakete in [frontend.md](frontend.md).
 

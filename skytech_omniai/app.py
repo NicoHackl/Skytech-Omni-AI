@@ -27,6 +27,10 @@ from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER, ProviderFactory
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
+from providers.gemini_sub_login import LoginError
+from providers.gemini_sub_login import login as gemini_login
+from providers.gemini_sub_provider import GEMINI_SUB_MODELS
+from providers.gemini_sub_provider import is_signed_in as gemini_sub_signed_in
 from settings import merge_update, public_view, revision
 from supervisor_client import SupervisorClient, SupervisorRejected, SupervisorUnavailable
 
@@ -64,6 +68,10 @@ FEHLER_KONFLIKT = (
 )
 FEHLER_UNGUELTIG = "Bitte die markierten Felder prüfen."
 FEHLER_EINSTELLUNGEN = "Die Einstellungen konnten nicht gespeichert werden."
+FEHLER_ANMELDUNG_NUR_INGRESS = (
+    "Die Anmeldung bei Google geht nur in Home Assistant über die Seitenleiste."
+)
+FEHLER_ANMELDUNG_EINGABE = "Bitte den Code von Google einfügen."
 
 # Über diese Adresse reicht der Supervisor die Aufrufe aus der Seitenleiste von
 # Home Assistant herein — erst nachdem Home Assistant den Nutzer angemeldet
@@ -135,6 +143,7 @@ def models():
                     "models": GEMINI_MODELS,
                     "default": GEMINI_DEFAULT_MODEL,
                 },
+                "gemini_sub": {"models": GEMINI_SUB_MODELS, "default": None},
             },
         }
     )
@@ -170,6 +179,9 @@ def status():
                     os.environ.get("GEMINI_API_KEY", "").strip()
                     or os.environ.get("GOOGLE_API_KEY", "").strip()
                 ),
+                # Die Anmeldung entsteht im Add-on selbst (Seite „Einstellungen“)
+                # und liegt als Datei unter /data, nicht in der Umgebung.
+                "gemini_sub": gemini_sub_signed_in(),
             },
         }
     )
@@ -262,6 +274,93 @@ def settings_save():
     apply_options_to_env(merged, clear_missing=True)
     log.info("Einstellungen über die Oberfläche gespeichert")
     return jsonify({**public_view(merged), "can_save": True, "read_only_reason": None})
+
+
+# --- Anmeldung bei Google (gemini_sub) -------------------------------------
+
+
+def _login_refused():
+    """Antwort, wenn die Anfrage nicht über den Ingress kam — sonst ``None``.
+
+    Wer den offenen Port erreicht, soll weder eine Anmeldung starten noch
+    entfernen können, und die Anmeldeadresse bekommt er auch nicht zu sehen.
+    """
+    if _from_ingress():
+        return None
+    log.warning("Anmeldung bei Google von %s abgelehnt", request.remote_addr)
+    return jsonify({"error": FEHLER_ANMELDUNG_NUR_INGRESS}), 403
+
+
+def _login_failed(fehler: LoginError):
+    """Übersetzt eine abgelehnte Anmeldung in eine Antwort mit fertigem Satz."""
+    log.warning("Anmeldung bei Google nicht fortgesetzt: %s", fehler)
+    if fehler.invalid:
+        return jsonify({"error": str(fehler), "field_errors": {"code": str(fehler)}}), 422
+    return jsonify({"error": str(fehler)}), 409 if fehler.busy else 400
+
+
+@app.route("/auth/gemini", methods=["GET"])
+def gemini_login_status():
+    """Zustand der Anmeldung für die Seite „Einstellungen“.
+
+    Die Adresse, unter der sich der Nutzer anmeldet, kommt nur über den Ingress
+    zurück; ``signed_in`` ist dieselbe Auskunft wie in ``/status``.
+    """
+    return jsonify(gemini_login.status(include_url=_from_ingress()))
+
+
+@app.route("/auth/gemini/start", methods=["POST"])
+def gemini_login_start():
+    """Startet die Anmeldung und liefert die Adresse bei Google."""
+    refused = _login_refused()
+    if refused:
+        return refused
+    try:
+        return jsonify(gemini_login.start())
+    except LoginError as fehler:
+        return _login_failed(fehler)
+    except Exception:
+        log.exception("Unerwarteter Fehler beim Start der Anmeldung bei Google")
+        return jsonify({"error": FEHLER_UNBEKANNT}), 500
+
+
+@app.route("/auth/gemini/code", methods=["POST"])
+def gemini_login_code():
+    """Nimmt den Code entgegen, den Google nach der Anmeldung anzeigt."""
+    refused = _login_refused()
+    if refused:
+        return refused
+    payload = request.get_json(silent=True)
+    code = payload.get("code") if isinstance(payload, dict) else None
+    if not isinstance(code, str) or not code.strip():
+        return jsonify(
+            {"error": FEHLER_ANMELDUNG_EINGABE, "field_errors": {"code": FEHLER_ANMELDUNG_EINGABE}}
+        ), 422
+    try:
+        return jsonify(gemini_login.submit(code))
+    except LoginError as fehler:
+        return _login_failed(fehler)
+    except Exception:
+        log.exception("Unerwarteter Fehler bei der Anmeldung bei Google")
+        return jsonify({"error": FEHLER_UNBEKANNT}), 500
+
+
+@app.route("/auth/gemini/cancel", methods=["POST"])
+def gemini_login_cancel():
+    """Bricht eine laufende Anmeldung ab."""
+    refused = _login_refused()
+    if refused:
+        return refused
+    return jsonify(gemini_login.cancel())
+
+
+@app.route("/auth/gemini", methods=["DELETE"])
+def gemini_login_remove():
+    """Entfernt die Anmeldung. Widerrufen lässt sie sich nur im Google-Konto."""
+    refused = _login_refused()
+    if refused:
+        return refused
+    return jsonify(gemini_login.logout())
 
 
 # Name im Sidebar-Fuß, solange der Supervisor den echten nicht liefert.

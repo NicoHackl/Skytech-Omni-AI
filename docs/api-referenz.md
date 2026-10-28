@@ -74,7 +74,7 @@ Führt einen Prompt gegen den gewählten Anbieter aus.
 | Feld | Typ | Pflicht | Bedeutung |
 |---|---|---|---|
 | `prompt` | Text | ja | Die Frage an das Modell. Die Anweisung, ausschließlich JSON zu liefern, hängt das Add-on selbst an |
-| `provider` | Text | nein | `claude_sub`, `codex_sub` oder `gemini`. Ohne Angabe gilt die Add-on-Konfiguration |
+| `provider` | Text | nein | `claude_sub`, `codex_sub`, `gemini` oder `gemini_sub`. Ohne Angabe gilt die Add-on-Konfiguration |
 | `model` | Text | nein | Modell für genau diese Anfrage. Erlaubt ist **jede** Kennung des Anbieters, auch eine, die nicht im Auswahlfeld steht |
 
 **Antwort `200`** — das geparste JSON des Modells, unverändert durchgereicht:
@@ -115,10 +115,15 @@ Liefert die auswählbaren Werte, damit Automatisierungen sie nicht fest verdraht
   "providers": {
     "claude_sub": { "models": ["sonnet", "opus", "haiku"], "default": null },
     "codex_sub": { "models": ["gpt-5.6-sol", "…"], "default": null },
-    "gemini": { "models": ["gemini-flash-latest", "…"], "default": "gemini-flash-latest" }
+    "gemini": { "models": ["gemini-flash-latest", "…"], "default": "gemini-flash-latest" },
+    "gemini_sub": { "models": [], "default": null }
   }
 }
 ```
+
+`gemini_sub` hat keine feste Liste: seine Modelle kennt die Google-Befehlszeile erst nach der
+Anmeldung. Pro Anfrage lässt sich über `model` jede Bezeichnung nennen, die sie versteht (etwa
+„Gemini 3.6 Flash (High)“); eine unbekannte beantwortet sie mit einem Fehler.
 
 ## `GET /status`
 
@@ -130,9 +135,12 @@ Zustand des Add-ons, gedacht für die Oberfläche.
   "version": "0.9.0",
   "default_model": null,
   "tool_access": "web",
-  "credentials": { "claude_sub": true, "codex_sub": false, "gemini": false }
+  "credentials": { "claude_sub": true, "codex_sub": false, "gemini": false, "gemini_sub": false }
 }
 ```
+
+Bei `gemini_sub` heißt `true`: Eine lesbare Anmeldung bei Google liegt vor. Ob Google sie noch
+gelten lässt, zeigt erst eine Anfrage.
 
 Zu den Zugängen kommt **ausschließlich** `true`/`false` zurück — nie der Wert, nie ein Ausschnitt
 davon und auch nicht seine Länge.
@@ -197,7 +205,7 @@ Anfrage arbeitet bereits mit dem neuen Stand.
 
 | Feld in `options` | Regel |
 |---|---|
-| `provider` | `claude_sub`, `codex_sub` oder `gemini` |
+| `provider` | `claude_sub`, `codex_sub`, `gemini` oder `gemini_sub` |
 | `model` | `auto` oder ein Modell **des gewählten Anbieters** aus `GET /models` |
 | `tool_access` | `off`, `web` oder `full` |
 | Zugänge | fehlt oder `""` = unverändert, `null` = entfernen, sonst neuer Wert. `codex_auth_json` muss ein JSON-Objekt sein |
@@ -210,6 +218,44 @@ wird die Absenderadresse des Ingress-Proxys, nicht ein Kopf; Begründung als D-0
 [design-entscheidungen.md](design-entscheidungen.md).
 
 **Antwort `200`** — wie `GET /settings`, mit dem neuen Stand.
+
+## Anmeldung bei Google: `/auth/gemini`
+
+Für den Anbieter `gemini_sub` (D-022, Ablauf in [architektur.md](architektur.md)). Alle Antworten
+haben dieselbe Form:
+
+```json
+{
+  "available": true,
+  "signed_in": false,
+  "state": "waiting",
+  "url": "https://accounts.google.com/o/oauth2/auth?…",
+  "seconds_left": 52,
+  "error": null
+}
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `available` | Die Antigravity-CLI ist im Bild vorhanden |
+| `signed_in` | Eine lesbare Anmeldung liegt vor (wie `credentials.gemini_sub` in `/status`) |
+| `state` | `idle` (nichts läuft), `waiting` (Adresse ausgegeben, Code fehlt) oder `checking` (Code übergeben, Google prüft) |
+| `url` | Anmeldeadresse bei Google, nur bei `waiting` und nur über den Ingress |
+| `seconds_left` | Restzeit für den Code, nur bei `waiting` |
+| `error` | Satz, warum die letzte Anmeldung nicht geklappt hat; nur bei `idle` |
+
+| Aufruf | Wirkung |
+|---|---|
+| `GET /auth/gemini` | Stand. Offen wie `/status`, aber ohne `url` |
+| `POST /auth/gemini/start` | Startet die Anmeldung und liefert `waiting` mit Adresse. `400`, wenn schon ein Konto angemeldet ist oder die CLI fehlt; `409`, wenn gerade eine Anfrage läuft |
+| `POST /auth/gemini/code` | Rumpf `{"code": "…"}`. Gibt den Code an die CLI weiter und liefert `checking`; den Ausgang zeigt danach `GET`. `422` mit `field_errors.code`, wenn die Eingabe nicht nach einem Code aussieht. Auch die ganze Adresse der Zielseite wird angenommen |
+| `POST /auth/gemini/cancel` | Bricht eine laufende Anmeldung ab |
+| `DELETE /auth/gemini` | Entfernt die Anmeldung samt Sicherung. Widerrufen lässt sie sich nur im Google-Konto |
+
+**Nur über den Ingress**, außer `GET`: Aufrufe über Port 8000 werden mit `403` abgelehnt, und die
+Adresse wird dort nicht ausgeliefert. Wer den offenen Port erreicht, soll weder ein Konto anmelden
+noch die Anmeldung entfernen können (wie bei `PUT /settings`, D-015). Code und Adresse stehen nie
+im Log.
 
 ## `GET /addon`
 
@@ -246,6 +292,7 @@ bestimmt dabei das `<base>`-Element — Einzelheiten in [architektur.md](archite
 | Anthropic | Claude-Code-CLI als Unterprozess, Zeitlimit 300 s | Prompts über das Pro/Max-Abo | Meldung „Claude hat die Anfrage nicht beantwortet", Ursache im Log |
 | OpenAI | Codex-CLI als Unterprozess (`codex exec`), Zeitlimit 300 s | Prompts über das ChatGPT-Abo | Meldung je nach Ursache (Kontingent, abgelaufene Anmeldung, sonst allgemein), Rohausgabe nur im Log |
 | Google | `POST https://generativelanguage.googleapis.com/v1beta/interactions`, Zeitlimit 300 s | Prompts über Gemini | Meldung je nach Ursache (Schlüssel, Kontingent, Überlastung), Antwortcode nur im Log |
+| Google (Abo) | Antigravity-CLI als Unterprozess (`agy -p`), Zeitlimit 300 s; Anmeldung über `accounts.google.com` | Prompts über das Google-AI-Pro-Abo | Meldung je nach Ursache (nicht angemeldet, Anmeldung abgelaufen, Kontingent, Konto eingeschränkt, besetzt, sonst allgemein), Rohausgabe nur im Log. Von Google bei privaten Abos nicht unterstützt (D-022) |
 | Home Assistant Supervisor | `GET /addons/self/info`, `POST /addons/self/options/validate`, `POST /addons/self/options`, Zeitlimit 10 s, ohne Proxy | Einstellungen lesen und speichern | Lesen: Rückfall auf `/data/options.json`, Seite nur zur Anzeige. Speichern: Meldung „nicht erreichbar“ bzw. „nicht übernommen“, Meldung des Supervisors nur im Log |
 
 Alle Aufrufe haben ein ausdrückliches Zeitlimit und ein definiertes Verhalten im Fehlerfall.

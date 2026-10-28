@@ -15,6 +15,7 @@ from providers.claude_sub_provider import CLAUDE_MODELS
 from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER
 from providers.gemini_provider import GEMINI_MODELS
+from providers.gemini_sub_provider import GEMINI_SUB_MODELS
 
 # Welche Modelle zu welchem Anbieter gehören. Das Auswahlfeld in config.yaml
 # ist eine gemeinsame Liste für alle; auf der Seite „Einstellungen“ wird
@@ -23,6 +24,7 @@ PROVIDER_MODELS = {
     "claude_sub": CLAUDE_MODELS,
     "codex_sub": CODEX_MODELS,
     "gemini": GEMINI_MODELS,
+    "gemini_sub": GEMINI_SUB_MODELS,
 }
 
 # Felder, die die Oberfläche bearbeiten darf. Alles andere in den Optionen

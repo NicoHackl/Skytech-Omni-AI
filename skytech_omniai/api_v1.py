@@ -27,6 +27,8 @@ from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER, ProviderFactory
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
+from providers.gemini_sub_provider import GEMINI_SUB_MODELS
+from providers.gemini_sub_provider import is_signed_in as gemini_sub_signed_in
 from runs import MAX_CONCURRENT_RUNS, MAX_RUN_MINUTES, RunConflict, RunManager
 
 log = logging.getLogger("omniai.v1")
@@ -45,6 +47,7 @@ PROVIDERS = {
     "claude_sub": {"name": "Claude (Abo)", "models": CLAUDE_MODELS, "default": None},
     "codex_sub": {"name": "ChatGPT (Abo)", "models": CODEX_MODELS, "default": None},
     "gemini": {"name": "Google Gemini", "models": GEMINI_MODELS, "default": GEMINI_DEFAULT_MODEL},
+    "gemini_sub": {"name": "Google Gemini (Abo)", "models": GEMINI_SUB_MODELS, "default": None},
 }
 
 # Anbieter, die in Läufen Werkzeuge (MCP) aufrufen können.
@@ -95,6 +98,9 @@ def credentials_present() -> dict[str, bool]:
             os.environ.get("GEMINI_API_KEY", "").strip()
             or os.environ.get("GOOGLE_API_KEY", "").strip()
         ),
+        # Kein Wert in der Umgebung, sondern die Anmeldung, die im Add-on selbst
+        # entstanden ist (Einstellungen → Google-Anmeldung).
+        "gemini_sub": gemini_sub_signed_in(),
     }
 
 

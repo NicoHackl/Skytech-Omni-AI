@@ -17,6 +17,7 @@ export default defineConfig({
       '/models': { target: 'http://127.0.0.1:8000', changeOrigin: true },
       '/status': { target: 'http://127.0.0.1:8000', changeOrigin: true },
       '/health': { target: 'http://127.0.0.1:8000', changeOrigin: true },
+      '/auth': { target: 'http://127.0.0.1:8000', changeOrigin: true },
     },
   },
 })

@@ -7,6 +7,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   claude_sub: 'Claude (Abo)',
   codex_sub: 'ChatGPT (Abo)',
   gemini: 'Google Gemini',
+  gemini_sub: 'Google Gemini (Abo)',
 }
 
 /** Beschriftung eines Anbieters, ersatzweise sein technischer Name. */

@@ -1,8 +1,7 @@
 # Umsetzungsplan
 
-Zwei Spuren, unabhängig voneinander. **Spur 1 ist empfohlen und kann sofort beginnen.** Spur 2 ist
-an Schranken gebunden und beginnt erst nach der Entscheidung des Users
-([abo-weg-antigravity.md](abo-weg-antigravity.md), Schranken G1 bis G3).
+Dieser Plan gilt nur noch für **Spur 1, den Ausbau des Schlüssel-Wegs** (`gemini`). Der Abo-Weg
+(Spur 2) ist umgesetzt: D-022, [../../adr/D-022-gemini-abo-antigravity.md](../../adr/D-022-gemini-abo-antigravity.md).
 
 ## Rahmen für jedes Arbeitspaket
 
@@ -11,7 +10,7 @@ dieses Vorhaben davon zählt:
 
 | Regel | Folge hier |
 |---|---|
-| Git (Regel 1) | Arbeit auf `agent/main`. **Jeder Push mit Änderung unter `skytech_omniai/` ist ein Release an alle Nutzer** (D-017). Spur 2 deshalb auf `feature/gemini-sub`, bis sie am echten Gerät geprüft ist |
+| Git (Regel 1) | Arbeit auf `agent/main`. **Jeder Push mit Änderung unter `skytech_omniai/` ist ein Release an alle Nutzer** (D-017) |
 | Changelog (Regel 4) | Trailer `Changelog-<Kategorie>:` aus Nutzersicht, nur bei nutzerrelevanter Änderung |
 | Doku (Regel 5) | Betroffene `docs/`-Dateien im selben Arbeitspaket, keine Nachreichung |
 | Nicht raten (Regel 7) | Die mit „ungeprüft“ markierten Punkte sind Prüfaufträge, keine Annahmen |
@@ -111,50 +110,9 @@ Eigener Beschluss, weil es die gemeinsame Schnittstelle berührt (D-005):
   Punkte der Pakete mit Status eintragen.
 - [../../bekannte-luecken.md](../../bekannte-luecken.md): Zeile „Googles Schrittformat ist nicht zugesichert“ prüfen;
   neu: Modelle mit eingeschränktem Zugang.
-- Entscheidung als **D-022** eintragen ([adr-entwurf.md](adr-entwurf.md)).
+- Entscheidung als eigene `D-xxx` eintragen (D-022 ist an den Abo-Weg vergeben).
 - Dieser Ordner wird danach auf den umgesetzten Teil gekürzt oder gelöscht (Pflegeregel:
   keine Plan-Dateien stehen lassen, die der Code überholt hat).
-
-## Spur 2 — Abo-Weg (nur nach Freigabe)
-
-Voraussetzung: G1 bis G3. Ohne sie wird kein Arbeitspaket dieser Spur begonnen.
-
-| AP | Inhalt |
-|---|---|
-| S-0 | Spike am echten Konto ([spike-abo-anmeldung.md](spike-abo-anmeldung.md)); Ergebnis in die Tabelle dort eintragen. **Kein Code im Repo.** Bestanden = Schranke G2 |
-| S-1 | ADR D-022 (Annahme des Risikos) und D-023 (Anmeldeverfahren nach Spike) schreiben, `feature/gemini-sub` anlegen |
-| S-2 | Provider `providers/gemini_sub_provider.py` samt Tests nach [abo-weg-antigravity.md](abo-weg-antigravity.md), Abschnitt 5 |
-| S-3 | Bild: Installation der CLI (festgenagelt), Rechte, `AGY_CLI_DISABLE_AUTO_UPDATE`; `scripts/check.sh --docker` auf **beiden** Architekturen (aarch64 wird in der CI nicht gebaut, siehe [../../bekannte-luecken.md](../../bekannte-luecken.md)) |
-| S-4 | Konfiguration und Einstellungsseite: Option `gemini_auth_json`, Modelle, Prüfung des Werts |
-| S-5 | Schnittstellen: `/models`, `/status`, `/v1/capabilities` |
-| S-6 | Doku-Abschluss, Hinweis auf das Risiko an jeder Stelle, an der der Provider auswählbar ist |
-| S-7 | Handabnahme am echten Home Assistant, erst dann Merge nach `agent/main` |
-
-### Berührungspunkte (Stand des Codes am 27.10.2026, nach dem Muster von `codex_sub`)
-
-| Datei | Änderung |
-|---|---|
-| `skytech_omniai/providers/gemini_sub_provider.py` | **neu**: Provider, Modellliste, Meldungen, Zugang ablegen, Aufruf, Aufräumen |
-| `skytech_omniai/providers/factory.py` | `_PROVIDERS` und `_ANZEIGENAMEN` |
-| `skytech_omniai/config_loader.py` | `OPTION_ENV_MAP` (`gemini_auth_json` → `GEMINI_AUTH_JSON`), `SECRET_OPTIONS` |
-| `skytech_omniai/config.yaml` | `options`, `schema` (Passwortfeld), `provider`-Liste, `model`-Liste (Konsistenztest!), Beschreibung |
-| `skytech_omniai/settings.py` | Modelle je Anbieter, Prüfung des eingefügten Werts (wie `codex_auth_json`) |
-| `skytech_omniai/app.py` | `/models`, `/status` (`credentials`) |
-| `skytech_omniai/api_v1.py` | `PROVIDERS`, `credentials_present`; `TOOL_PROVIDERS` bleibt unverändert |
-| `skytech_omniai/Dockerfile` | Installationsblock; `COPY providers` deckt die neue Datei ab |
-| `skytech_omniai/web/src/types.ts`, `provider.ts` | `ProviderName`, Optionsschlüssel, Anzeigename |
-| `skytech_omniai/web/src/pages/Dashboard.tsx` | `CREDENTIAL_KEYS` |
-| `skytech_omniai/web/src/pages/Einstellungen.tsx` | Eingabefeld für den Zugang mit Risikohinweis |
-| `skytech_omniai/info.md`, `README.md` | Einrichtung, Risiko |
-| `tests/conftest.py` | neue Umgebungsvariablen vor jedem Test abräumen |
-| `tests/unit/providers/test_gemini_sub_provider.py` | **neu**, mit ersetztem `subprocess.run` |
-| `tests/unit/providers/test_factory.py`, `test_addon_config.py`, `test_api_v1.py`, `test_app.py`, `test_config_loader.py`, `test_settings.py` | je der neue Anbieter |
-| `docs/` | `architektur.md` (Tabelle, Diagramm), `konfiguration.md`, `api-referenz.md`, `sicherheit-datenschutz.md` (Datenarten, externe Dienste, Verlauf auf der Platte), `bekannte-luecken.md`, `roadmap.md`, `design-entscheidungen.md`, `adr/` |
-| `docs/contracts/omniai-api-v1.yaml` | `provider` ist dort eine offene Menge; Beschreibung nur prüfen. Master liegt im Repo Skytech-X-Backend |
-
-Voraussichtlich braucht die Oberfläche keine neuen Komponenten oder Klassen. Das ist beim Bau
-gegen [../../frontend.md](../../frontend.md) und [../../design-system.md](../../design-system.md) zu prüfen
-(eiserne Regel 8) — hier ist es nicht belegt.
 
 ## Reihenfolge und Aufwand (grobe Schätzung)
 
@@ -164,8 +122,6 @@ gegen [../../frontend.md](../../frontend.md) und [../../design-system.md](../../
 | 1-1 bis 1-3 | 0,5 bis 1 Tag | Wartezeit nur für H5 (Freikontingent-Schlüssel) |
 | 1-4, 1-5 | je 0,5 Tag | nur bei Bedarf |
 | 1-6 | 1 Stunde | |
-| S-0 Spike | 0,5 Tag | Konto, Browser, Docker |
-| S-1 bis S-7 | 3 bis 5 Tage | davon der Großteil Bild, Anmeldung und Aufräumen |
 
 ## Nicht Teil des Plans
 

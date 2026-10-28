@@ -20,6 +20,33 @@ RUN apk add --no-cache \
 # nur für x86_64 und aarch64 — deshalb wird das Add-on nur für 64 Bit gebaut.
 RUN npm install -g @anthropic-ai/claude-code@2.1.234 @openai/codex@0.147.0
 
+# Antigravity-CLI (agy) für Google Gemini über das Google-AI-Pro-Abo (D-022):
+# ein statisch gelinktes musl-Binary, rund 200 MB. Version und Prüfsumme sind
+# festgenagelt, weil sich Ausgabeformat und Fehlerverhalten zwischen den
+# Versionen mehrfach geändert haben. Die Adressen stammen aus den Manifesten
+# unter antigravity-cli-auto-updater-974169037036.us-central1.run.app; der
+# Ordner der arm64-Datei heißt dort tatsächlich "linux-arm-musl". Stimmt die
+# Prüfsumme nicht, bricht der Bau ab. Beim Anheben der Version beide Summen neu
+# aus dem Manifest holen und die Handprüfung aus docs/adr/D-022 wiederholen.
+# Die CLI aktualisiert sich sonst selbst; das schaltet die Variable ab.
+ENV AGY_CLI_DISABLE_AUTO_UPDATE=true
+RUN set -eu; \
+    base="https://storage.googleapis.com/antigravity-public/antigravity-cli/1.4.8-5447777392656384"; \
+    case "$(uname -m)" in \
+      x86_64) \
+        url="$base/linux-x64-musl/cli_linux_x64_musl.tar.gz"; \
+        sha="8a3696428a888cb44126979a9e1178c07470133351f87a4d5a7c103bab2d499462b36f1dc041681c09ed23b775ad3ac6120d13ce81d4d52902246d17cc19063e" ;; \
+      aarch64) \
+        url="$base/linux-arm-musl/cli_linux_arm64_musl.tar.gz"; \
+        sha="dcf9e593e3947c8546f0b3f7a5ce11f83556c0e23de810f039b20ee6d50cb56dec60d43efec7409291bde25a580ad8863f8b37f215a1770cbf9ec1b75486b2d2" ;; \
+      *) echo "Architektur nicht unterstützt: $(uname -m)" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL -o /tmp/agy.tar.gz "$url"; \
+    echo "$sha  /tmp/agy.tar.gz" | sha512sum -c -; \
+    tar -xzf /tmp/agy.tar.gz -C /tmp antigravity; \
+    install -m 0755 /tmp/antigravity /usr/local/bin/agy; \
+    rm -f /tmp/agy.tar.gz /tmp/antigravity
+
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 

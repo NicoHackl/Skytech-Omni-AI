@@ -63,7 +63,8 @@ echo "✓ Bündel der Oberfläche ausgeliefert"
 
 docker exec "$name" claude --version >/dev/null || fail "Claude-CLI fehlt im Bild."
 docker exec "$name" codex --version >/dev/null || fail "Codex-CLI fehlt im Bild."
-echo "✓ Claude- und Codex-CLI vorhanden"
+docker exec "$name" agy --version >/dev/null || fail "Antigravity-CLI fehlt im Bild."
+echo "✓ Claude-, Codex- und Antigravity-CLI vorhanden"
 
 # Ohne tzdata und TZ stünden die Log-Zeiten in UTC (eiserne Regel 9).
 zone="$(docker exec "$name" date +%Z)"

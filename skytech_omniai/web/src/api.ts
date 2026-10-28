@@ -2,6 +2,7 @@ import type {
   AddonInfo,
   AskInput,
   AskResponse,
+  GeminiLoginStatus,
   ModelsResponse,
   SettingsInput,
   SettingsResponse,
@@ -77,6 +78,17 @@ export const api = {
   settings: () => request<SettingsResponse>('settings'),
   saveSettings: (data: SettingsInput) =>
     request<SettingsResponse>('settings', { method: 'PUT', body: JSON.stringify(data) }),
+  /* Anmeldung bei Google für „Google Gemini (Abo)“. Entsteht im Add-on selbst,
+     weil die Befehlszeile kein Token zum Einfügen kennt. */
+  geminiLogin: () => request<GeminiLoginStatus>('auth/gemini'),
+  geminiLoginStart: () => request<GeminiLoginStatus>('auth/gemini/start', { method: 'POST' }),
+  geminiLoginCode: (code: string) =>
+    request<GeminiLoginStatus>('auth/gemini/code', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+  geminiLoginCancel: () => request<GeminiLoginStatus>('auth/gemini/cancel', { method: 'POST' }),
+  geminiLogout: () => request<GeminiLoginStatus>('auth/gemini', { method: 'DELETE' }),
 }
 
 /** Feldfehler aus einer abgelehnten Speicherung, sonst ein leeres Objekt. */
