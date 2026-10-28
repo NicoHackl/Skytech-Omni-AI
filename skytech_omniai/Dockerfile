@@ -26,8 +26,10 @@ RUN npm install -g @anthropic-ai/claude-code@2.1.234 @openai/codex@0.147.0
 # Versionen mehrfach geändert haben. Die Adressen stammen aus den Manifesten
 # unter antigravity-cli-auto-updater-974169037036.us-central1.run.app; der
 # Ordner der arm64-Datei heißt dort tatsächlich "linux-arm-musl". Stimmt die
-# Prüfsumme nicht, bricht der Bau ab. Beim Anheben der Version beide Summen neu
-# aus dem Manifest holen und die Handprüfung aus docs/adr/D-022 wiederholen.
+# Prüfsumme nicht, bricht der Bau ab. Sie wird über eine Datei geprüft, nicht
+# über eine Pipe: hadolint verlangt für Pipes "pipefail" (DL4006). Beim Anheben
+# der Version beide Summen neu aus dem Manifest holen und die Handprüfung aus
+# docs/adr/D-022 wiederholen.
 # Die CLI aktualisiert sich sonst selbst; das schaltet die Variable ab.
 ENV AGY_CLI_DISABLE_AUTO_UPDATE=true
 RUN set -eu; \
@@ -42,10 +44,11 @@ RUN set -eu; \
       *) echo "Architektur nicht unterstützt: $(uname -m)" >&2; exit 1 ;; \
     esac; \
     curl -fsSL -o /tmp/agy.tar.gz "$url"; \
-    echo "$sha  /tmp/agy.tar.gz" | sha512sum -c -; \
+    echo "$sha  /tmp/agy.tar.gz" > /tmp/agy.sha512; \
+    sha512sum -c /tmp/agy.sha512; \
     tar -xzf /tmp/agy.tar.gz -C /tmp antigravity; \
     install -m 0755 /tmp/antigravity /usr/local/bin/agy; \
-    rm -f /tmp/agy.tar.gz /tmp/antigravity
+    rm -f /tmp/agy.tar.gz /tmp/agy.sha512 /tmp/antigravity
 
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"

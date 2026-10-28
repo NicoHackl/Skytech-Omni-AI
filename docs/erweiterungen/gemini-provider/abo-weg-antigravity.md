@@ -89,8 +89,8 @@ Agenten, nicht an der Zahl der Anfragen. Zahlen nennt Google nicht; `/usage` zei
 ## 2. Eigene Messungen am 27.10.2026
 
 Container: `ghcr.io/home-assistant/aarch64-base:3.19` (Alpine, musl), Archiv per Manifest
-geladen, Prüfsumme (SHA-512) stimmte, **ohne Anmeldung**. Getestet wurde nur arm64 — das
-amd64-Archiv liegt im Manifest, wurde aber nicht ausgeführt.
+geladen, Prüfsumme (SHA-512) stimmte, **ohne Anmeldung**. Von Hand getestet wurde nur arm64; das
+amd64-Binary hat die CI gebaut und mit `agy --version` gestartet.
 
 | Versuch | Ergebnis |
 |---|---|
@@ -114,7 +114,7 @@ Weitere Messungen am 27.10.2026 (gleicher Container, weiterhin ohne Konto), Grun
 | `strace -f` auf `agy models` | Öffnet `~/.gemini/antigravity-cli/antigravity-oauth-token` und `~/.config/antigravity/credential-user-scope`, prüft `/.dockerenv`; mit `SSH_*` Logzeile „Using file-based token storage because SSH session detected“ |
 | Selbst gebaute Token-Datei (geratenes Format: `auth_method`, `token{access_token,refresh_token,expiry}`) am bestätigten Pfad | Wird nicht als Anmeldung erkannt („Auth mode is unspecified“, „You are not logged into Antigravity“) — Format nur der CLI bekannt |
 | Zeichenketten im Binary | Gründe für den Dateispeicher: „SSH session“, „container environment“, „keyring timeout“; Meldungen „Failed to load stored token from keyring, falling back to file“; keine Umgebungsvariable für ein Token |
-| amd64-Archiv | SHA-512 stimmt mit dem Manifest, ELF-Kopf x86-64; nicht ausgeführt |
+| amd64-Archiv | SHA-512 stimmt mit dem Manifest, ELF-Kopf x86-64. Die CI baut das amd64-Image und startet `agy --version` im Smoke-Test (28.10.2026, grün) |
 | Bau des Bildes mit dem Block aus dem `Dockerfile` (arm64) | Gelingt; `agy --version` = 1.4.8 |
 
 **Nicht geprüft** (braucht Anmeldung): alles ab dem ersten echten Modellaufruf.

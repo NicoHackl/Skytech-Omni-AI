@@ -30,7 +30,8 @@ bauen („Wir versuchen es mit agy über meinen Abo weg“).
 ## Messungen vom 27.10.2026
 
 Arm64-Container auf Basis von `ghcr.io/home-assistant/aarch64-base:3.19`, Version 1.4.8, **ohne
-Konto**. Das amd64-Archiv wurde nur gehasht (SHA-512 stimmt, ELF x86-64), nicht ausgeführt.
+Konto**. Das amd64-Binary wurde lokal nur gehasht (SHA-512 stimmt, ELF x86-64); gebaut und gestartet
+(`agy --version`) hat es die CI im Smoke-Test des amd64-Images.
 
 | Beobachtung | Folge für den Entwurf |
 |---|---|
