@@ -10,6 +10,10 @@ Entsteht die Anmeldung im Add-on, schreibt und liest dieselbe Umgebung die Datei
 — das umgeht die Berichte, nach denen eine in einem anderen Container erzeugte
 Anmeldung nicht angenommen wird.
 
+Jede Anmeldung legt ein **neues Konto** an (D-024): eigenes Heimatverzeichnis,
+eigene Anmeldung. Erst wenn sie gelungen und in einem frischen Prozess bestätigt
+ist, kommt das Konto in die Liste; scheitert sie, verschwinden seine Dateien wieder.
+
 Ablauf: ``start`` → Nutzer meldet sich bei Google an und kopiert den Code →
 ``submit`` → die CLI tauscht den Code, beantwortet einen Probeauftrag → ein
 frischer Prozess prüft, dass die Anmeldung die Datei überdauert hat. Alle Zustände
@@ -27,7 +31,9 @@ import time
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlparse
 
+from providers import gemini_sub_accounts as accounts
 from providers import gemini_sub_provider as cli
+from providers.gemini_sub_accounts import Account, AccountError
 from providers.gemini_sub_provider import RUN_LOCK, AgyResult
 
 log = logging.getLogger("omniai.gemini_sub.login")
@@ -58,7 +64,7 @@ FEHLER_CLI_FEHLT = cli.FEHLER_CLI_FEHLT
 FEHLER_BESETZT = (
     "Gerade läuft eine Anfrage an Google Gemini (Abo). Bitte in einem Moment erneut versuchen."
 )
-FEHLER_BEREITS_ANGEMELDET = "Es ist bereits ein Google-Konto angemeldet. Bitte erst abmelden."
+FEHLER_KONTO_UNBEKANNT = "Dieses Konto gibt es nicht (mehr)."
 FEHLER_KEIN_START = "Die Adresse von Google ließ sich nicht abrufen. Bitte erneut versuchen."
 FEHLER_KEINE_ANMELDUNG = "Es läuft keine Anmeldung. Bitte neu starten."
 FEHLER_CODE_FORMAT = "Das sieht nicht nach dem Code von Google aus. Bitte ihn vollständig kopieren."
@@ -81,16 +87,28 @@ FEHLER_ALLGEMEIN = "Die Anmeldung hat nicht geklappt. Bitte erneut versuchen."
 class LoginError(Exception):
     """Die Anmeldung lässt sich nicht fortsetzen; der Satz ist für Nutzer geschrieben."""
 
-    def __init__(self, message: str, *, busy: bool = False, invalid: bool = False):
+    def __init__(
+        self,
+        message: str,
+        *,
+        busy: bool = False,
+        invalid: bool = False,
+        missing: bool = False,
+        field: str = "code",
+    ):
         super().__init__(message)
         self.busy = busy
+        # Die Eingabe taugt nicht; ``field`` nennt das Feld, das die Oberfläche markiert.
         self.invalid = invalid
+        self.field = field
+        self.missing = missing
 
 
 @dataclass
 class _Session:
     process: subprocess.Popen
     master_fd: int
+    account: Account
     url: str
     deadline: float
     out_chunks: list = field(default_factory=list)
@@ -99,6 +117,10 @@ class _Session:
     state: str = "waiting"  # waiting | checking
     finish_deadline: float = 0.0
     before: dict = field(default_factory=dict)
+    # Erst die bestätigte Anmeldung macht das Konto zu einem der Liste.
+    registered: bool = False
+    # ``_finish`` hat begonnen; ein zweiter Aufruf darf nichts mehr tun.
+    finished: bool = False
 
 
 def extract_code(raw: str) -> str:
@@ -140,6 +162,9 @@ class GeminiLogin:
         return {
             "available": cli.cli_available(),
             "signed_in": cli.is_signed_in(),
+            "accounts": [accounts.describe(a) for a in accounts.list_accounts()],
+            # Wer sich gerade anmeldet, steht noch nicht in der Liste.
+            "pending_label": session.account.label if session else None,
             "state": state,
             "url": session.url if (session and include_url and state == "waiting") else None,
             "seconds_left": seconds_left,
@@ -148,8 +173,11 @@ class GeminiLogin:
 
     # --- Ablauf -----------------------------------------------------------
 
-    def start(self) -> dict:
-        """Startet die CLI und liefert die Adresse, unter der sich der Nutzer anmeldet.
+    def start(self, label: str = "") -> dict:
+        """Startet die CLI für ein **neues Konto** und liefert die Adresse bei Google.
+
+        ``label`` ist der Name, unter dem das Konto in der Oberfläche steht; leer
+        heißt „Konto N“.
 
         :raises LoginError: wenn sich keine Anmeldung starten lässt.
         """
@@ -157,19 +185,23 @@ class GeminiLogin:
             if self._session is not None:
                 self._finish(self._session, error=None)
             self._error = None
-            if cli.is_signed_in():
-                raise LoginError(FEHLER_BEREITS_ANGEMELDET)
             if not cli.cli_available():
                 raise LoginError(FEHLER_CLI_FEHLT)
+            try:
+                account = accounts.new_account(label)
+            except AccountError as error:
+                raise LoginError(str(error), invalid=True, field="label") from error
             if not RUN_LOCK.acquire(timeout=START_LOCK_WAIT_SEKUNDEN):
                 raise LoginError(FEHLER_BESETZT, busy=True)
             try:
                 try:
-                    session = self._spawn()
+                    session = self._spawn(account)
                 except RuntimeError as error:
                     raise LoginError(str(error)) from error
             except BaseException:
                 RUN_LOCK.release()
+                # Ein Konto, das nie entstand, soll auch keinen Ordner hinterlassen.
+                accounts.discard_files(account)
                 raise
             self._session = session
         threading.Thread(target=self._watch, args=(session,), daemon=True).start()
@@ -206,20 +238,35 @@ class GeminiLogin:
             self._error = None
         return self.status()
 
-    def logout(self) -> dict:
-        """Entfernt die Anmeldung. Widerrufen lässt sie sich nur im Google-Konto."""
+    def logout(self, account_id: str) -> dict:
+        """Entfernt ein Konto samt Anmeldung. Widerrufen lässt sie sich nur im Google-Konto.
+
+        :raises LoginError: wenn es das Konto nicht gibt oder gerade eine Anfrage läuft.
+        """
         with self._lock:
             if self._session is not None:
                 self._finish(self._session, error=None)
             self._error = None
-            cli.remove_token()
-        log.info("Google-Anmeldung entfernt")
+            # Mitten in einer Anfrage dieses Kontos die Dateien zu löschen, brächte der
+            # Anfrage einen unverständlichen Fehler.
+            if not RUN_LOCK.acquire(timeout=START_LOCK_WAIT_SEKUNDEN):
+                raise LoginError(FEHLER_BESETZT, busy=True)
+            try:
+                removed = accounts.remove_account(account_id)
+                if removed is None:
+                    raise LoginError(FEHLER_KONTO_UNBEKANNT, missing=True)
+                if not accounts.list_accounts():
+                    # Die Liste der Modelle gehört zu den Konten, die sich abgemeldet haben.
+                    cli.clear_models()
+            finally:
+                RUN_LOCK.release()
+        log.info("Google-Konto „%s“ entfernt", removed.label)
         return self.status()
 
     # --- Innenleben -------------------------------------------------------
 
-    def _spawn(self) -> _Session:
-        workspace = cli.prepare_state("off")
+    def _spawn(self, account: Account) -> _Session:
+        workspace = cli.prepare_state("off", account.home)
         command = [
             cli.AGY_BINARY,
             "-p",
@@ -230,7 +277,7 @@ class GeminiLogin:
             f"{FINISH_WAIT_SEKUNDEN - 10}s",
             "--disable-slash-commands",
         ]
-        before = cli.snapshot_state()
+        before = cli.snapshot_state(account.home)
         # Eine Pty als Eingabe: mit /dev/null druckt die CLI die Adresse und
         # wartet, aber liest nichts; mit einer Pipe gibt sie sofort auf. Nur ein
         # Terminal zeigt ihr, dass jemand den Code eintippt.
@@ -241,7 +288,7 @@ class GeminiLogin:
                 stdin=slave_fd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=cli.agy_env(),
+                env=cli.agy_env(account.home),
                 cwd=workspace,
                 start_new_session=True,
                 close_fds=True,
@@ -257,7 +304,12 @@ class GeminiLogin:
             os.close(slave_fd)
 
         session = _Session(
-            process=process, master_fd=master_fd, url="", deadline=0.0, before=before
+            process=process,
+            master_fd=master_fd,
+            account=account,
+            url="",
+            deadline=0.0,
+            before=before,
         )
         for stream, sink in (
             (process.stdout, session.out_chunks),
@@ -289,20 +341,29 @@ class GeminiLogin:
         cli.terminate(session.process)
         with contextlib.suppress(OSError):
             os.close(session.master_fd)
-        cli.cleanup_state(session.before)
+        cli.cleanup_state(session.before, home=session.account.home)
+        if not session.registered:
+            # Eine Anmeldung, die nicht zum Konto wurde, hinterlässt nichts.
+            accounts.discard_files(session.account)
 
     def _finish(self, session: _Session, *, error: str | None) -> None:
-        """Beendet die Sitzung genau einmal und gibt die Sperre frei. Unter ``_lock`` aufrufen."""
-        if self._session is not session:
+        """Beendet die Sitzung genau einmal und gibt die Sperre frei. Unter ``_lock`` aufrufen.
+
+        Erst wenn die Sperre frei ist, gilt die Sitzung als beendet: wer den Zustand
+        „idle“ liest, darf gleich danach eine Anfrage stellen, ohne auf eine Sperre zu
+        stoßen, die niemand mehr hält.
+        """
+        if self._session is not session or session.finished:
             return
-        self._session = None
-        self._error = error
+        session.finished = True
         try:
             self._release(session)
         finally:
             # Die Sperre muss auch dann frei werden, wenn das Aufräumen scheitert —
             # sonst liefe nie wieder eine Anfrage.
             RUN_LOCK.release()
+            self._error = error
+            self._session = None
 
     def _watch(self, session: _Session) -> None:
         """Beobachtet Zeitlimits und den Ausgang des Prozesses, bis die Sitzung endet."""
@@ -350,14 +411,23 @@ class GeminiLogin:
         )
         envelope = cli.parse_envelope(result.stdout)
         status = str((envelope or {}).get("status", "")).upper()
+        quota_only = False
         if status != "SUCCESS":
             output = f"{(envelope or {}).get('error', '')}\n{result.stderr}"
-            log.error(
-                "Anmeldung bei Google fehlgeschlagen, Rückgabecode %s. Ausgabe: %s",
-                result.returncode,
-                _without_urls(output).strip(),
-            )
-            return self._login_failure(output)
+            # Die Anmeldung kann gelungen sein und nur der Probeauftrag am Kontingent
+            # scheitern (ein Konto, das gerade leer ist). Dann gehört das Konto trotzdem
+            # in die Liste — mit Wartezeit.
+            token_written = cli.read_token_file(cli.token_path(session.account.home)) is not None
+            if cli.classify_failure(output) == "quota" and token_written:
+                quota_only = True
+                log.warning("Anmeldung gelungen, der Probeauftrag fand aber kein Kontingent")
+            else:
+                log.error(
+                    "Anmeldung bei Google fehlgeschlagen, Rückgabecode %s. Ausgabe: %s",
+                    result.returncode,
+                    _without_urls(output).strip(),
+                )
+                return self._login_failure(output)
 
         # Der Probeauftrag hat geklappt. Ob die Anmeldung auch einen neuen
         # Prozess überlebt, zeigt erst ein neuer Prozess — das ist der Fall,
@@ -365,8 +435,8 @@ class GeminiLogin:
         try:
             verify = cli.run_agy(
                 [cli.AGY_BINARY, "models"],
-                env=cli.agy_env(),
-                cwd=cli.workspace_dir(),
+                env=cli.agy_env(session.account.home),
+                cwd=cli.workspace_dir(session.account.home),
                 timeout=VERIFY_TIMEOUT_SEKUNDEN,
             )
         except OSError as error:
@@ -380,7 +450,9 @@ class GeminiLogin:
             )
             return FEHLER_NICHT_GESPEICHERT
 
-        cli.backup_token()
+        cli.backup_token(session.account.home)
+        accounts.add_account(session.account)
+        session.registered = True
         models = cli.parse_models(verify.stdout)
         if models:
             cli.store_models(models)
@@ -389,9 +461,13 @@ class GeminiLogin:
         # Die Modellnamen stehen nur hier im Log: sie sind die Grundlage für
         # eine spätere feste Liste und enthalten nichts Persönliches.
         log.info(
-            "Anmeldung bei Google erfolgreich. Verfügbare Modelle:\n%s",
+            "Anmeldung bei Google erfolgreich, Konto „%s“. Verfügbare Modelle:\n%s",
+            session.account.label,
             verify.stdout.strip()[:2000],
         )
+        if quota_only:
+            accounts.mark_exhausted(session.account.id)
+            return cli.FEHLER_KONTINGENT
         return None
 
     @staticmethod

@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.16.0] — 28.10.2026
+
+### Hinzugefügt
+
+- Bei Google Gemini (Abo) lassen sich mehrere Google-Konten anmelden. Ist das Kontingent eines Kontos aufgebraucht, nimmt das Add-on das nächste. Die Karte „Google-Anmeldung“ zeigt jedes Konto mit seinem Zustand. Google nennt den automatischen Wechsel zwischen Konten ausdrücklich nicht unterstützt; mit jedem Konto steigt das Risiko, und eine Maßnahme kann alle treffen.
+
+### Geändert
+
+- Das Entfernen einer Google-Anmeldung gilt jetzt je Konto.
+
 ## [0.15.0] — 28.10.2026
 
 ### Hinzugefügt

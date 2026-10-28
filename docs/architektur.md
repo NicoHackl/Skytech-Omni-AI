@@ -122,7 +122,7 @@ Zielseite. Deshalb **entsteht die Anmeldung im Add-on selbst** (D-022):
    Fehlerausgabe und reicht sie an die Oberfläche.
 2. Der Nutzer meldet sich bei Google an, kopiert den Code von der Zielseite und fügt ihn ein
    (`POST /auth/gemini/code`). Das Modul schreibt ihn in die Eingabe der CLI; sie tauscht den Code,
-   legt die Anmeldung als Datei unter `/data/.gemini/antigravity-cli/` ab und beantwortet den
+   legt die Anmeldung als Datei im Heimatverzeichnis **dieses Kontos** ab und beantwortet den
    Probeauftrag.
 3. Ein **frischer** Prozess (`agy models`) prüft, dass die Anmeldung die Datei überdauert hat. Erst
    dann gilt sie als angemeldet. Die Oberfläche fragt den Stand ab (`GET /auth/gemini`).
@@ -131,6 +131,16 @@ Für jeden Aufruf der CLI — Anmeldung wie Anfrage — setzt das Add-on `SSH_CO
 und `SSH_TTY`. Die CLI nimmt dann den Dateispeicher statt eines Schlüsselbunds, den es im Container
 nicht gibt: beim Schreiben wie beim Lesen derselbe Weg. Die Dateien liegen unter `/data` und
 überstehen Neustarts und Updates.
+
+**Mehrere Konten (D-024).** Jede Anmeldung legt ein eigenes Konto an: eigenes Heimatverzeichnis
+(`HOME` der CLI), eigene Anmeldung, eigener Zustand, eigener Arbeitsbereich. Das erste liegt in `/data`
+selbst, wo die Anmeldung schon vor mehreren Konten lag — Bestandsinstallationen übernehmen sie als
+„Konto 1“ —, jedes weitere unter `/data/omniai-gemini-accounts/konto-N`. Die Liste (Namen, Reihenfolge,
+Wartezeiten) steht in `/data/omniai-gemini-accounts.json`. Ein Wechsel des Kontos ist nur ein anderes
+`HOME` für den Aufruf; Dateien werden nie getauscht oder kopiert, denn das Format der Anmeldung kennt nur
+die CLI selbst. Der Provider nimmt das erste Konto, das Kontingent hat, und wechselt bei aufgebrauchtem
+Kontingent, eingeschränktem Konto oder ungültiger Anmeldung zum nächsten (Wartezeit 30 Minuten,
+verdoppelt bis fünf Stunden); die Regeln stehen in [konfiguration.md](konfiguration.md).
 
 Eine Anfrage läuft so ab:
 
@@ -150,8 +160,8 @@ Eine Anfrage läuft so ab:
   jedem erfolgreichen Lauf entsteht eine Kopie; ist die Datei unlesbar (etwa nach einem Abbruch
   mitten im Schreiben), wird sie daraus wiederhergestellt.
 - **Modelle.** Die Bezeichnungen kennt nur die CLI: das Add-on liest `agy models` (nach der Anmeldung,
-  bei fehlender oder sechs Stunden alter Liste) in `/data/.gemini/antigravity-cli/omniai-models.json`
-  und löst Kurzformen wie `flash-3.8` gegen diese Liste auf. Unbekanntes oder Mehrdeutiges lehnt der
+  bei fehlender oder sechs Stunden alter Liste) in `/data/omniai-gemini-models.json` — eine Liste für
+  alle Konten — und löst Kurzformen wie `flash-3.8` gegen diese Liste auf. Unbekanntes oder Mehrdeutiges lehnt der
   Provider ab, bevor die CLI startet.
 - **Sofortiger Abbruch ohne Anmeldung.** Verlangt die CLI mitten im Betrieb eine Anmeldung (Zugriff
   bei Google widerrufen), bricht der Lauf sofort ab, statt 60 Sekunden zu warten.

@@ -429,8 +429,8 @@ class FakeLogin:
         self.calls.append(("status", include_url))
         return {"state": "idle", "url": "https://accounts.google.com/x" if include_url else None}
 
-    def start(self):
-        return self._answer("start")
+    def start(self, label=""):
+        return self._answer("start", label)
 
     def submit(self, code):
         return self._answer("submit", code)
@@ -438,8 +438,8 @@ class FakeLogin:
     def cancel(self):
         return self._answer("cancel")
 
-    def logout(self):
-        return self._answer("logout")
+    def logout(self, account_id):
+        return self._answer("logout", account_id)
 
 
 @pytest.fixture
@@ -460,7 +460,7 @@ def test_the_login_status_hides_the_address_from_the_open_port(client, login):
         ("post", "/auth/gemini/start"),
         ("post", "/auth/gemini/code"),
         ("post", "/auth/gemini/cancel"),
-        ("delete", "/auth/gemini"),
+        ("delete", "/auth/gemini/konto-1"),
     ],
 )
 def test_the_login_cannot_be_changed_from_the_open_port(client, login, methode, pfad):
@@ -475,8 +475,9 @@ def test_the_login_cannot_be_changed_from_the_open_port(client, login, methode, 
 def test_the_login_can_be_started_and_ended_through_the_ingress(client, login):
     assert client.post("/auth/gemini/start", environ_base=INGRESS).get_json()["state"] == "waiting"
     assert client.post("/auth/gemini/cancel", environ_base=INGRESS).status_code == 200
-    assert client.delete("/auth/gemini", environ_base=INGRESS).status_code == 200
+    assert client.delete("/auth/gemini/konto-1", environ_base=INGRESS).status_code == 200
     assert [aufruf[0] for aufruf in login.calls] == ["start", "cancel", "logout"]
+    assert ("logout", "konto-1") in login.calls
 
 
 def test_the_code_is_handed_over(client, login):

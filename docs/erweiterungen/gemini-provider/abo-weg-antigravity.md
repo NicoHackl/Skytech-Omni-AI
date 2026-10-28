@@ -179,6 +179,8 @@ Parallelität, Bild) ist im Code angekommen:
 | Bild (Version 1.4.8, SHA-512 je Architektur) | `skytech_omniai/Dockerfile` |
 | Architektur und Sicherheit | [../../architektur.md](../../architektur.md), [../../sicherheit-datenschutz.md](../../sicherheit-datenschutz.md) |
 
+Spätere Erweiterungen: Modellauswahl (Liste aus `agy models`) und **mehrere Konten mit Wechsel** (D-024).
+
 Abweichungen vom früheren Entwurf: keine Option `gemini_auth_json` (die Anmeldung kommt nicht aus
 einem eingefügten Wert), Modelle aus `agy models` statt fester Liste (Option `gemini_sub_model` fürs Standardmodell), Befehle bei `full` nie freigegeben, nur ein Lauf
 zur Zeit.

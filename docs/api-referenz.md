@@ -224,13 +224,18 @@ wird die Absenderadresse des Ingress-Proxys, nicht ein Kopf; Begründung als D-0
 
 ## Anmeldung bei Google: `/auth/gemini`
 
-Für den Anbieter `gemini_sub` (D-022, Ablauf in [architektur.md](architektur.md)). Alle Antworten
+Für den Anbieter `gemini_sub` (D-022, mehrere Konten D-024, Ablauf in [architektur.md](architektur.md)). Alle Antworten
 haben dieselbe Form:
 
 ```json
 {
   "available": true,
-  "signed_in": false,
+  "signed_in": true,
+  "accounts": [
+    { "id": "konto-1", "label": "Privat", "state": "exhausted", "retry_at": "2026-10-28T19:30:00Z" },
+    { "id": "konto-2", "label": "Arbeit", "state": "ok", "retry_at": null }
+  ],
+  "pending_label": "Reserve",
   "state": "waiting",
   "url": "https://accounts.google.com/o/oauth2/auth?…",
   "seconds_left": 52,
@@ -241,7 +246,9 @@ haben dieselbe Form:
 | Feld | Bedeutung |
 |---|---|
 | `available` | Die Antigravity-CLI ist im Bild vorhanden |
-| `signed_in` | Eine lesbare Anmeldung liegt vor (wie `credentials.gemini_sub` in `/status`) |
+| `signed_in` | Mindestens ein Konto hat eine lesbare Anmeldung (wie `credentials.gemini_sub` in `/status`) |
+| `accounts` | Alle Konten in der Reihenfolge, in der sie an die Reihe kommen. `state`: `ok` (bereit), `exhausted` (Kontingent aufgebraucht), `restricted` (von Google eingeschränkt), `login_expired` (Anmeldung gilt nicht mehr), `signed_out`. `retry_at` (ISO, UTC) nennt bei `exhausted` und `restricted` den nächsten Versuch. Nie ein Pfad |
+| `pending_label` | Name des Kontos, das sich gerade anmeldet; es steht noch nicht in `accounts` |
 | `state` | `idle` (nichts läuft), `waiting` (Adresse ausgegeben, Code fehlt) oder `checking` (Code übergeben, Google prüft) |
 | `url` | Anmeldeadresse bei Google, nur bei `waiting` und nur über den Ingress |
 | `seconds_left` | Restzeit für den Code, nur bei `waiting` |
@@ -250,11 +257,11 @@ haben dieselbe Form:
 | Aufruf | Wirkung |
 |---|---|
 | `GET /auth/gemini` | Stand. Offen wie `/status`, aber ohne `url` |
-| `POST /auth/gemini/start` | Startet die Anmeldung und liefert `waiting` mit Adresse. `400`, wenn schon ein Konto angemeldet ist oder die CLI fehlt; `409`, wenn gerade eine Anfrage läuft |
+| `POST /auth/gemini/start` | Startet die Anmeldung eines **neuen Kontos** und liefert `waiting` mit Adresse. Der Rumpf darf `{"label": "Name"}` tragen (höchstens 40 Zeichen, Buchstaben, Ziffern, einfache Satzzeichen; leer = „Konto N“); `422` mit `field_errors.label`, wenn der Name nicht passt oder schon zehn Konten da sind. `400`, wenn die CLI fehlt; `409`, wenn gerade eine Anfrage läuft |
 | `POST /auth/gemini/code` | Rumpf `{"code": "…"}`. Gibt den Code an die CLI weiter und liefert `checking`; den Ausgang zeigt danach `GET`. `422` mit `field_errors.code`, wenn die Eingabe nicht nach einem Code aussieht. Auch die ganze Adresse der Zielseite wird angenommen |
 | `POST /auth/gemini/cancel` | Bricht eine laufende Anmeldung ab |
 | `POST /auth/gemini/models` | Holt die Modelle der Befehlszeile neu und liefert `{"models": ["…"]}`. Läuft gerade eine Anfrage, bleibt die bisherige Liste |
-| `DELETE /auth/gemini` | Entfernt die Anmeldung samt Sicherung. Widerrufen lässt sie sich nur im Google-Konto |
+| `DELETE /auth/gemini/<id>` | Entfernt dieses Konto samt Anmeldung, Sicherung und Zustand. `404`, wenn es das Konto nicht gibt; `409`, wenn gerade eine Anfrage läuft. Widerrufen lässt sich der Zugriff nur im Google-Konto |
 
 **Nur über den Ingress**, außer `GET`: Aufrufe über Port 8000 werden mit `403` abgelehnt, und die
 Adresse wird dort nicht ausgeliefert. Wer den offenen Port erreicht, soll weder ein Konto anmelden

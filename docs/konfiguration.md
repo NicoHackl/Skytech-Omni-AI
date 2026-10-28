@@ -115,12 +115,43 @@ Die Anmeldung geschieht deshalb **im Add-on selbst**, auf der Seite „Einstellu
    lässt dafür etwa eine Minute Zeit (der Rest der Zeit steht neben dem Feld). Wer stattdessen die
    ganze Adresse der Zielseite kopiert, kommt ebenfalls zum Ziel.
 4. Das Add-on prüft die Anmeldung mit einem kurzen Probeauftrag und danach in einem neuen Prozess.
-   Erst dann steht dort „Angemeldet“, und der Anbieter „Google Gemini (Abo)“ ist nutzbar.
+   Erst dann steht das Konto in der Liste mit „Bereit“, und der Anbieter „Google Gemini (Abo)“ ist
+   nutzbar.
 
-Die Anmeldung liegt unter `/data/.gemini/antigravity-cli/` (Rechte `0600`), samt einer Sicherung.
-Die CLI erneuert sie selbst; das Add-on überschreibt sie nie. „Abmelden“ löscht sie aus dem Add-on.
-Den Zugriff widerrufen lässt sich zusätzlich im Google-Konto unter „Sicherheit“. Gilt die
-Anmeldung später nicht mehr, meldet das Add-on es bei der nächsten Anfrage; dann erneut anmelden.
+Die Anmeldung liegt je Konto unter `/data` (Rechte `0600`), samt einer Sicherung. Die CLI erneuert sie
+selbst; das Add-on überschreibt sie nie. „Entfernen“ löscht das Konto aus dem Add-on. Den Zugriff
+widerrufen lässt sich zusätzlich im Google-Konto unter „Sicherheit“. Gilt eine Anmeldung später nicht
+mehr, markiert das Add-on das Konto („Anmeldung abgelaufen“) und nimmt das nächste; ein solches Konto
+wird entfernt und neu angemeldet.
+
+### Mehrere Google-Konten
+
+Die Karte „Google-Anmeldung (Abo)“ nimmt beliebig viele Konten (höchstens zehn); jede weitere
+Anmeldung — „Weiteres Konto anmelden“, auf Wunsch mit einem Namen — legt ein **eigenes Konto** an,
+mit eigener Anmeldung und eigenem Zustand der CLI. Jedes Konto bringt sein eigenes Kontingent mit.
+
+So wechselt das Add-on (D-024):
+
+- Es arbeitet mit dem **ersten Konto der Liste, das Kontingent hat**, und bleibt dabei. Reihum wird
+  nicht verteilt.
+- Meldet die CLI „Kontingent aufgebraucht“, markiert das Add-on das Konto und wiederholt **dieselbe
+  Anfrage** mit dem nächsten. Der Aufrufer merkt davon nichts als eine etwas längere Antwortzeit.
+- Ein aufgebrauchtes Konto wird erst nach einer Wartezeit wieder versucht: 30 Minuten, nach jedem
+  weiteren Fehlschlag doppelt so lange, höchstens fünf Stunden. So wird ein früher erneuertes
+  Kontingent bald genutzt, ohne dass jede Anfrage ein leeres Konto antippt. In der Liste steht der
+  nächste Versuch.
+- Dasselbe gilt für ein Konto, das Google einschränkt („Von Google eingeschränkt“). Ein Konto mit
+  abgelaufener Anmeldung wird übersprungen, bis es neu angemeldet ist.
+- Sind alle Konten in Wartezeit, antwortet das Add-on sofort mit einem Satz, der den nächsten Versuch
+  nennt; es startet dann keine CLI.
+- Nur diese drei Gründe führen zum Wechsel — nie eine schlechte Antwort oder ein Zeitlimit.
+- Die Modellliste gilt für alle Konten; sie müssen demselben Tarif angehören, sonst nennt die Auswahl
+  Modelle, die ein Konto nicht kennt.
+
+**Google nennt „automating account rotation“ ausdrücklich als nicht unterstützt** (Wortlaut in der
+[Recherche](erweiterungen/gemini-provider/recherche.md)). Das Add-on wechselt offen — ein Rechner, eine
+Software, im Protokoll sichtbar — und tarnt nichts. Trotzdem steigt das Risiko mit jedem Konto, und eine
+Maßnahme von Google kann alle treffen.
 
 ### Modelle bei Google Gemini (Abo)
 
