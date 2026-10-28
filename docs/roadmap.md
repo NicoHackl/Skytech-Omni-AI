@@ -67,7 +67,7 @@ geprüft, nicht gegen die Absicht. Was hier „fertig" heißt, muss laufen.
 
 **Ziel:** Das Backend von Skytech X kann über den Vertrag v1 Antworten und ganze Agent-Läufe
 anfordern; die Werkzeuge liefert das Backend über MCP (D-019,
-[contracts/omniai-api-v1.yaml](contracts/omniai-api-v1.yaml)).
+[contract/contract_skytech_x_omniai/omniai-api-v1.yaml](../contract/contract_skytech_x_omniai/omniai-api-v1.yaml)).
 
 | Punkt | Status | Verweis |
 |---|---|---|

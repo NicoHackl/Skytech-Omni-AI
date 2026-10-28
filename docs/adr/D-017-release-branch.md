@@ -1,7 +1,7 @@
 # D-017: main ist ein reiner Release-Branch, die CI schreibt nie nach agent/main
 
 - **Datum:** 16.10.2026
-- **Status:** Aktiv — ersetzt [D-016](D-016-automatisches-release.md)
+- **Status:** Ersetzt durch [D-025](D-025-dev-workflow.md) — ersetzte zuvor [D-016](D-016-automatisches-release.md)
 - **Betrifft:** `.github/workflows/ci.yaml`, `scripts/release.py`, `scripts/commit_msg.py`,
   `.githooks/`, `skytech_omniai/config.yaml` (Version), Changelog, Branch `main`
 

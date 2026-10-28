@@ -4,7 +4,7 @@ allowed-tools: Bash(git diff:*), Bash(git status), Bash(git log:*), Read
 ---
 
 Erzeuge die Changelog-Trailer für die Commit-Message aus den aktuellen Änderungen. Eine Datei
-`CHANGELOG.md` gibt es auf `agent/main` nicht — den Changelog baut der Release-Job aus diesen
+`CHANGELOG.md` gibt es auf `dev/dev` nicht — den Changelog baut der Release-Job aus diesen
 Trailern (docs/git-workflow.md, D-017).
 
 Aktueller Stand:

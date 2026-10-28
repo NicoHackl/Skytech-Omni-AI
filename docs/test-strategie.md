@@ -95,11 +95,31 @@ der echten Claude-, Codex- bzw. Antigravity-CLI. Letzterer ist als Lücke in
 [bekannte-luecken.md](bekannte-luecken.md) geführt — nach jedem Anheben einer CLI-Version wird
 über den betroffenen Anbieter von Hand eine Anfrage gestellt.
 
+## Lokal = CI
+
+Eine rote CI nach grünem lokalem Test hat fast immer dieselben Ursachen. Jede ist eine Abweichung
+zwischen beiden Umgebungen — und jede wird vorab ausgeschlossen (eiserne Regel 15):
+
+| Ursache | Gegenmaßnahme in diesem Projekt |
+|---|---|
+| Lokal nur der geänderte Test gelaufen, die CI führt alles aus | Vor dem Push immer `scripts/check.sh` (der pre-push-Hook erzwingt das) |
+| CI nutzt andere Befehle oder Flags | `scripts/check.sh` und `ci.yaml` führen dieselben Prüfungen aus; wer eine ändert, ändert beide im selben Commit |
+| Andere Versionen | Python 3.11 **und** 3.14 in der CI-Matrix, Node 20 wie im Image, alle Abhängigkeiten gepinnt, `npm ci` nach Lockfile |
+| Datei lokal vorhanden, aber nicht eingecheckt oder ignoriert | Vor dem Push `git status` prüfen; im Zweifel in einem frischen Klon testen |
+| Lokale `.env`, Dienste oder Netz | Tests laufen ohne diese; benötigte Werte setzt die CI mit Testwerten |
+| Groß-/Kleinschreibung von Dateinamen (macOS vs. Linux), Zeitzone, Locale | Beim Auftreten mit einem Test absichern; Zeitzone im Test explizit setzen |
+| Nur in der CI vorhandene Jobs (Image, Smoke-Test, Sicherheit, Add-on-Linter) | `scripts/check.sh --docker` bei Änderungen an Dockerfile, Add-on-Konfiguration oder Abhängigkeiten |
+
+Lässt sich ein roter CI-Lauf lokal nicht nachstellen, ist das der eigentliche Fehler: erst die
+Abweichung finden, dann den Test beheben. Ein erneuter Push „auf gut Glück" ist nicht zulässig.
+
 ## Automatische Prüfungen (CI)
 
 [`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) läuft bei jedem Push auf
-`agent/main` und bei jedem Pull Request dorthin. Alle Jobs müssen grün sein, bevor der
-Release-Job startet ([git-workflow.md](git-workflow.md#release)).
+`dev/dev` und bei jedem Pull Request nach `dev/dev` oder `main`. Alle Jobs müssen grün sein, bevor
+der Job „Nach dev/main übernehmen" den Stand weiterreicht
+([git-workflow.md](git-workflow.md#branch-modell)). Das Release selbst ist ein eigener Workflow
+([`release.yaml`](../.github/workflows/release.yaml), [git-workflow.md](git-workflow.md#release)).
 
 | Job | Prüft | Lokal |
 |---|---|---|
