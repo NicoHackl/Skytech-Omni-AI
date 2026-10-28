@@ -12,7 +12,7 @@
 - [ ] Tests laufen fehlerfrei
 - [ ] Linting läuft fehlerfrei
 - [ ] `scripts/check.sh` lokal gelaufen — dieselben Prüfungen wie die CI (Regel 15)
-- [ ] PR geht von `dev/main` nach `main`, kein zweiter PR offen
+- [ ] PR geht von `dev/main` nach `main`, kein zweiter PR offen, dem Repo-Besitzer zugewiesen
 - [ ] Keine KI-Signatur / kein `Co-Authored-By` in Commits und Beschreibung
 - [ ] Changelog-Trailer `Changelog-<Kategorie>: …` im Commit (bei funktionaler oder gestalterischer Änderung)
 - [ ] Betroffene Dateien in `docs/` aktualisiert

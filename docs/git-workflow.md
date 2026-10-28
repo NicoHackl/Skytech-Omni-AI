@@ -39,11 +39,31 @@ Ein Vorhaben kann aus mehreren Arbeitspaketen bestehen — jedes Paket erzeugt e
 `dev/dev` und damit eine automatische Übernahme nach `dev/main`. Nach `main` geht trotzdem nur
 **ein** Pull Request:
 
-1. Vorhaben abgeschlossen, `dev/main` ist grün: `gh pr create --base main --head dev/main`.
+1. Vorhaben abgeschlossen, `dev/main` ist grün, dann gleich dem Repo-Besitzer zugewiesen:
+   `gh pr create --base main --head dev/main --assignee "$(gh repo view --json owner --jq .owner.login)"`.
+   Der Workflow [`pr-zuweisen.yaml`](../.github/workflows/pr-zuweisen.yaml) weist zusätzlich jeden
+   neu eröffneten Pull Request (auch von Dependabot) selbsttätig dem Besitzer zu.
 2. **Der User gibt den Pull Request frei.** Ein Agent merged ihn nie.
 3. Gemergt wird mit **Merge-Commit** (nicht Squash, nicht Rebase) — der Release-Job erkennt am
    zweiten Elternteil, welche Commits neu sind, und liest daraus die Changelog-Trailer.
 4. Solange ein Pull Request offen ist, wird kein zweiter angelegt.
+
+### Konflikt im Pull Request
+
+Ein Konflikt entsteht, wenn `dev/main` und `main` dieselbe oder eine angrenzende Zeile geändert
+haben — typisch in `skytech_omniai/config.yaml` (Release-Job ändert `version:`) und
+`skytech_omniai/CHANGELOG.md`. Auflösen, ohne den Ablauf zu beschädigen:
+
+1. `main` nach `dev/main` mergen und den Konflikt dort lösen (Weboberfläche oder lokal).
+   In `config.yaml` bleibt `version: "dev"`; sonst gilt die Seite von `dev/main`.
+2. Pull Request wie gewohnt mergen. Die Version setzt der Release-Job ohnehin neu.
+3. Danach **einmalig** `dev/dev` nachziehen, weil `dev/main` den Merge-Commit hat und der
+   nächste Push auf `dev/dev` sonst nicht mehr per Fast-Forward übernommen werden kann:
+   `git fetch && git checkout dev/dev && git merge --ff-only origin/dev/main && git push`.
+   Das ist die einzige zulässige Richtung `dev/main` → `dev/dev`; nie rebasen.
+
+Dadurch liegt `skytech_omniai/CHANGELOG.md` als Kopie von `main` auch auf `dev/dev`. Sie wird dort
+nicht gepflegt und nicht gelöscht (sonst entsteht beim nächsten Release ein Konflikt).
 
 ## Commit-Format
 
@@ -191,6 +211,7 @@ andere Änderung durch `dev/main` und den Pull Request nach `main`.
 - Kein Commit und kein Merge von Hand auf `main`; kein Commit von Hand auf `dev/main`
 - Kein Merge von `dev/main` zurück nach `dev/dev`
 - Kein zweiter Pull Request nach `main`, solange einer offen ist
+- Kein Pull Request ohne Zuweisung an den Repo-Besitzer
 - Kein `Co-Authored-By`-Trailer und keine KI-Namensnennung in Commits oder Pull Requests
 - Keine Versionsnummer von Hand in `config.yaml` und kein von Hand gepflegter Changelog
 - Keine Secrets im Commit — vor dem Commit `git diff --staged` prüfen

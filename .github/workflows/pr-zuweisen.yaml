@@ -1,0 +1,27 @@
+# Weist jeden neu eröffneten Pull Request dem Repo-Besitzer zu.
+# Grund: Freigaben laufen über den Besitzer; ein nicht zugewiesener Pull Request (auch von
+# Dependabot) geht sonst unter. Ablauf: docs/git-workflow.md
+name: Pull Request zuweisen
+
+# pull_request_target statt pull_request: Dependabot-Läufe haben bei pull_request nur
+# Leserechte. Der Workflow checkt keinen Code des Pull Requests aus und führt keinen aus —
+# nur dann ist pull_request_target unbedenklich.
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  zuweisen:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dem Repo-Besitzer zuweisen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: gh pr edit "$PR" --repo "$REPO" --add-assignee "$OWNER"

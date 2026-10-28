@@ -94,7 +94,9 @@ def test_version_is_the_dev_placeholder(config):
 def test_no_changelog_on_the_working_branch():
     """Der Changelog entsteht beim Release aus den Trailern, nicht als Datei hier."""
     assert not (ROOT / "CHANGELOG.md").exists()
-    assert not (ADDON_DIR / "CHANGELOG.md").exists()
+    # skytech_omniai/CHANGELOG.md darf als Kopie von main vorhanden sein: nach einem Konflikt
+    # im Pull Request wird main nach dev/main gemergt (docs/git-workflow.md). Gepflegt wird
+    # sie dort nie.
 
 
 def test_dockerfile_copies_every_python_module():

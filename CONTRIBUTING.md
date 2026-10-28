@@ -24,7 +24,7 @@ roter Lauf wird vor allem anderen behoben.
 ## Pull Requests
 
 Gearbeitet wird auf `dev/dev`, die CI übernimmt grüne Stände nach `dev/main`. Nach `main` geht je
-Vorhaben **ein** Pull Request von `dev/main`, den der Maintainer freigibt. Ablauf:
+Vorhaben **ein** Pull Request von `dev/main`, der dem Maintainer zugewiesen ist und von ihm freigegeben wird. Ablauf:
 [docs/git-workflow.md](docs/git-workflow.md).
 
 ## Vor jedem Pull Request

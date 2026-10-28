@@ -25,6 +25,9 @@ wo nicht.
 - **Der Pull Request nach `main` wird als Merge-Commit gemergt.** Bei Squash oder Rebase fehlt der
   zweite Elternteil; der Release-Job fällt dann auf den Squash-Commit zurück, und die
   Changelog-Trailer einzelner Commits gehen verloren.
+- **Nach einem Konflikt im Pull Request liegt `skytech_omniai/CHANGELOG.md` auch auf `dev/dev`.**
+  Das ist erwartet und kein Fehler; Ablauf in [git-workflow.md](git-workflow.md#konflikt-im-pull-request).
+  Die Datei dort weder pflegen noch löschen.
 - **Ein Changelog-Trailer ist nach dem Push endgültig.** `dev/dev` verbietet das Umschreiben
   der Historie. Ein falscher Eintrag bleibt stehen; ergänzt wird mit dem nächsten Commit. Der
   commit-msg-Hook fängt Tippfehler in der Kategorie ab, den Wortlaut prüft er nicht.
