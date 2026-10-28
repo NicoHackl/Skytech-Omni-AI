@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.16.1] — 28.10.2026
+
+### Geändert
+
+- Interne Verbesserungen ohne sichtbare Änderung.
+
 ## [0.16.0] — 28.10.2026
 
 ### Hinzugefügt
