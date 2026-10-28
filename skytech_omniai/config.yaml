@@ -1,9 +1,9 @@
 name: "Skytech OmniAI"
 # Die echte Version setzt der Release-Job beim Veröffentlichen auf main
 # (scripts/release.py, D-017). Auf agent/main steht hier immer "dev".
-version: "0.13.0"
+version: "0.14.0"
 slug: "skytech_omniai"
-description: "Modulare KI-Brücke für Home Assistant — Claude und ChatGPT über das jeweilige Abo, dazu Google Gemini"
+description: "Modulare KI-Brücke für Home Assistant — Claude, ChatGPT und Google Gemini über das jeweilige Abo, dazu Gemini per API-Schlüssel"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
 # Nur 64 Bit: die Codex-CLI wird ausschließlich für x86_64 und aarch64
 # ausgeliefert. Begründung: D-014.
@@ -51,12 +51,13 @@ options:
   # Mindestens 32 zufällige Zeichen, z. B. openssl rand -base64 32.
   api_token: ""
 schema:
-  provider: "list(claude_sub|codex_sub|gemini)"
+  provider: "list(claude_sub|codex_sub|gemini|gemini_sub)"
   # Gemeinsame Liste für alle Provider: die ersten Einträge gehören zu
   # "claude_sub", die "gpt-*"-Einträge zu "codex_sub", die "gemini-*"-Einträge
-  # zu "gemini". Pro Anfrage kann über das Feld "model" im /ask-Rumpf weiterhin
-  # jede beliebige Modell-Kennung gesetzt werden - diese Liste bestimmt nur den
-  # add-on-weiten Standard.
+  # zu "gemini". "gemini_sub" hat keine feste Liste (nur "auto"): seine Modelle
+  # kennt die Google-Befehlszeile erst nach der Anmeldung. Pro Anfrage kann über
+  # das Feld "model" im /ask-Rumpf weiterhin jede beliebige Modell-Kennung
+  # gesetzt werden - diese Liste bestimmt nur den add-on-weiten Standard.
   model: "list(auto|sonnet|opus|haiku|gpt-5.6-sol|gpt-5.6-terra|gpt-5.6-luna|gpt-5.3-codex-spark|gemini-flash-latest|gemini-3.6-flash|gemini-3.5-flash|gemini-3.5-flash-lite|gemini-3.1-flash-lite|gemini-2.5-pro|gemini-2.5-flash|gemini-2.5-flash-lite)"
   tool_access: "list(off|web|full)"
   claude_oauth_token: "password?"

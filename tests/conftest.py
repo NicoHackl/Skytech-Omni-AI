@@ -25,6 +25,9 @@ ENV_KEYS = [
 
 
 @pytest.fixture(autouse=True)
-def clean_env(monkeypatch):
+def clean_env(monkeypatch, tmp_path):
     for key in ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
+    # Die Google-CLI legt Anmeldung und Zustand unter einem Heimatverzeichnis ab
+    # (im Container /data). Kein Test darf an das echte heran.
+    monkeypatch.setenv("OMNIAI_GEMINI_HOME", str(tmp_path / "gemini-home"))

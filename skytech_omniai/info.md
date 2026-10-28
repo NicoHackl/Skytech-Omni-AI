@@ -12,8 +12,8 @@ nutzen — ohne zusätzliche Kosten pro Anfrage.
 
 ## Was das Add-on kann
 
-- **Drei Anbieter, gleiche Bedienung.** Angebunden sind **Claude (Abo)**, **ChatGPT (Abo)** und
-  **Google Gemini**. Weitere Anbieter wie lokale Modelle lassen sich ergänzen, ohne dass sich für
+- **Vier Zugänge, gleiche Bedienung.** Angebunden sind **Claude (Abo)**, **ChatGPT (Abo)**,
+  **Google Gemini (Abo)** über Google AI Pro und **Google Gemini** mit Schlüssel. Weitere Anbieter wie lokale Modelle lassen sich ergänzen, ohne dass sich für
   bestehende Automatisierungen etwas ändert.
 - **Das Abo statt Kosten pro Anfrage.** Über die jeweilige Befehlszeile zählt jede Anfrage auf das
   Kontingent deines Abos.
@@ -100,9 +100,29 @@ Add-on später, die Anmeldung gelte nicht mehr: Schritt 1 und 2 wiederholen.
 | `gpt-5.6-luna` | Schnell und günstig |
 | `gpt-5.3-codex-spark` | Nur mit ChatGPT Pro |
 
-## Einrichtung — Google Gemini
+## Einrichtung — Google Gemini über das Abo (Google AI Pro)
 
-Gemini wird über einen Schlüssel angebunden (nach Verbrauch abgerechnet, kein Abo-Modell).
+Die Anmeldung geschieht im Add-on selbst, einmalig:
+
+1. In der Seitenleiste **OmniAI → Einstellungen**, Karte **Google-Anmeldung (Abo)**: **Mit Google anmelden**.
+2. **Google-Seite öffnen** und mit dem Konto anmelden, das Google AI Pro hat. Am besten ist der
+   Browser vorher schon bei Google angemeldet.
+3. Den Code kopieren, den Google danach anzeigt, einfügen und **Anmeldung abschließen**. Google
+   lässt dafür etwa eine Minute Zeit.
+4. Als Anbieter **Google Gemini (Abo)** wählen und speichern.
+
+Die Anmeldung bleibt gespeichert und wird vom Add-on erneuert. **Abmelden** entfernt sie wieder.
+Ein Modell lässt sich pro Anfrage über das Feld `model` nennen; ohne Angabe wählt Google selbst.
+
+> **Risiko:** Google unterstützt es bei privaten Abos nicht, die Antigravity-Befehlszeile über
+> andere Anwendungen zu nutzen, und kann Konten dafür einschränken oder sperren. Die Nutzung
+> geschieht auf eigenes Risiko — am besten mit einem Konto, dessen Verlust nicht schmerzt. Bei
+> privaten Konten gelten außerdem die Datenbedingungen für Verbraucher: Was im Prompt steht, kann
+> Google zur Verbesserung nutzen.
+
+## Einrichtung — Google Gemini mit Schlüssel
+
+Der von Google vorgesehene Weg: ein Schlüssel (nach Verbrauch abgerechnet, kein Abo-Modell).
 
 1. **Schlüssel erzeugen** unter <https://aistudio.google.com/apikey>.
 2. **Schlüssel eintragen** in der Seitenleiste unter **OmniAI → Einstellungen** in das Feld „Gemini-Schlüssel“.
@@ -134,6 +154,7 @@ die Modelle des gewählten Anbieters zur Auswahl; im Reiter „Konfiguration“ 
 - `sonnet` / `opus` / `haiku` — gehören zu `claude_sub`.
 - `gpt-*` — gehören zu `codex_sub`.
 - `gemini-*` — gehören zu `gemini`.
+- `gemini_sub` hat keine feste Liste; dort bleibt es bei `auto`, ein Modell wird pro Anfrage genannt.
 
 Passen Anbieter und Modell nicht zusammen, sagt das Add-on das im Klartext. **Pro Anfrage** lässt
 sich im Rumpf von `/ask` weiterhin jede Modellkennung setzen — auch eine, die nicht im Auswahlfeld
@@ -141,7 +162,7 @@ steht.
 
 ## Internet-Zugriff und Werkzeuge
 
-Beide Befehlszeilen laufen im Add-on **ohne Bildschirm** (`claude -p`, `codex exec`). In diesem
+Die Befehlszeilen laufen im Add-on **ohne Bildschirm** (`claude -p`, `codex exec`, `agy -p`). In diesem
 Modus gibt es keine Rückfrage — und ohne ausdrückliche Freigabe benutzt die KI deshalb **kein**
 Werkzeug, auch nicht die Websuche. Antwortet sie, sie könne nichts nachschlagen, ist also nichts
 blockiert: es war nur nichts freigegeben.
@@ -168,8 +189,9 @@ Gesteuert wird das über die Option **`tool_access`**:
 Die Stufe heißt in den Einstellungen „Werkzeuge“ und gilt nach dem Speichern sofort. Ein im
 Reiter „Konfiguration“ vertippter Wert wird nicht übernommen, sondern fällt auf `web` zurück.
 
-> **Hinweis:** `tool_access` betrifft `claude_sub` und `codex_sub`. Google Gemini hat keinen
-> Web-Zugriff und antwortet allein aus seinem Trainingswissen.
+> **Hinweis:** `tool_access` betrifft `claude_sub`, `codex_sub` und `gemini_sub`. Bei Google Gemini
+> (Abo) führt das Add-on nie Befehle aus; „Alle Werkzeuge“ wirkt dort wie „Web-Recherche“. Google
+> Gemini mit Schlüssel hat keinen Web-Zugriff und antwortet allein aus seinem Trainingswissen.
 
 ### Wetterabfrage testen
 

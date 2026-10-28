@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { ApiError, api, fieldErrorsOf } from '../api'
+import { GoogleLogin } from '../components/GoogleLogin'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/Layout'
 import { useToast } from '../components/Toast'
@@ -272,8 +273,10 @@ export function Einstellungen() {
                       ))}
                     </select>
                     <small>
-                      {TOOL_ACCESS_HINTS[draft.tool_access] ?? ''} Gilt für Claude und ChatGPT;
-                      Gemini antwortet immer aus seinem Wissen.
+                      {TOOL_ACCESS_HINTS[draft.tool_access] ?? ''} Gilt für Claude, ChatGPT und
+                      Google Gemini (Abo), dort ohne Befehle: „Alle Werkzeuge“ wirkt wie
+                      „Web-Recherche“. Google Gemini mit Schlüssel antwortet immer aus seinem
+                      Wissen.
                     </small>
                     {fieldError('tool_access')}
                   </label>
@@ -357,6 +360,8 @@ export function Einstellungen() {
                 </div>
               </div>
             </section>
+
+            <GoogleLogin locked={readOnly} />
 
             {readOnly ? null : (
               <div className="form-footer">

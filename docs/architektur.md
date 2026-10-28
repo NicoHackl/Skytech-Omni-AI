@@ -8,15 +8,17 @@
 Skytech OmniAI ist ein Home-Assistant-Add-on und eine modulare Brücke zwischen dem Smart Home und
 mehreren KI-Anbietern. Es nimmt Prompts über eine HTTP-Schnittstelle entgegen, leitet sie an
 Claude (Pro/Max-Abo über die Claude-Code-CLI), ChatGPT (Abo über die Codex-CLI) oder Google Gemini
-weiter und liefert geprüftes JSON zurück. Eine Weboberfläche über den Ingress von Home Assistant zeigt den Zustand und erlaubt
+(Google-AI-Pro-Abo über die Antigravity-CLI, oder per API-Schlüssel) weiter und liefert geprüftes
+JSON zurück. Eine Weboberfläche über den Ingress von Home Assistant zeigt den Zustand und erlaubt
 Testanfragen.
 
 **Nicht** Aufgabe dieses Projekts:
 
 - Kein Gedächtnis über Anfragen hinweg. Jede Anfrage steht für sich; es gibt keinen Verlauf und
   keine Sitzung.
-- Keine eigene Persistenz. Gespeichert wird nur, was die beiden Befehlszeilen selbst unter `/data`
-  ablegen — ihr Anmeldezustand.
+- Keine eigene Persistenz. Gespeichert wird nur, was die Befehlszeilen selbst unter `/data`
+  ablegen — ihr Anmeldezustand. Die Antigravity-CLI legt zusätzlich Gespräche auf der Platte ab; der
+  Provider löscht sie nach jedem Lauf.
 - Keine Automatisierungslogik. Wann etwas gefragt wird und was mit der Antwort geschieht,
   entscheidet Home Assistant.
 - Keine Zugriffssteuerung auf dem offenen Port — siehe
@@ -26,11 +28,12 @@ Testanfragen.
 
 | Schicht | Technologie | Warum |
 |---|---|---|
-| Sprache / Laufzeit | Python 3 (Alpine, nur 64 Bit) | Die Befehlszeilen werden als Prozess gestartet; Python genügt dafür und ist im Basisimage vorhanden. 32 Bit entfällt, weil es die Codex-CLI dort nicht gibt — D-014 |
+| Sprache / Laufzeit | Python 3 (Alpine, nur 64 Bit) | Die Befehlszeilen werden als Prozess gestartet; Python genügt dafür und ist im Basisimage vorhanden. 32 Bit entfällt, weil es die Codex- und die Antigravity-CLI dort nicht gibt — D-014 |
 | Webserver | Flask + waitress | Flask für die wenigen Endpunkte, waitress als Produktionsserver — D-008 |
 | Anbieter Claude | Claude-Code-CLI als Unterprozess | Nutzt das Pro/Max-Abo statt eines nach Verbrauch abgerechneten Schlüssels — D-006 |
 | Anbieter ChatGPT | Codex-CLI als Unterprozess (`codex exec`) | Dasselbe für das ChatGPT-Abo; die Anmeldung wird als `auth.json` eingetragen — D-013 |
-| Anbieter Gemini | `urllib` aus der Standardbibliothek | Das offizielle SDK zöge über pydantic-core eine Rust-Werkzeugkette ins musl-Bild nach — D-007 |
+| Anbieter Gemini (Schlüssel) | `urllib` aus der Standardbibliothek | Das offizielle SDK zöge über pydantic-core eine Rust-Werkzeugkette ins musl-Bild nach — D-007 |
+| Anbieter Gemini (Abo) | Antigravity-CLI (`agy`) als Unterprozess, festgenagelt, rund 200 MB | Nutzt das Kontingent von Google AI Pro. Die Anmeldung entsteht im Add-on selbst, siehe unten — D-022. Von Google bei privaten Abos nicht unterstützt |
 | Oberfläche | React 18 + TypeScript + Vite | Festgelegter Stack, siehe [frontend.md](frontend.md) |
 | Auslieferung | Ein Container, ein Prozess | Die Oberfläche liegt als gebautes Bündel im Bild und wird von Flask ausgeliefert — D-009 |
 | Tests | pytest, ruff | Keine Netzzugriffe, keine echten Zugangsdaten — siehe [test-strategie.md](test-strategie.md) |
@@ -49,19 +52,20 @@ Testanfragen.
                                           ▼
                                   ┌───────────────┐
                                   │  factory.py   │
-                                  └──┬─────┬────┬─┘
-                                     │     │    │
-              ┌──────────────────────┘     │    └──────────────────┐
-              ▼                            ▼                       ▼
-   ┌─────────────────────┐     ┌────────────────────┐   ┌────────────────────┐
-   │ claude_sub_provider │     │ codex_sub_provider │   │  gemini_provider   │
-   │  Unterprozess       │     │  Unterprozess      │   │  HTTPS             │
-   └──────────┬──────────┘     └─────────┬──────────┘   └──────────┬─────────┘
-              │                          │                         │
-              ▼                          ▼                         ▼
-        Claude-Code-CLI              Codex-CLI                Google Gemini
-              │                          │                         │
-              └──────────► base_provider.parse_json ◄──────────────┘
+                                  └─┬───┬───┬───┬─┘
+                  ┌─────────────────────┘   │   │   └─────────────────────┐
+                  │            ┌────────────┘   └────────────┐            │
+                  ▼            ▼                             ▼            ▼
+   ┌─────────────────────┐ ┌──────────────────┐ ┌────────────────┐ ┌───────────────────┐
+   │ claude_sub_provider │ │codex_sub_provider│ │gemini_provider │ │gemini_sub_provider│
+   │  Unterprozess       │ │  Unterprozess    │ │  HTTPS         │ │  Unterprozess     │
+   └──────────┬──────────┘ └────────┬─────────┘ └───────┬────────┘ └─────────┬─────────┘
+              ▼                     ▼                   ▼                    ▼
+        Claude-Code-CLI         Codex-CLI         Google Gemini      Antigravity-CLI
+              │                     │                   │                    │
+              └──────────────► base_provider.parse_json ◄────────────────────┘
+
+  gemini_sub_login (nur Anmeldung, nicht Teil der Anfrage) ──► Antigravity-CLI
 
   config_loader.py liest beim Start /data/options.json und legt die Werte
   als Umgebungsvariablen ab, aus denen sich alle Komponenten bedienen.
@@ -94,7 +98,8 @@ ist das eine Design-Entscheidung → [design-entscheidungen.md](design-entscheid
 2. Eine Anfrage trifft als `POST /ask` ein. `app.py` prüft, ob ein Prompt dabei ist.
 3. `ProviderFactory` wählt die Umsetzung: Angabe in der Anfrage, sonst Konfiguration, sonst Claude.
 4. Der Provider löst das Modell auf, hängt die JSON-Anweisung an den Prompt und ruft seinen Anbieter
-   auf — als Unterprozess (Claude, ChatGPT) oder über HTTPS (Gemini).
+   auf — als Unterprozess (Claude, ChatGPT, Gemini über das Abo) oder über HTTPS (Gemini mit
+   Schlüssel).
 5. `BaseProvider.parse_json` wertet die Antwort aus und verzeiht Markdown-Blöcke und umgebende
    Prosa.
 6. Das Ergebnis geht unverändert an den Aufrufer. Scheitert ein Schritt, wird die technische
@@ -104,6 +109,50 @@ ist das eine Design-Entscheidung → [design-entscheidungen.md](design-entscheid
 `{"error": "<deutscher Satz>"}` — nie eine Rohausgabe, nie ein Antwortcode im Text.
 
 Details zu Endpunkten: [api-referenz.md](api-referenz.md).
+
+## Google Gemini über das Abo (`gemini_sub`)
+
+Anders als bei Claude und ChatGPT gibt es für die Antigravity-CLI weder ein Token noch eine Datei
+zum Einfügen. Ohne Anmeldung druckt sie eine Google-Adresse und wartet 60 Sekunden auf den Code der
+Zielseite. Deshalb **entsteht die Anmeldung im Add-on selbst** (D-022):
+
+1. Seite „Einstellungen“ → Karte „Google-Anmeldung“ → `POST /auth/gemini/start`.
+   `gemini_sub_login` startet die CLI mit einem Probeauftrag und einer **Pty als Eingabe** (mit
+   `/dev/null` liest sie nichts, mit einer Pipe gibt sie sofort auf), liest die Adresse von der
+   Fehlerausgabe und reicht sie an die Oberfläche.
+2. Der Nutzer meldet sich bei Google an, kopiert den Code von der Zielseite und fügt ihn ein
+   (`POST /auth/gemini/code`). Das Modul schreibt ihn in die Eingabe der CLI; sie tauscht den Code,
+   legt die Anmeldung als Datei unter `/data/.gemini/antigravity-cli/` ab und beantwortet den
+   Probeauftrag.
+3. Ein **frischer** Prozess (`agy models`) prüft, dass die Anmeldung die Datei überdauert hat. Erst
+   dann gilt sie als angemeldet. Die Oberfläche fragt den Stand ab (`GET /auth/gemini`).
+
+Für jeden Aufruf der CLI — Anmeldung wie Anfrage — setzt das Add-on `SSH_CONNECTION`, `SSH_CLIENT`
+und `SSH_TTY`. Die CLI nimmt dann den Dateispeicher statt eines Schlüsselbunds, den es im Container
+nicht gibt: beim Schreiben wie beim Lesen derselbe Weg. Die Dateien liegen unter `/data` und
+überstehen Neustarts und Updates.
+
+Eine Anfrage läuft so ab:
+
+- **Ein Prozess zur Zeit.** Eine Sperre im Provider reiht Anfragen hintereinander; wer länger als
+  seine Zeitgrenze (höchstens zwei Minuten) wartet, bekommt „bearbeitet gerade eine andere Anfrage“.
+  Die Anmeldung hält dieselbe Sperre.
+- **Eigener leerer Arbeitsbereich** `/data/omniai-gemini-workspace` statt `/data`: die CLI darf dort
+  ohne Rückfrage lesen und schreiben, die Optionen mit allen Zugängen liegen außerhalb.
+- **Regeln für Werkzeuge** in der `settings.json` der CLI, bei jedem Lauf neu geprüft. Befehle sind
+  nie freigegeben; `web` und `full` erlauben das Lesen von Webseiten, `off` nicht. Fehlt die Datei
+  oder lässt sie sich nicht schreiben, läuft die CLI nicht.
+- **Schmale Umgebung.** Die CLI bekommt nur `HOME`, `PATH`, Zeitzone und Proxy-Variablen — keine
+  Zugänge der anderen Anbieter, kein Supervisor-Token.
+- **Aufräumen.** Gesprächsdaten, Zusammenfassungen und alles, was im Arbeitsbereich entstand, werden
+  nach jedem Lauf gelöscht; von den Protokollen der CLI bleiben die jüngsten fünf.
+- **Sicherung der Anmeldung.** Die CLI erneuert ihr Zugriffstoken und schreibt die Datei zurück. Nach
+  jedem erfolgreichen Lauf entsteht eine Kopie; ist die Datei unlesbar (etwa nach einem Abbruch
+  mitten im Schreiben), wird sie daraus wiederhergestellt.
+- **Sofortiger Abbruch ohne Anmeldung.** Verlangt die CLI mitten im Betrieb eine Anmeldung (Zugriff
+  bei Google widerrufen), bricht der Lauf sofort ab, statt 60 Sekunden zu warten.
+
+Risiken und offene Punkte: [bekannte-luecken.md](bekannte-luecken.md).
 
 ## Auslieferung der Oberfläche
 
@@ -135,7 +184,7 @@ Skytech-Omni-AI/                  # Repo-Wurzel = Add-on-Repository
     ├── config.yaml               # Add-on-Konfiguration; Version "dev", echte Nummer nur auf main
     ├── CHANGELOG.md              # nur auf main, vom Release-Job erzeugt (D-017)
     ├── build.yaml                # Basisimages je Architektur, festgenagelt
-    ├── Dockerfile                # Bild: Node, Python, Claude- und Codex-CLI, gebaute Oberfläche
+    ├── Dockerfile                # Bild: Node, Python, Claude-, Codex- und Antigravity-CLI, gebaute Oberfläche
     ├── requirements.txt          # Laufzeit-Abhängigkeiten, feste Versionen
     ├── info.md                   # Text, den der Add-on-Store anzeigt
     ├── app.py                    # HTTP-Schnittstelle und Auslieferung der Oberfläche

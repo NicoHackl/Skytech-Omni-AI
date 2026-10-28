@@ -4,9 +4,9 @@
 
 Home-Assistant-Add-on und modulare Brücke zwischen dem Smart Home und mehreren KI-Anbietern. Es
 nimmt Prompts über eine HTTP-Schnittstelle entgegen, leitet sie an **Claude** (über das
-Pro/Max-Abo), **ChatGPT** (über das ChatGPT-Abo) oder **Google Gemini** weiter und liefert
-geprüftes JSON zurück — bei Claude und ChatGPT über das jeweilige Abo statt über einen nach
-Verbrauch abgerechneten Schlüssel. Eine Weboberfläche in Home Assistant zeigt den Zustand
+Pro/Max-Abo), **ChatGPT** (über das ChatGPT-Abo) oder **Google Gemini** (über das Google-AI-Pro-Abo
+oder mit Schlüssel) weiter und liefert geprüftes JSON zurück — bei Claude, ChatGPT und Gemini
+(Abo) über das jeweilige Abo statt über einen nach Verbrauch abgerechneten Schlüssel. Eine Weboberfläche in Home Assistant zeigt den Zustand
 und erlaubt Testanfragen.
 
 ## Installation
@@ -57,10 +57,23 @@ auf.
 > Alternative: Unter `openai_api_key` lässt sich ein OpenAI-Schlüssel hinterlegen. Der wird nach
 > Verbrauch abgerechnet und nutzt das Abo **nicht**.
 
-### Google Gemini
+### Google Gemini mit Schlüssel
 
 Unter <https://aistudio.google.com/apikey> einen Schlüssel erzeugen, ihn unter
 **Einstellungen → Gemini-Schlüssel** eintragen, als Anbieter „Google Gemini“ wählen und speichern.
+Das ist der von Google vorgesehene Weg; er wird nach Verbrauch abgerechnet.
+
+### Google Gemini über das Google-AI-Pro-Abo
+
+Unter **Einstellungen → Google-Anmeldung (Abo)** auf „Mit Google anmelden“ klicken, die Google-Seite
+öffnen, mit dem Konto anmelden, das Google AI Pro hat, den angezeigten Code kopieren und einfügen
+(Google lässt dafür etwa eine Minute Zeit). Danach als Anbieter „Google Gemini (Abo)“ wählen und
+speichern. Die Anmeldung entsteht im Add-on selbst und bleibt gespeichert.
+
+> **Risiko:** Google unterstützt es bei privaten Abos nicht, die Antigravity-Befehlszeile über
+> andere Anwendungen zu nutzen, und kann Konten dafür einschränken oder sperren. Die Nutzung
+> geschieht auf eigenes Risiko — am besten mit einem Konto, dessen Verlust nicht schmerzt. Hintergrund:
+> [D-022](docs/adr/D-022-gemini-abo-antigravity.md).
 
 ## Nutzung
 

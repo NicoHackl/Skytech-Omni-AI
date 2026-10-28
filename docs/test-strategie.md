@@ -56,6 +56,12 @@ Für alles, was ein Mensch am Ende liest, zusätzlich:
    diesem Projekt kein Nebenschauplatz, sondern die am leichtesten zu brechende Regel: die
    Ursachen kommen von zwei fremden Diensten, und ihr Wortlaut ändert sich ohne Vorwarnung.
 
+Die Anmeldung bei Google und ihr Ablauf von den Endpunkten bis zur Antwort werden mit einem Skript
+an Stelle der CLI getestet (`test_gemini_sub_login.py`, `test_gemini_sub_flow.py`): es spielt
+Adresse, Eingabe über eine Pty, Anmeldedatei und Fehlerfälle nach — echte Prozesse, aber ohne Netz
+und ohne Konto. Das schließt ein Verhalten der echten CLI nicht ein; dafür gibt es die Handprüfung
+in D-022.
+
 Beispiele dafür stehen in `test_gemini_provider.py`
 (`test_http_errors_carry_no_status_code`) und in `test_app.py`
 (`test_a_provider_failure_stays_free_of_technical_detail`).
@@ -85,7 +91,7 @@ Zusammenfassung des Laufs) — als Hinweis, wo Tests fehlen, nicht als Schwelle.
 wertlos.
 
 Ungetestet bleiben dürfen: die Verdrahtung in `main.tsx`, reine Anzeigekomponenten und der Aufruf
-der echten Claude- bzw. Codex-CLI. Letzterer ist als Lücke in
+der echten Claude-, Codex- bzw. Antigravity-CLI. Letzterer ist als Lücke in
 [bekannte-luecken.md](bekannte-luecken.md) geführt — nach jedem Anheben einer CLI-Version wird
 über den betroffenen Anbieter von Hand eine Anfrage gestellt.
 

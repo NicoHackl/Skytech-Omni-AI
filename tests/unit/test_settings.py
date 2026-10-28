@@ -107,3 +107,13 @@ def test_short_api_token_is_rejected():
     assert errors["api_token"] == "Das Token braucht mindestens 32 Zeichen."
     assert ok == {}
     assert merged["api_token"] == "x" * 32
+
+
+def test_the_google_subscription_accepts_only_the_automatic_model():
+    """Seine Modelle kennt die Google-Befehlszeile erst nach der Anmeldung — es gibt keine Liste."""
+    merged, errors = merge_update(STORED, {"provider": "gemini_sub", "model": "auto"})
+    assert errors == {}
+    assert merged["provider"] == "gemini_sub"
+
+    _, errors = merge_update(STORED, {"provider": "gemini_sub", "model": "gemini-flash-latest"})
+    assert set(errors) == {"model"}

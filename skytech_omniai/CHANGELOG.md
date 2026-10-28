@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.14.0] — 28.10.2026
+
+### Hinzugefügt
+
+- Google Gemini lässt sich über das Google-AI-Pro-Abo nutzen. Unter „Einstellungen“ in der Karte „Google-Anmeldung“ einmal mit dem Google-Konto anmelden und den Anbieter „Google Gemini (Abo)“ wählen. Google unterstützt das bei privaten Abos nicht; die Nutzung geschieht auf eigenes Risiko.
+
+### Geändert
+
+- Das Add-on ist rund 200 MB größer, weil die Google-Befehlszeile mitgeliefert wird.
+
 ## [0.13.0] — 27.10.2026
 
 ### Hinzugefügt
