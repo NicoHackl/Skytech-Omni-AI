@@ -200,6 +200,31 @@ def test_a_pasted_address_works_like_the_code(fake_cli, manager):
     assert _wait_idle(manager)["signed_in"] is True
 
 
+def test_idle_always_means_the_lock_is_free(fake_cli, manager, monkeypatch):
+    """Wer „idle“ liest, darf sofort eine Anfrage stellen: die Sperre ist dann schon frei.
+
+    Zuvor wurde der Zustand vor der Sperre zurückgesetzt, und eine Anfrage in diesem
+    Augenblick stieß auf eine Sperre, die niemand mehr hielt.
+    """
+    real_release = manager._release
+
+    def slow_release(session):
+        time.sleep(0.3)
+        real_release(session)
+
+    monkeypatch.setattr(manager, "_release", slow_release)
+    manager.start()
+    manager.submit(GOOD_CODE)
+
+    deadline = time.monotonic() + 15
+    while manager.status()["state"] != "idle":
+        assert time.monotonic() < deadline
+        time.sleep(0.01)
+
+    assert cli.RUN_LOCK.acquire(blocking=False)
+    cli.RUN_LOCK.release()
+
+
 def test_the_lock_is_free_again_after_a_login(fake_cli, manager):
     manager.start()
     assert not cli.RUN_LOCK.acquire(blocking=False), "während der Anmeldung läuft sonst keine CLI"

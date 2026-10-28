@@ -119,6 +119,8 @@ class _Session:
     before: dict = field(default_factory=dict)
     # Erst die bestätigte Anmeldung macht das Konto zu einem der Liste.
     registered: bool = False
+    # ``_finish`` hat begonnen; ein zweiter Aufruf darf nichts mehr tun.
+    finished: bool = False
 
 
 def extract_code(raw: str) -> str:
@@ -345,17 +347,23 @@ class GeminiLogin:
             accounts.discard_files(session.account)
 
     def _finish(self, session: _Session, *, error: str | None) -> None:
-        """Beendet die Sitzung genau einmal und gibt die Sperre frei. Unter ``_lock`` aufrufen."""
-        if self._session is not session:
+        """Beendet die Sitzung genau einmal und gibt die Sperre frei. Unter ``_lock`` aufrufen.
+
+        Erst wenn die Sperre frei ist, gilt die Sitzung als beendet: wer den Zustand
+        „idle“ liest, darf gleich danach eine Anfrage stellen, ohne auf eine Sperre zu
+        stoßen, die niemand mehr hält.
+        """
+        if self._session is not session or session.finished:
             return
-        self._session = None
-        self._error = error
+        session.finished = True
         try:
             self._release(session)
         finally:
             # Die Sperre muss auch dann frei werden, wenn das Aufräumen scheitert —
             # sonst liefe nie wieder eine Anfrage.
             RUN_LOCK.release()
+            self._error = error
+            self._session = None
 
     def _watch(self, session: _Session) -> None:
         """Beobachtet Zeitlimits und den Ausgang des Prozesses, bis die Sitzung endet."""
