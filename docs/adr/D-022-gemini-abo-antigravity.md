@@ -89,8 +89,13 @@ Bauweise (Einzelheiten in [architektur.md](../architektur.md)):
   `settings.json` der CLI (Befehle nie freigegeben), schmale Umgebung, sofortiger Abbruch, wenn die
   CLI eine Anmeldung verlangt, Aufräumen der Gesprächsdaten nach jedem Lauf.
 - **Bild**: Version 1.4.8 mit SHA-512 je Architektur im `Dockerfile`; Selbstaktualisierung aus.
-- **Modelle**: keine feste Liste (sie sind erst nach der Anmeldung abrufbar); die Namen stehen nach
-  der Anmeldung im Log, `model` pro Anfrage wird unverändert an die CLI gegeben.
+- **Modelle**: keine feste Liste im Code (sie sind erst nach der Anmeldung abrufbar). Das Add-on
+  liest sie aus `agy models`, merkt sie sich und zeigt sie in Oberfläche und Schnittstelle. Eigene
+  Option `gemini_sub_model` für das Standardmodell, weil das gemeinsame Auswahlfeld `model` des
+  Supervisors eine feste Liste verlangt. Kurzformen (`flash-3.8`, `argon-4`) werden gegen die Liste
+  aufgelöst (ohne Stufe: Medium, sonst High, Low, Max); Mehrdeutiges oder Unbekanntes nennt die
+  Auswahl. Das Zeilenformat von `agy models` ist nicht dokumentiert und wurde ohne Konto nicht
+  gesehen — die Liste wird deshalb tolerant gelesen (Handprüfung H6).
 
 ## Folgen
 
@@ -115,7 +120,7 @@ Abweichung hier und in [bekannte-luecken.md](../bekannte-luecken.md) nachtragen:
 | H3 | Mehr als eine Stunde warten, wieder fragen | Zugriffstoken wird erneuert, Datei verändert sich, Anfrage klappt |
 | H4 | Nach einer Anfrage in `/data/.gemini/antigravity-cli/` nachsehen (`conversations`, `brain`, `implicit`, Datenbank) und nach dem Prompt-Text suchen | Nichts davon liegt noch da; der Satz steht nirgends im Klartext |
 | H5 | Wetterfrage mit `web`; dieselbe mit `off`; Befehlsversuch im Prompt („führe `ls` aus“) | `web` recherchiert, `off` nicht, ein Befehl wird nie ausgeführt |
-| H6 | `model` pro Anfrage mit einem Namen aus dem Protokoll; mit einem erfundenen | Der erste klappt, der zweite gibt „kennt Google Gemini (Abo) nicht“ — sonst Marker `MODEL_MARKER` anpassen |
+| H6 | Auswahl „Standardmodell“ auf der Seite „Einstellungen“ öffnen und mit dem Protokoll vergleichen (Zeile „Modelle der Google-CLI“); `model` pro Anfrage mit einer Bezeichnung aus der Liste, mit `flash-3.8` und `argon-4`, und mit einem erfundenen Namen | Die Liste stimmt mit der Ausgabe von `agy models` überein, eine Bezeichnung aus der Liste klappt wirklich (das beweist, dass `--model` sie so versteht), die Kurzformen finden Medium, der erfundene Name nennt die Auswahl. Weicht etwas ab: `parse_models` oder die Übergabe an `--model` anpassen |
 | H7 | Zehn Anfragen, Verbrauch in der Google-Oberfläche vergleichen | Größenordnung je Auftrag notieren (Grundlage für Drosselung) |
 | H8 | `/v1`-Anfrage mit kurzer Zeitgrenze | Zeitgrenze greift, danach läuft kein `agy`-Prozess mehr |
 | H9 | Add-on-Update einspielen | Anmeldung bleibt |

@@ -18,13 +18,19 @@ from providers.gemini_sub_provider import (
     GEMINI_SUB_MODELS,
     AgyResult,
     GeminiSubProvider,
+    ModelInfo,
     agy_env,
+    available_models,
     backup_path,
     backup_token,
     cleanup_state,
     is_signed_in,
+    load_models,
     parse_envelope,
+    parse_models,
+    pick_model,
     prepare_state,
+    refresh_models,
     remove_token,
     restore_token_if_broken,
     run_agy,
@@ -372,9 +378,10 @@ def test_no_model_means_the_cli_decides(signed_in, fake, provider):
     assert provider.effective_model() == "auto"
 
 
-def test_the_requested_model_is_passed_through_unchanged(signed_in, fake, provider):
+def test_the_requested_model_is_passed_through_without_a_known_list(signed_in, fake, provider):
+    """Ohne Liste (noch nicht abrufbar) entscheidet die CLI, ob sie das Modell kennt."""
     provider.execute("Test", model="Gemini 3.6 Flash (High)")
-    command = fake.calls[0][0]
+    command = fake.calls[-1][0]
 
     assert command[command.index("--model") + 1] == "Gemini 3.6 Flash (High)"
     assert provider.effective_model("Gemini 3.6 Flash (High)") == "Gemini 3.6 Flash (High)"
@@ -385,7 +392,7 @@ def test_the_addon_default_model_applies_without_a_request(signed_in, fake, prov
 
     provider.execute("Test")
 
-    assert "Gemini 3.6 Flash (High)" in fake.calls[0][0]
+    assert "Gemini 3.6 Flash (High)" in fake.calls[-1][0]
 
 
 def test_the_request_beats_the_addon_default(signed_in, fake, provider, monkeypatch):
@@ -393,7 +400,8 @@ def test_the_request_beats_the_addon_default(signed_in, fake, provider, monkeypa
 
     provider.execute("Test", model="Anfrage")
 
-    assert fake.calls[0][0][fake.calls[0][0].index("--model") + 1] == "Anfrage"
+    command = fake.calls[-1][0]
+    assert command[command.index("--model") + 1] == "Anfrage"
 
 
 def test_auto_means_no_model(signed_in, fake, provider, monkeypatch):
@@ -415,6 +423,294 @@ def test_a_default_model_of_another_provider_is_ignored(
 
     assert "--model" not in fake.calls[0][0]
     assert provider.effective_model() == "auto"
+
+
+MODELS_OUTPUT = """Fetching available models...
+Available models:
+  Gemini 4 Argon (Low)
+  Gemini 4 Argon (Medium)
+  Gemini 4 Argon (High)
+  Gemini 3.8 Flash (Low)
+  Gemini 3.8 Flash (Medium)
+  Gemini 3.8 Flash (High)
+  Gemini 3.1 Pro (Low)
+  Gemini 3.1 Pro (High)
+  Claude Opus 5.5 (Max)
+"""
+
+
+def _known_models():
+    modul.store_models(parse_models(MODELS_OUTPUT))
+
+
+def test_the_model_list_is_read_from_the_cli_output():
+    labels = [m.label for m in parse_models(MODELS_OUTPUT)]
+
+    assert labels[0] == "Gemini 4 Argon (Low)"
+    assert "Gemini 3.8 Flash (Medium)" in labels
+    assert len(labels) == 9
+    assert not any("Fetching" in label or "Available" in label for label in labels)
+
+
+@pytest.mark.parametrize(
+    "ausgabe",
+    [
+        "Available models:\n- Gemini 4 Argon (High)\n- Gemini 3.8 Flash (Medium)\n",
+        "1. Gemini 4 Argon (High)\n2) Gemini 3.8 Flash (Medium)\n",
+        "* Gemini 4 Argon (High) (default)\n* Gemini 3.8 Flash (Medium) [current]\n",
+        "Gemini 4 Argon (High)   ✓\nGemini 3.8 Flash (Medium)\n\n",
+        "Gemini 4 Argon (High)\tgemini-4-argon-high\nGemini 3.8 Flash (Medium)\tg-3.8-flash\n",
+        "Gemini 4 Argon (High)  |  gemini-4-argon-high\n",
+    ],
+)
+def test_the_model_list_tolerates_common_layouts(ausgabe):
+    labels = [m.label for m in parse_models(ausgabe)]
+
+    assert labels[0] == "Gemini 4 Argon (High)"
+
+
+def test_further_columns_become_alternative_names():
+    models = parse_models("Gemini 4 Argon (High)\tgemini-4-argon-high\n")
+
+    assert models[0].aliases == ("gemini-4-argon-high",)
+    assert pick_model("gemini-4-argon-high", models) == "Gemini 4 Argon (High)"
+
+
+@pytest.mark.parametrize(
+    "ausgabe",
+    [
+        "",
+        "Error: Please sign in to view available models.",
+        "No models available\n",
+        "Use --model <name> to choose one of these models.\n",
+        '{"status": "SUCCESS"}',
+    ],
+)
+def test_text_without_model_names_gives_no_models(ausgabe):
+    assert parse_models(ausgabe) == []
+
+
+def test_doubled_lines_count_once():
+    assert len(parse_models("Gemini 4 Argon (High)\nGemini 4 Argon (High)\n")) == 1
+
+
+@pytest.mark.parametrize(
+    ("eingabe", "erwartet"),
+    [
+        ("Gemini 4 Argon (High)", "Gemini 4 Argon (High)"),
+        ("gemini 4 argon (high)", "Gemini 4 Argon (High)"),
+        ("argon-4", "Gemini 4 Argon (Medium)"),
+        ("Argon 4", "Gemini 4 Argon (Medium)"),
+        ("flash-3.8", "Gemini 3.8 Flash (Medium)"),
+        ("gemini-3.8-flash", "Gemini 3.8 Flash (Medium)"),
+        ("flash 3.8 high", "Gemini 3.8 Flash (High)"),
+        ("argon-4-low", "Gemini 4 Argon (Low)"),
+        ("3.8", "Gemini 3.8 Flash (Medium)"),
+        ("opus", "Claude Opus 5.5 (Max)"),
+        ("3.1 pro", "Gemini 3.1 Pro (High)"),
+    ],
+)
+def test_short_names_find_the_model(eingabe, erwartet):
+    """„flash-3.8“ und „argon-4“ genügen; ohne Stufe gilt Medium, sonst High."""
+    assert pick_model(eingabe, parse_models(MODELS_OUTPUT)) == erwartet
+
+
+def test_a_short_name_must_not_match_inside_a_number():
+    models = parse_models("Gemini 13.8 Flash (High)\nGemini 3.8 Flash (High)\n")
+
+    assert pick_model("3.8", models) == "Gemini 3.8 Flash (High)"
+
+
+def test_an_unknown_name_gets_the_choices():
+    with pytest.raises(UnknownModel) as fehler:
+        pick_model("gpt-9", parse_models(MODELS_OUTPUT))
+
+    text = str(fehler.value)
+    assert "„gpt-9“" in text
+    assert "Gemini 4 Argon (Low)" in text
+    assert " …" in text
+    _assert_no_tech(text.replace("agy", ""))
+
+
+def test_an_ambiguous_name_gets_the_candidates():
+    with pytest.raises(UnknownModel) as fehler:
+        pick_model("gemini", parse_models(MODELS_OUTPUT))
+
+    text = str(fehler.value)
+    assert "mehrere Modelle" in text
+    assert "Gemini 3.8 Flash" in text
+    assert "Gemini 4 Argon" in text
+
+
+def test_the_known_list_resolves_the_requested_model(signed_in, fake, provider):
+    _known_models()
+
+    provider.execute("Test", model="flash-3.8")
+
+    command = fake.calls[-1][0]
+    assert command[command.index("--model") + 1] == "Gemini 3.8 Flash (Medium)"
+    assert len(fake.calls) == 1, "mit bekannter Liste fragt der Provider die CLI nicht erneut"
+    assert provider.effective_model("argon-4") == "Gemini 4 Argon (Medium)"
+
+
+def test_the_configured_default_model_is_resolved_too(signed_in, fake, provider, monkeypatch):
+    _known_models()
+    monkeypatch.setenv("GEMINI_SUB_MODEL", "Gemini 4 Argon (High)")
+
+    provider.execute("Test")
+
+    assert "Gemini 4 Argon (High)" in fake.calls[-1][0]
+
+
+def test_the_request_beats_the_configured_default(signed_in, fake, provider, monkeypatch):
+    _known_models()
+    monkeypatch.setenv("GEMINI_SUB_MODEL", "Gemini 4 Argon (High)")
+
+    provider.execute("Test", model="flash-3.8")
+
+    assert "Gemini 3.8 Flash (Medium)" in fake.calls[-1][0]
+
+
+def test_the_default_option_beats_the_old_global_model(signed_in, fake, provider, monkeypatch):
+    _known_models()
+    monkeypatch.setenv("GEMINI_SUB_MODEL", "argon-4")
+    monkeypatch.setenv("OMNIAI_MODEL", "flash-3.8")
+
+    assert provider.effective_model() == "Gemini 4 Argon (Medium)"
+
+
+def test_an_unknown_model_fails_before_the_cli_starts(signed_in, fake, provider):
+    _known_models()
+
+    with pytest.raises(UnknownModel) as fehler:
+        provider.execute("Test", model="gibt-es-nicht")
+
+    assert "Zur Auswahl stehen" in str(fehler.value)
+    assert fake.calls == []
+
+
+def test_without_a_list_it_is_fetched_before_the_model_is_resolved(
+    signed_in, provider, monkeypatch
+):
+    """Etwa nach einem Update: die Anmeldung gibt es, die Liste noch nicht."""
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        if command[1] == "models":
+            return _result(stdout=MODELS_OUTPUT)
+        return _result(stdout=_envelope())
+
+    monkeypatch.setattr(modul, "run_agy", run)
+
+    provider.execute("Test", model="argon-4")
+
+    assert calls[0][1] == "models"
+    assert calls[1][calls[1].index("--model") + 1] == "Gemini 4 Argon (Medium)"
+    assert load_models()[1][0].label == "Gemini 4 Argon (Low)"
+
+
+def test_a_failed_list_fetch_does_not_block_the_request(signed_in, provider, monkeypatch):
+    def run(command, **kwargs):
+        if command[1] == "models":
+            return _result(stderr="Error: Please sign in", returncode=1)
+        return _result(stdout=_envelope())
+
+    monkeypatch.setattr(modul, "run_agy", run)
+
+    assert provider.execute("Test", model="argon-4") == {"ok": True}
+
+
+def test_the_cli_rejecting_a_model_lists_the_choices(signed_in, fake, provider):
+    """Die Liste kann veralten; dann lehnt die CLI ab und die Meldung nennt die Auswahl."""
+    modul.store_models([ModelInfo("Gemini 4 Argon (High)")])
+    fake.result = _result(
+        stdout=_envelope(status="ERROR", response="", error="unknown model"), returncode=1
+    )
+
+    with pytest.raises(UnknownModel) as fehler:
+        provider.execute("Test", model="Gemini 4 Argon (High)")
+
+    assert "Gemini 4 Argon (High)" in str(fehler.value)
+
+
+def test_the_list_survives_in_a_file_and_leaves_with_the_login(signed_in):
+    _known_models()
+    assert load_models()[1][0].label == "Gemini 4 Argon (Low)"
+    assert oct(modul.models_path().stat().st_mode & 0o777) == "0o600"
+
+    remove_token()
+
+    assert load_models() == (0.0, [])
+
+
+def test_a_damaged_list_file_counts_as_no_list(signed_in):
+    modul.models_path().parent.mkdir(parents=True, exist_ok=True)
+    modul.models_path().write_text("{kaputt", encoding="utf-8")
+
+    assert load_models() == (0.0, [])
+
+
+def test_available_models_are_empty_without_a_login(fake):
+    assert available_models() == []
+    assert fake.calls == []
+
+
+def test_available_models_fetch_once_and_then_use_the_file(signed_in, monkeypatch):
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        return _result(stdout=MODELS_OUTPUT)
+
+    monkeypatch.setattr(modul, "run_agy", run)
+
+    first = available_models()
+    second = available_models()
+
+    assert first == second
+    assert first[0] == "Gemini 4 Argon (Low)"
+    assert len(calls) == 1
+
+
+def test_an_old_list_is_fetched_again(signed_in, monkeypatch):
+    _known_models()
+    stale = time.time() - modul.MODELS_MAX_AGE_SEKUNDEN - 10
+    data = json.loads(modul.models_path().read_text(encoding="utf-8"))
+    data["fetched_at"] = stale
+    modul.models_path().write_text(json.dumps(data), encoding="utf-8")
+    monkeypatch.setattr(modul, "run_agy", lambda *a, **k: _result(stdout="Gemini 5 Neu (High)\n"))
+
+    assert available_models() == ["Gemini 5 Neu (High)"]
+
+
+def test_a_forced_refresh_ignores_the_age(signed_in, monkeypatch):
+    _known_models()
+    monkeypatch.setattr(modul, "run_agy", lambda *a, **k: _result(stdout="Gemini 5 Neu (High)\n"))
+
+    assert [m.label for m in refresh_models(force=True)] == ["Gemini 5 Neu (High)"]
+
+
+def test_a_running_request_keeps_the_known_list(signed_in, fake):
+    """Auf die Sperre wartet die Abfrage der Liste nicht — die Oberfläche fragt oft."""
+    _known_models()
+    assert modul.RUN_LOCK.acquire(timeout=1)
+    try:
+        labels = [m.label for m in refresh_models(force=True)]
+    finally:
+        modul.RUN_LOCK.release()
+
+    assert labels[0] == "Gemini 4 Argon (Low)"
+    assert fake.calls == []
+
+
+def test_a_failing_fetch_keeps_the_old_list(signed_in, monkeypatch):
+    _known_models()
+    monkeypatch.setattr(
+        modul, "run_agy", lambda *a, **k: _result(stderr="Error: Please sign in", returncode=1)
+    )
+
+    assert refresh_models(force=True)[0].label == "Gemini 4 Argon (Low)"
 
 
 def test_the_provider_has_no_fixed_model_list():

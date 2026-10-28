@@ -29,8 +29,9 @@ from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
 from providers.gemini_sub_login import LoginError
 from providers.gemini_sub_login import login as gemini_login
-from providers.gemini_sub_provider import GEMINI_SUB_MODELS
+from providers.gemini_sub_provider import available_models as gemini_sub_models
 from providers.gemini_sub_provider import is_signed_in as gemini_sub_signed_in
+from providers.gemini_sub_provider import refresh_models as gemini_sub_refresh_models
 from settings import merge_update, public_view, revision
 from supervisor_client import SupervisorClient, SupervisorRejected, SupervisorUnavailable
 
@@ -143,10 +144,23 @@ def models():
                     "models": GEMINI_MODELS,
                     "default": GEMINI_DEFAULT_MODEL,
                 },
-                "gemini_sub": {"models": GEMINI_SUB_MODELS, "default": None},
+                # Die Liste kommt von der Google-Befehlszeile (nach der Anmeldung), nicht
+                # aus dem Code; ``default`` ist die Option „gemini_sub_model“.
+                "gemini_sub": {
+                    "models": gemini_sub_models(),
+                    "default": os.environ.get("GEMINI_SUB_MODEL", "").strip() or None,
+                },
             },
         }
     )
+
+
+def _default_model() -> str | None:
+    """Standardmodell des aktiven Anbieters. Google Gemini (Abo) hat eine eigene
+    Option, weil sein Auswahlfeld keine feste Liste haben kann."""
+    if os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER) == "gemini_sub":
+        return os.environ.get("GEMINI_SUB_MODEL", "").strip() or None
+    return os.environ.get("OMNIAI_MODEL") or None
 
 
 @app.route("/status", methods=["GET"])
@@ -164,7 +178,7 @@ def status():
         {
             "provider": os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER),
             "version": read_addon_version(),
-            "default_model": os.environ.get("OMNIAI_MODEL") or None,
+            "default_model": _default_model(),
             "tool_access": resolve_tool_access(),
             "credentials": {
                 "claude_sub": bool(
@@ -352,6 +366,19 @@ def gemini_login_cancel():
     if refused:
         return refused
     return jsonify(gemini_login.cancel())
+
+
+@app.route("/auth/gemini/models", methods=["POST"])
+def gemini_login_models():
+    """Holt die Modelle der Google-Befehlszeile neu, etwa nach einem Wechsel des Tarifs.
+
+    Läuft gerade eine Anfrage, bleibt die bisherige Liste; auf die Sperre wird nicht
+    gewartet.
+    """
+    refused = _login_refused()
+    if refused:
+        return refused
+    return jsonify({"models": [model.label for model in gemini_sub_refresh_models(force=True)]})
 
 
 @app.route("/auth/gemini", methods=["DELETE"])

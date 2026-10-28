@@ -112,7 +112,10 @@ Die Anmeldung geschieht im Add-on selbst, einmalig:
 4. Als Anbieter **Google Gemini (Abo)** wählen und speichern.
 
 Die Anmeldung bleibt gespeichert und wird vom Add-on erneuert. **Abmelden** entfernt sie wieder.
-Ein Modell lässt sich pro Anfrage über das Feld `model` nennen; ohne Angabe wählt Google selbst.
+Die Modelle liest das Add-on von Google ein und zeigt sie in der Auswahl „Standardmodell“ (z. B.
+*Gemini 4 Argon* oder *Gemini 3.8 Flash*, jeweils in Stufen wie Low, Medium und High). Pro Anfrage
+genügt im Feld `model` auch eine Kurzform wie `flash-3.8` oder `argon-4`; ohne Stufe gilt Medium.
+Ohne Angabe wählt Google selbst. „Modelle neu laden“ in der Karte holt die Liste neu.
 
 > **Risiko:** Google unterstützt es bei privaten Abos nicht, die Antigravity-Befehlszeile über
 > andere Anwendungen zu nutzen, und kann Konten dafür einschränken oder sperren. Die Nutzung
@@ -154,7 +157,8 @@ die Modelle des gewählten Anbieters zur Auswahl; im Reiter „Konfiguration“ 
 - `sonnet` / `opus` / `haiku` — gehören zu `claude_sub`.
 - `gpt-*` — gehören zu `codex_sub`.
 - `gemini-*` — gehören zu `gemini`.
-- `gemini_sub` hat keine feste Liste; dort bleibt es bei `auto`, ein Modell wird pro Anfrage genannt.
+- `gemini_sub` hat keine feste Liste in der Konfiguration: seine Modelle liest das Add-on nach der Anmeldung
+  von Google ein. Das Standardmodell wählst du auf der Seite „Einstellungen“ (Option `gemini_sub_model`).
 
 Passen Anbieter und Modell nicht zusammen, sagt das Add-on das im Klartext. **Pro Anfrage** lässt
 sich im Rumpf von `/ask` weiterhin jede Modellkennung setzen — auch eine, die nicht im Auswahlfeld

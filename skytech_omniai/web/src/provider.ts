@@ -18,6 +18,9 @@ export function providerLabel(key: string): string {
 /** Wert des Auswahlfelds für „kein Modell erzwingen“. */
 export const MODEL_AUTO = 'auto'
 
+/** Anbieter, dessen Modelle erst nach der Anmeldung bekannt sind; er hat eine eigene Option. */
+export const SUBSCRIPTION_PROVIDER = 'gemini_sub'
+
 /* Werkzeugstufen der beiden Befehlszeilen. Der Nutzer liest, was die Stufe
    bewirkt, nicht den technischen Wert aus der Konfiguration (eiserne Regel 12). */
 

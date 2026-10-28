@@ -19,7 +19,14 @@ import { useToast } from './Toast'
 const POLL_MS = 1500
 const HURRY_SECONDS = 15
 
-export function GoogleLogin({ locked }: { locked: boolean }) {
+export function GoogleLogin({
+  locked,
+  onModelsChange,
+}: {
+  locked: boolean
+  /** Die Liste der Modelle hat sich geändert; die Seite lädt sie neu. */
+  onModelsChange?: () => void
+}) {
   const [status, setStatus] = useState<GeminiLoginStatus | null>(null)
   const [error, setError] = useState('')
   const [code, setCode] = useState('')
@@ -96,6 +103,21 @@ export function GoogleLogin({ locked }: { locked: boolean }) {
       return
     }
     void run(() => api.geminiLoginCode(code))
+  }
+
+  async function reloadModels() {
+    setBusy(true)
+    setError('')
+    try {
+      const { models } = await api.geminiModelsRefresh()
+      onModelsChange?.()
+      if (models.length > 0) toast(`${models.length} Modelle gefunden.`)
+      else toast('Es wurden keine Modelle gefunden. Die Ausgabe steht im Protokoll des Add-ons.', 'err')
+    } catch (cause) {
+      setError((cause as Error).message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   function logout() {
@@ -212,6 +234,15 @@ export function GoogleLogin({ locked }: { locked: boolean }) {
               widerrufen.
             </small>
             <div className="inline-actions">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => void reloadModels()}
+                disabled={disabled}
+              >
+                <Icon name="refresh" size={14} />
+                Modelle neu laden
+              </button>
               <button type="button" className="btn btn-danger btn-sm" onClick={logout} disabled={disabled}>
                 <Icon name="logout" size={14} />
                 Abmelden

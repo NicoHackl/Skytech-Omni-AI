@@ -27,7 +27,7 @@ from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER, ProviderFactory
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
-from providers.gemini_sub_provider import GEMINI_SUB_MODELS
+from providers.gemini_sub_provider import available_models as gemini_sub_models
 from providers.gemini_sub_provider import is_signed_in as gemini_sub_signed_in
 from runs import MAX_CONCURRENT_RUNS, MAX_RUN_MINUTES, RunConflict, RunManager
 
@@ -47,7 +47,9 @@ PROVIDERS = {
     "claude_sub": {"name": "Claude (Abo)", "models": CLAUDE_MODELS, "default": None},
     "codex_sub": {"name": "ChatGPT (Abo)", "models": CODEX_MODELS, "default": None},
     "gemini": {"name": "Google Gemini", "models": GEMINI_MODELS, "default": GEMINI_DEFAULT_MODEL},
-    "gemini_sub": {"name": "Google Gemini (Abo)", "models": GEMINI_SUB_MODELS, "default": None},
+    # Die Modelle kennt die Google-Befehlszeile erst nach der Anmeldung; die Liste
+    # wird beim Abruf geholt (Funktion statt Liste).
+    "gemini_sub": {"name": "Google Gemini (Abo)", "models": gemini_sub_models, "default": None},
 }
 
 # Anbieter, die in Läufen Werkzeuge (MCP) aufrufen können.
@@ -145,7 +147,7 @@ def capabilities():
             "id": key,
             "name": meta["name"],
             "available": present[key],
-            "models": meta["models"],
+            "models": meta["models"]() if callable(meta["models"]) else meta["models"],
             "defaultModel": meta["default"],
             "features": {
                 "tools": key in TOOL_PROVIDERS,

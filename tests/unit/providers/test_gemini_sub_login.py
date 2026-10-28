@@ -160,6 +160,26 @@ def test_a_good_code_signs_in_and_survives_a_fresh_process(fake_cli, manager):
     assert json.loads(cli.token_path().read_text())["token"]["refresh_token"]
 
 
+def test_the_models_of_the_cli_are_remembered_after_the_login(fake_cli, manager):
+    """Die Liste kommt aus der Prüfung in neuem Prozess — ohne einen weiteren Aufruf."""
+    manager.start()
+
+    manager.submit(GOOD_CODE)
+    _wait_idle(manager)
+
+    assert [m.label for m in cli.load_models()[1]] == ["Gemini Probe (Low)"]
+
+
+def test_logout_forgets_the_models(fake_cli, manager):
+    manager.start()
+    manager.submit(GOOD_CODE)
+    _wait_idle(manager)
+
+    manager.logout()
+
+    assert cli.load_models() == (0.0, [])
+
+
 def test_a_pasted_address_works_like_the_code(fake_cli, manager):
     manager.start()
 

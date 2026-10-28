@@ -149,6 +149,10 @@ Eine Anfrage läuft so ab:
 - **Sicherung der Anmeldung.** Die CLI erneuert ihr Zugriffstoken und schreibt die Datei zurück. Nach
   jedem erfolgreichen Lauf entsteht eine Kopie; ist die Datei unlesbar (etwa nach einem Abbruch
   mitten im Schreiben), wird sie daraus wiederhergestellt.
+- **Modelle.** Die Bezeichnungen kennt nur die CLI: das Add-on liest `agy models` (nach der Anmeldung,
+  bei fehlender oder sechs Stunden alter Liste) in `/data/.gemini/antigravity-cli/omniai-models.json`
+  und löst Kurzformen wie `flash-3.8` gegen diese Liste auf. Unbekanntes oder Mehrdeutiges lehnt der
+  Provider ab, bevor die CLI startet.
 - **Sofortiger Abbruch ohne Anmeldung.** Verlangt die CLI mitten im Betrieb eine Anmeldung (Zugriff
   bei Google widerrufen), bricht der Lauf sofort ab, statt 60 Sekunden zu warten.
 

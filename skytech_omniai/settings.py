@@ -8,6 +8,7 @@ verbindet beides.
 
 import hashlib
 import json
+import re
 
 from config_loader import MODEL_AUTO, OPTION_ENV_MAP, SECRET_OPTIONS
 from providers.base_provider import DEFAULT_TOOL_ACCESS, TOOL_ACCESS_LEVELS
@@ -37,6 +38,11 @@ FEHLER_WERKZEUGE = "Bitte eine der angebotenen Stufen wählen."
 FEHLER_TEXT = "Hier wird ein Text erwartet."
 FEHLER_API_TOKEN = "Das Token braucht mindestens 32 Zeichen."
 API_TOKEN_MIN_LENGTH = 32
+FEHLER_GEMINI_ABO_MODELL = (
+    "Bitte eine der angebotenen Bezeichnungen wählen oder das Feld leer lassen."
+)
+# Bezeichnungen wie „Gemini 4 Argon (High)“ oder Kurzformen wie „flash-3.8“.
+GEMINI_SUB_MODEL_PATTERN = re.compile(r"^[\w .()\-:/+]{1,80}$")
 FEHLER_CHATGPT_ZUGANG = (
     "Das ist nicht der Inhalt der Datei „auth.json“. Bitte die Datei vollständig kopieren."
 )
@@ -136,6 +142,13 @@ def merge_update(current: dict, draft: dict) -> tuple[dict, dict[str, str]]:
             parsed = None
         if not isinstance(parsed, dict):
             errors.setdefault("codex_auth_json", FEHLER_CHATGPT_ZUGANG)
+
+    # Welche Bezeichnungen gelten, weiß nur die Google-Befehlszeile; geprüft wird
+    # hier nur, dass es nach einer Bezeichnung aussieht. Eine falsche meldet der
+    # Provider bei der ersten Anfrage mit der Auswahl.
+    sub_model = _text(merged.get("gemini_sub_model"))
+    if sub_model and not GEMINI_SUB_MODEL_PATTERN.match(sub_model):
+        errors.setdefault("gemini_sub_model", FEHLER_GEMINI_ABO_MODELL)
 
     token = draft.get("api_token")
     if isinstance(token, str) and token.strip() and len(token.strip()) < API_TOKEN_MIN_LENGTH:

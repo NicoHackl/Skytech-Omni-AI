@@ -47,6 +47,8 @@ export interface SettingsOptions {
   codex_auth_json: string
   openai_api_key: string
   gemini_api_key: string
+  /** Standardmodell von „Google Gemini (Abo)“; leer heißt: Google wählt. */
+  gemini_sub_model: string
   api_token: string
 }
 

@@ -4,7 +4,13 @@ import { GoogleLogin } from '../components/GoogleLogin'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/Layout'
 import { useToast } from '../components/Toast'
-import { MODEL_AUTO, TOOL_ACCESS_FULL, providerLabel, toolAccessLabel } from '../provider'
+import {
+  MODEL_AUTO,
+  SUBSCRIPTION_PROVIDER,
+  TOOL_ACCESS_FULL,
+  providerLabel,
+  toolAccessLabel,
+} from '../provider'
 import type {
   ModelsResponse,
   SecretKey,
@@ -108,19 +114,19 @@ export function Einstellungen() {
     [adopt],
   )
 
+  const loadCatalog = useCallback(
+    () =>
+      api
+        .models()
+        .then(setCatalog)
+        .catch((cause: Error) => console.error('Modelle nicht abrufbar', cause)),
+    [],
+  )
+
   useEffect(() => {
     void load()
-    let cancelled = false
-    api
-      .models()
-      .then((value) => {
-        if (!cancelled) setCatalog(value)
-      })
-      .catch((cause: Error) => console.error('Modelle nicht abrufbar', cause))
-    return () => {
-      cancelled = true
-    }
-  }, [load])
+    void loadCatalog()
+  }, [load, loadCatalog])
 
   function patch(partial: Partial<SettingsOptions>) {
     setDraft((current) => (current ? { ...current, ...partial } : current))
@@ -130,6 +136,12 @@ export function Einstellungen() {
       for (const key of Object.keys(partial)) delete next[key]
       return next
     })
+  }
+
+  function changeModel(value: string) {
+    // Google Gemini (Abo) hat sein eigenes Feld; das gemeinsame bleibt dort „auto“.
+    if (draft?.provider === SUBSCRIPTION_PROVIDER) patch({ gemini_sub_model: value, model: MODEL_AUTO })
+    else patch({ model: value })
   }
 
   function changeProvider(next: string) {
@@ -152,6 +164,8 @@ export function Einstellungen() {
     setError('')
     try {
       const options: SettingsInput['options'] = { ...draft }
+      // Das gemeinsame Auswahlfeld kann keine Bezeichnung von Google tragen.
+      if (draft.provider === SUBSCRIPTION_PROVIDER) options.model = MODEL_AUTO
       for (const key of removed) options[key] = null
       const saved = await api.saveSettings({ options, stored_revision: loaded.stored_revision })
       adopt(saved)
@@ -176,18 +190,28 @@ export function Einstellungen() {
 
   const providers = Object.keys(catalog?.providers ?? {})
   const providerModels = draft ? (catalog?.providers[draft.provider]?.models ?? []) : []
-  // Ein im Reiter „Konfiguration“ gesetztes Modell, das nicht zum Anbieter
-  // passt, bleibt sichtbar — sonst zeigte das Auswahlfeld einen falschen Stand.
+  // Bei Google Gemini (Abo) gilt eine eigene Option; leer heißt „Google wählt“.
+  const subscription = draft !== null && draft.provider === SUBSCRIPTION_PROVIDER
+  const modelKey = subscription ? 'gemini_sub_model' : 'model'
+  const autoValue = subscription ? '' : MODEL_AUTO
+  const modelValue = draft ? draft[modelKey] : autoValue
+  // Ein gesetztes Modell, das nicht in der Liste steht (im Reiter „Konfiguration“
+  // gesetzt, oder die Liste ist gerade nicht abrufbar), bleibt sichtbar — sonst
+  // zeigte das Auswahlfeld einen falschen Stand.
   const models =
-    draft && draft.model !== MODEL_AUTO && !providerModels.includes(draft.model)
-      ? [...providerModels, draft.model]
+    modelValue !== autoValue && !providerModels.includes(modelValue)
+      ? [...providerModels, modelValue]
       : providerModels
 
   // Ein unpassendes Modell (gesetzt im Reiter „Konfiguration“, dessen
   // Auswahlfeld alle Anbieter mischt) wird gleich beim Laden markiert und
   // nicht erst, wenn das Speichern scheitert.
   const modelMismatch =
-    draft !== null && catalog !== null && draft.model !== MODEL_AUTO && !providerModels.includes(draft.model)
+    !subscription &&
+    draft !== null &&
+    catalog !== null &&
+    draft.model !== MODEL_AUTO &&
+    !providerModels.includes(draft.model)
   const errors: Record<string, string> = modelMismatch
     ? { model: MODEL_MISMATCH, ...fieldErrors }
     : fieldErrors
@@ -246,19 +270,26 @@ export function Einstellungen() {
                     {fieldError('provider')}
                   </label>
 
-                  <label className={fieldClass('model')}>
+                  <label className={fieldClass(modelKey)}>
                     <span>Standardmodell</span>
                     <select
-                      value={draft.model}
-                      onChange={(event) => patch({ model: event.target.value })}
+                      value={modelValue}
+                      onChange={(event) => changeModel(event.target.value)}
                       disabled={locked || catalog === null}
                     >
-                      <option value={MODEL_AUTO}>Vorgabe des Anbieters</option>
+                      <option value={autoValue}>Vorgabe des Anbieters</option>
                       {models.map((name) => (
                         <option value={name} key={name}>{name}</option>
                       ))}
                     </select>
-                    {fieldError('model')}
+                    {subscription ? (
+                      <small>
+                        {models.length === 0
+                          ? 'Die Modelle stehen nach der Anmeldung bei Google hier zur Auswahl.'
+                          : 'Die Liste kommt von Google. Pro Anfrage genügt auch eine Kurzform wie „flash-3.8“ oder „argon-4“.'}
+                      </small>
+                    ) : null}
+                    {fieldError(modelKey)}
                   </label>
 
                   <label className={fieldClass('tool_access', true)}>
@@ -361,7 +392,7 @@ export function Einstellungen() {
               </div>
             </section>
 
-            <GoogleLogin locked={readOnly} />
+            <GoogleLogin locked={readOnly} onModelsChange={() => void loadCatalog()} />
 
             {readOnly ? null : (
               <div className="form-footer">
