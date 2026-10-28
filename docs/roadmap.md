@@ -31,6 +31,7 @@ geprüft, nicht gegen die Absicht. Was hier „fertig" heißt, muss laufen.
 | `GET /models` zum Abfragen der gültigen Werte | fertig | [api-referenz.md](api-referenz.md) |
 | ChatGPT über das Abo als dritter Anbieter | fertig | D-013 |
 | Google Gemini über das Google-AI-Pro-Abo (Antigravity-CLI, Anmeldung im Add-on) | umgesetzt, Handprüfung mit echtem Konto offen | D-022 |
+| Mehrere Google-Konten für Gemini (Abo) mit Wechsel bei aufgebrauchtem Kontingent | umgesetzt, Handprüfung mit echten Konten offen | D-024 |
 | Gemini mit Schlüssel auf den Stand von Google bringen (neue Modelle, `url_context`) | offen | [erweiterungen/gemini-provider/api-weg.md](erweiterungen/gemini-provider/api-weg.md) |
 | Lokale Modelle über Ollama | offen | |
 

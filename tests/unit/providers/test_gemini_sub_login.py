@@ -14,6 +14,7 @@ import time
 
 import pytest
 
+from providers import gemini_sub_accounts as accounts
 from providers import gemini_sub_login as login_modul
 from providers import gemini_sub_provider as cli
 from providers.gemini_sub_login import GeminiLogin, LoginError, extract_code
@@ -175,9 +176,20 @@ def test_logout_forgets_the_models(fake_cli, manager):
     manager.submit(GOOD_CODE)
     _wait_idle(manager)
 
-    manager.logout()
+    manager.logout("konto-1")
 
     assert cli.load_models() == (0.0, [])
+
+
+def test_the_models_stay_while_another_account_remains(fake_cli, manager):
+    for _ in range(2):
+        manager.start()
+        manager.submit(GOOD_CODE)
+        _wait_idle(manager)
+
+    manager.logout("konto-2")
+
+    assert cli.load_models()[1], "ein verbleibendes Konto braucht die Liste weiter"
 
 
 def test_a_pasted_address_works_like_the_code(fake_cli, manager):
@@ -250,15 +262,92 @@ def test_submit_without_a_running_login(manager):
     assert str(fehler.value) == login_modul.FEHLER_KEINE_ANMELDUNG
 
 
-def test_an_already_signed_in_account_is_not_replaced_silently(fake_cli, manager):
-    cli.token_path().parent.mkdir(parents=True, exist_ok=True)
-    cli.token_path().write_text('{"token": {"refresh_token": "x"}}')
+def test_a_second_login_adds_a_second_account_next_to_the_first(fake_cli, manager):
+    """Mehrere Konten: jedes mit eigenem Heimatverzeichnis und eigener Anmeldung (D-024)."""
+    manager.start("Privat")
+    manager.submit(GOOD_CODE)
+    _wait_idle(manager)
+
+    manager.start("Arbeit")
+    manager.submit(GOOD_CODE)
+    status = _wait_idle(manager)
+
+    assert status["error"] is None
+    assert [(a["label"], a["state"]) for a in status["accounts"]] == [
+        ("Privat", "ok"),
+        ("Arbeit", "ok"),
+    ]
+    first, second = accounts.list_accounts()
+    assert first.home == accounts.base_home()
+    assert second.home == accounts.base_home() / accounts.ACCOUNTS_DIR_NAME / "konto-2"
+    assert cli.read_token_file(cli.token_path(first.home))
+    assert cli.read_token_file(cli.token_path(second.home))
+
+
+def test_a_new_account_gets_a_default_name(fake_cli, manager):
+    manager.start()
+    manager.submit(GOOD_CODE)
+    status = _wait_idle(manager)
+
+    assert status["accounts"][0]["label"] == "Konto 1"
+
+
+def test_the_pending_account_is_named_while_the_login_runs(fake_cli, manager):
+    status = manager.start("Zweitkonto")
+
+    assert status["pending_label"] == "Zweitkonto"
+    assert status["accounts"] == []
+
+
+@pytest.mark.parametrize("name", ["x" * 41, "a;b", "<b>", "zeile\nzwei"])
+def test_an_unusable_account_name_is_refused_before_anything_starts(fake_cli, manager, name):
+    with pytest.raises(LoginError) as fehler:
+        manager.start(name)
+
+    assert fehler.value.invalid
+    assert fehler.value.field == "label"
+    assert manager.status()["state"] == "idle"
+
+
+def test_the_account_limit_is_enforced(fake_cli, manager, monkeypatch):
+    monkeypatch.setattr(accounts, "MAX_ACCOUNTS", 1)
+    manager.start()
+    manager.submit(GOOD_CODE)
+    _wait_idle(manager)
 
     with pytest.raises(LoginError) as fehler:
         manager.start()
 
-    assert str(fehler.value) == login_modul.FEHLER_BEREITS_ANGEMELDET
-    assert manager.status()["state"] == "idle"
+    assert fehler.value.field == "label"
+
+
+def test_a_cancelled_second_login_leaves_no_folder_and_no_account(fake_cli, manager):
+    manager.start()
+    manager.submit(GOOD_CODE)
+    _wait_idle(manager)
+
+    manager.start("Abgebrochen")
+    pending = accounts.base_home() / accounts.ACCOUNTS_DIR_NAME / "konto-2"
+    assert pending.exists()
+    manager.cancel()
+
+    assert not pending.exists()
+    assert [a.label for a in accounts.list_accounts()] == ["Konto 1"]
+
+
+def test_a_failed_second_login_keeps_the_first_account_untouched(fake_cli, manager):
+    manager.start()
+    manager.submit(GOOD_CODE)
+    _wait_idle(manager)
+    before = cli.token_path().read_text()
+
+    manager.start()
+    manager.submit("4/0AWRONGCODE-99999")
+    status = _wait_idle(manager)
+
+    assert status["error"] == login_modul.FEHLER_CODE_ABGELEHNT
+    assert [a["state"] for a in status["accounts"]] == ["ok"]
+    assert cli.token_path().read_text() == before
 
 
 def test_a_missing_cli_is_reported_without_technical_detail(tmp_path, monkeypatch, manager):
@@ -400,6 +489,9 @@ def test_a_used_up_quota_after_the_login_is_named_as_such(tmp_path, monkeypatch,
         monkeypatch,
         body=HEAD
         + """
+if sys.argv[1] == "models":
+    print("Gemini Probe (Low)")
+    sys.exit(0)
 print("Authentication required", file=sys.stderr)
 print("  https://accounts.google.com/o/oauth2/auth?state=x", file=sys.stderr)
 print("", file=sys.stderr, flush=True)
@@ -418,6 +510,9 @@ sys.exit(3)
 
     assert status["error"] == cli.FEHLER_KONTINGENT
     assert status["signed_in"] is True
+    # Das Konto bleibt, wartet aber: ein leeres Konto ist kein misslungenes.
+    assert [a["state"] for a in status["accounts"]] == ["exhausted"]
+    assert status["accounts"][0]["retry_at"]
 
 
 def test_the_lock_is_released_even_if_the_cleanup_fails(fake_cli, manager, monkeypatch):
@@ -465,15 +560,50 @@ def test_logout_removes_the_login_and_its_backup(fake_cli, manager):
     _wait_idle(manager)
     assert cli.is_signed_in()
 
-    status = manager.logout()
+    status = manager.logout("konto-1")
 
     assert status["signed_in"] is False
+    assert status["accounts"] == []
     assert not cli.token_path().exists()
     assert not cli.backup_path().exists()
 
 
-def test_logout_without_a_login_is_harmless(manager):
-    assert manager.logout()["signed_in"] is False
+def test_logout_of_one_account_keeps_the_others(fake_cli, manager):
+    for name in ("Privat", "Arbeit"):
+        manager.start(name)
+        manager.submit(GOOD_CODE)
+        _wait_idle(manager)
+    second_home = accounts.get_account("konto-2").home
+
+    status = manager.logout("konto-2")
+
+    assert [a["label"] for a in status["accounts"]] == ["Privat"]
+    assert status["signed_in"] is True
+    assert not second_home.exists()
+    assert cli.token_path().exists()
+
+
+def test_logout_of_an_unknown_account_is_refused(manager):
+    with pytest.raises(LoginError) as fehler:
+        manager.logout("konto-9")
+
+    assert fehler.value.missing
+
+
+def test_logout_waits_for_no_running_request(fake_cli, manager, monkeypatch):
+    manager.start()
+    manager.submit(GOOD_CODE)
+    _wait_idle(manager)
+    monkeypatch.setattr(login_modul, "START_LOCK_WAIT_SEKUNDEN", 0.05)
+    assert cli.RUN_LOCK.acquire(timeout=1)
+    try:
+        with pytest.raises(LoginError) as fehler:
+            manager.logout("konto-1")
+    finally:
+        cli.RUN_LOCK.release()
+
+    assert fehler.value.busy
+    assert cli.token_path().exists()
 
 
 # --- Geheimnisse ---------------------------------------------------------------

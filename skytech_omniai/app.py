@@ -309,7 +309,9 @@ def _login_failed(fehler: LoginError):
     """Übersetzt eine abgelehnte Anmeldung in eine Antwort mit fertigem Satz."""
     log.warning("Anmeldung bei Google nicht fortgesetzt: %s", fehler)
     if fehler.invalid:
-        return jsonify({"error": str(fehler), "field_errors": {"code": str(fehler)}}), 422
+        return jsonify({"error": str(fehler), "field_errors": {fehler.field: str(fehler)}}), 422
+    if fehler.missing:
+        return jsonify({"error": str(fehler)}), 404
     return jsonify({"error": str(fehler)}), 409 if fehler.busy else 400
 
 
@@ -325,12 +327,17 @@ def gemini_login_status():
 
 @app.route("/auth/gemini/start", methods=["POST"])
 def gemini_login_start():
-    """Startet die Anmeldung und liefert die Adresse bei Google."""
+    """Startet die Anmeldung eines **neuen Kontos** und liefert die Adresse bei Google.
+
+    Der Rumpf darf ``label`` tragen, den Namen des Kontos in der Oberfläche.
+    """
     refused = _login_refused()
     if refused:
         return refused
+    payload = request.get_json(silent=True)
+    label = payload.get("label") if isinstance(payload, dict) else ""
     try:
-        return jsonify(gemini_login.start())
+        return jsonify(gemini_login.start(label if isinstance(label, str) else ""))
     except LoginError as fehler:
         return _login_failed(fehler)
     except Exception:
@@ -381,13 +388,19 @@ def gemini_login_models():
     return jsonify({"models": [model.label for model in gemini_sub_refresh_models(force=True)]})
 
 
-@app.route("/auth/gemini", methods=["DELETE"])
-def gemini_login_remove():
-    """Entfernt die Anmeldung. Widerrufen lässt sie sich nur im Google-Konto."""
+@app.route("/auth/gemini/<account_id>", methods=["DELETE"])
+def gemini_login_remove(account_id: str):
+    """Entfernt ein Konto samt Anmeldung. Widerrufen lässt sie sich nur im Google-Konto."""
     refused = _login_refused()
     if refused:
         return refused
-    return jsonify(gemini_login.logout())
+    try:
+        return jsonify(gemini_login.logout(account_id))
+    except LoginError as fehler:
+        return _login_failed(fehler)
+    except Exception:
+        log.exception("Unerwarteter Fehler beim Entfernen eines Google-Kontos")
+        return jsonify({"error": FEHLER_UNBEKANNT}), 500
 
 
 # Name im Sidebar-Fuß, solange der Supervisor den echten nicht liefert.

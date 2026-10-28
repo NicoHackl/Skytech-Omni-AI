@@ -6,12 +6,14 @@ der CLI — es braucht weder Netz noch Anmeldung.
 
 import json
 import os
+import re
 import sys
 import textwrap
 import time
 
 import pytest
 
+from providers import gemini_sub_accounts as accounts
 from providers import gemini_sub_provider as modul
 from providers.base_provider import NotJson, ProviderTimeout, UnknownModel
 from providers.gemini_sub_provider import (
@@ -634,13 +636,15 @@ def test_the_cli_rejecting_a_model_lists_the_choices(signed_in, fake, provider):
     assert "Gemini 4 Argon (High)" in str(fehler.value)
 
 
-def test_the_list_survives_in_a_file_and_leaves_with_the_login(signed_in):
+def test_the_list_survives_in_a_file_until_the_last_account_leaves(signed_in):
     _known_models()
     assert load_models()[1][0].label == "Gemini 4 Argon (Low)"
     assert oct(modul.models_path().stat().st_mode & 0o777) == "0o600"
 
     remove_token()
+    assert load_models()[1], "ein einzelnes Konto abzumelden räumt die gemeinsame Liste nicht"
 
+    modul.clear_models()
     assert load_models() == (0.0, [])
 
 
@@ -1098,3 +1102,317 @@ def test_run_agy_leaves_no_child_process_behind(tmp_path):
 def test_run_agy_reports_a_missing_binary(tmp_path):
     with pytest.raises(FileNotFoundError):
         run_agy(["gibt-es-nicht-agy"], env={}, cwd=tmp_path, timeout=5)
+
+
+# --- Mehrere Konten (D-024) -----------------------------------------------------------
+
+
+class PerAccountAgy:
+    """Ersatz für ``run_agy``, der je Konto (Heimatverzeichnis) anders antwortet."""
+
+    def __init__(self, by_label: dict[str, AgyResult]):
+        self.by_label = by_label
+        self.calls: list[tuple[str, list[str], dict]] = []
+
+    def __call__(self, command, **kwargs):
+        home = kwargs["env"]["HOME"]
+        label = next(a.label for a in accounts.list_accounts() if str(a.home) == home)
+        self.calls.append((label, command, kwargs))
+        return self.by_label[label]
+
+    @property
+    def used(self) -> list[str]:
+        return [label for label, _, _ in self.calls]
+
+
+QUOTA = _result(
+    stdout=_envelope(status="ERROR", response="", error="Your AI credits balance is too low"),
+    returncode=3,
+)
+OK = _result(stdout=_envelope(response='{"von": "ok"}'))
+
+
+def _two_accounts(*labels):
+    labels = labels or ("Privat", "Arbeit")
+    for label in labels:
+        account = accounts.new_account(label)
+        token_path(account.home).parent.mkdir(parents=True, exist_ok=True)
+        token_path(account.home).write_text(TOKEN_JSON, encoding="utf-8")
+        accounts.add_account(account)
+
+
+def _agy(monkeypatch, **by_label):
+    agy = PerAccountAgy({label.replace("_", " "): result for label, result in by_label.items()})
+    monkeypatch.setattr(modul, "run_agy", agy)
+    return agy
+
+
+def _state(label):
+    return next(a for a in accounts.list_accounts() if a.label == label).state()
+
+
+def test_the_first_account_with_quota_answers(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=OK, Arbeit=OK)
+
+    assert provider.execute("Test") == {"von": "ok"}
+    assert agy.used == ["Privat"], "solange das erste Konto Kontingent hat, bleibt es dabei"
+
+
+def test_an_empty_account_hands_over_to_the_next_within_the_same_request(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=QUOTA, Arbeit=OK)
+
+    assert provider.execute("Test") == {"von": "ok"}
+    assert agy.used == ["Privat", "Arbeit"]
+    assert _state("Privat") == "exhausted"
+    assert _state("Arbeit") == "ok"
+
+
+def test_the_prompt_and_the_model_are_the_same_for_the_second_account(provider, monkeypatch):
+    _two_accounts()
+    _known_models()
+    agy = _agy(monkeypatch, Privat=QUOTA, Arbeit=OK)
+
+    provider.execute("Meine Frage", model="argon-4")
+
+    first, second = agy.calls[0][1], agy.calls[1][1]
+    assert first[first.index("-p") + 1] == second[second.index("-p") + 1]
+    assert "Meine Frage" in first[first.index("-p") + 1]
+    assert first[first.index("--model") + 1] == second[second.index("--model") + 1]
+
+
+def test_each_account_runs_in_its_own_home_and_workspace(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=QUOTA, Arbeit=OK)
+
+    provider.execute("Test")
+
+    (_, _, first), (_, _, second) = agy.calls
+    assert first["env"]["HOME"] != second["env"]["HOME"]
+    assert first["cwd"] == workspace_dir(accounts.list_accounts()[0].home)
+    assert second["cwd"] == workspace_dir(accounts.list_accounts()[1].home)
+    for account in accounts.list_accounts():
+        settings = json.loads((state_dir(account.home) / "settings.json").read_text())
+        assert "command(*)" in settings["permissions"]["deny"]
+
+
+def test_a_waiting_account_is_skipped_by_the_next_requests(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=QUOTA, Arbeit=OK)
+    provider.execute("Test")
+    agy.calls.clear()
+
+    provider.execute("Test")
+    provider.execute("Test")
+
+    assert agy.used == ["Arbeit", "Arbeit"]
+
+
+def test_a_waiting_account_is_tried_again_when_its_time_has_come(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=QUOTA, Arbeit=OK)
+    provider.execute("Test")
+    first = accounts.list_accounts()[0]
+    accounts.update_account(first.id, exhausted_until=time.time() - 1)
+    monkeypatch.setattr(modul, "run_agy", PerAccountAgy({"Privat": OK, "Arbeit": OK}))
+    agy = modul.run_agy
+
+    provider.execute("Test")
+
+    assert agy.used == ["Privat"]
+    assert _state("Privat") == "ok"
+    assert accounts.list_accounts()[0].strikes == 0
+
+
+def test_when_every_account_is_empty_the_answer_says_when_to_try_again(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=QUOTA, Arbeit=QUOTA)
+
+    with pytest.raises(RuntimeError) as fehler:
+        provider.execute("Test")
+
+    text = str(fehler.value)
+    assert agy.used == ["Privat", "Arbeit"]
+    assert "allen angemeldeten Google-Konten" in text
+    assert re.search(r"\b\d\d:\d\d\b", text), text
+    _assert_no_tech(text)
+
+
+def test_while_every_account_waits_no_cli_is_started(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=QUOTA, Arbeit=QUOTA)
+    with pytest.raises(RuntimeError):
+        provider.execute("Test")
+    agy.calls.clear()
+
+    with pytest.raises(RuntimeError) as fehler:
+        provider.execute("Test")
+
+    assert agy.calls == []
+    assert "allen angemeldeten Google-Konten" in str(fehler.value)
+
+
+def test_a_single_account_keeps_the_plain_quota_sentence(provider, signed_in, monkeypatch):
+    agy = _agy(monkeypatch, **{"Konto_1": QUOTA})
+
+    with pytest.raises(RuntimeError) as fehler:
+        provider.execute("Test")
+    with pytest.raises(RuntimeError) as zweite:
+        provider.execute("Test")
+
+    assert str(fehler.value) == modul.FEHLER_KONTINGENT
+    assert str(zweite.value) == modul.FEHLER_KONTINGENT
+    assert agy.used == ["Konto 1"], "die zweite Anfrage wartet auf die Wartezeit statt zu raten"
+
+
+def test_a_login_gone_bad_marks_the_account_and_the_next_one_answers(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=_result(auth_required=True, returncode=-15), Arbeit=OK)
+
+    assert provider.execute("Test") == {"von": "ok"}
+    assert agy.used == ["Privat", "Arbeit"]
+    assert _state("Privat") == "login_expired"
+
+    agy.calls.clear()
+    provider.execute("Test")
+    assert agy.used == ["Arbeit"]
+
+
+def test_when_no_login_is_valid_any_more_the_answer_says_to_sign_in_again(provider, monkeypatch):
+    _two_accounts()
+    _agy(
+        monkeypatch,
+        Privat=_result(auth_required=True, returncode=-15),
+        Arbeit=_result(auth_required=True, returncode=-15),
+    )
+
+    with pytest.raises(RuntimeError) as fehler:
+        provider.execute("Test")
+    with pytest.raises(RuntimeError) as zweite:
+        provider.execute("Test")
+
+    assert "erneut anmelden" in str(fehler.value)
+    assert "erneut anmelden" in str(zweite.value)
+
+
+def test_a_restricted_account_hands_over_and_is_named_so(provider, monkeypatch):
+    _two_accounts()
+    restricted = _result(
+        stdout=_envelope(status="ERROR", response="", error="account is not eligible"),
+        returncode=1,
+    )
+    agy = _agy(monkeypatch, Privat=restricted, Arbeit=OK)
+
+    assert provider.execute("Test") == {"von": "ok"}
+    assert agy.used == ["Privat", "Arbeit"]
+    assert _state("Privat") == "restricted"
+
+
+def test_a_single_restricted_account_says_so(provider, signed_in, monkeypatch):
+    restricted = _result(
+        stdout=_envelope(status="ERROR", response="", error="account is not eligible"),
+        returncode=1,
+    )
+    _agy(monkeypatch, **{"Konto_1": restricted})
+
+    with pytest.raises(RuntimeError) as fehler:
+        provider.execute("Test")
+
+    assert str(fehler.value) == modul.FEHLER_KONTO
+
+
+def test_other_failures_never_switch_the_account(provider, monkeypatch):
+    """Eine schlechte Antwort ist kein Grund, ein zweites Konto zu belasten."""
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=_result(stderr="irgendwas", returncode=1), Arbeit=OK)
+
+    with pytest.raises(RuntimeError):
+        provider.execute("Test")
+
+    assert agy.used == ["Privat"]
+    assert _state("Privat") == "ok"
+
+
+def test_an_answer_that_is_no_json_never_switches_the_account(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=_result(stdout=_envelope(response="Prosa")), Arbeit=OK)
+
+    with pytest.raises(NotJson):
+        provider.execute("Test")
+
+    assert agy.used == ["Privat"]
+
+
+def test_a_timeout_never_switches_the_account(provider, monkeypatch):
+    _two_accounts()
+    agy = _agy(monkeypatch, Privat=_result(timed_out=True, returncode=-9), Arbeit=OK)
+
+    with pytest.raises(ProviderTimeout):
+        provider.execute("Test")
+
+    assert agy.used == ["Privat"]
+
+
+def test_a_handover_with_too_little_time_left_ends_as_a_timeout(provider, monkeypatch):
+    _two_accounts()
+
+    def slow(command, **kwargs):
+        time.sleep(1.3)
+        return QUOTA
+
+    monkeypatch.setattr(modul, "run_agy", slow)
+
+    with pytest.raises(ProviderTimeout):
+        provider.execute("Test", timeout=16)
+
+
+def test_the_conversation_data_of_every_tried_account_is_cleaned(provider, monkeypatch):
+    _two_accounts()
+    traces = []
+
+    def leaving(command, **kwargs):
+        home = kwargs["env"]["HOME"]
+        from pathlib import Path
+
+        conversations = state_dir(Path(home)) / "conversations"
+        conversations.mkdir(parents=True, exist_ok=True)
+        (conversations / "spur.pb").write_text("Prompt", encoding="utf-8")
+        traces.append(conversations)
+        return QUOTA if len(traces) == 1 else OK
+
+    monkeypatch.setattr(modul, "run_agy", leaving)
+
+    provider.execute("Test")
+
+    assert len(traces) == 2
+    assert all(list(path.iterdir()) == [] for path in traces)
+
+
+def test_the_model_list_is_fetched_from_the_first_signed_in_account(monkeypatch):
+    _two_accounts()
+    accounts.mark_needs_login("konto-1")
+    agy = _agy(
+        monkeypatch, Privat=_result(stdout=MODELS_OUTPUT), Arbeit=_result(stdout=MODELS_OUTPUT)
+    )
+
+    assert available_models()[0] == "Gemini 4 Argon (Low)"
+    assert agy.used == ["Arbeit"]
+
+
+def test_the_model_list_is_shared_by_all_accounts():
+    _two_accounts()
+    _known_models()
+
+    assert modul.models_path().parent == accounts.base_home()
+    assert load_models()[1][0].label == "Gemini 4 Argon (Low)"
+
+
+@pytest.mark.parametrize("hours", [1, 30])
+def test_the_retry_time_is_shown_as_a_clock_time(hours):
+    text = modul.format_retry_time(time.time() + hours * 3600)
+
+    assert re.fullmatch(r"(\d\d\.\d\d\., )?\d\d:\d\d", text), text
+    assert ("," in text) == (hours >= 24)
+    for fremd in ("UTC", "MESZ", "+0", "Berlin"):
+        assert fremd not in text

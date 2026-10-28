@@ -111,7 +111,17 @@ Die Anmeldung geschieht im Add-on selbst, einmalig:
    lässt dafür etwa eine Minute Zeit.
 4. Als Anbieter **Google Gemini (Abo)** wählen und speichern.
 
-Die Anmeldung bleibt gespeichert und wird vom Add-on erneuert. **Abmelden** entfernt sie wieder.
+Die Anmeldung bleibt gespeichert und wird vom Add-on erneuert. **Entfernen** löscht ein Konto wieder.
+
+**Mehrere Konten:** Mit **Weiteres Konto anmelden** lassen sich beliebig viele Google-Konten
+anmelden (höchstens zehn), auf Wunsch mit einem Namen. Das Add-on nimmt das erste Konto, das noch
+Kontingent hat; ist es aufgebraucht, wiederholt es dieselbe Anfrage mit dem nächsten. Ein leeres Konto
+wird nach 30 Minuten wieder versucht, später in größeren Abständen; die Liste zeigt den nächsten
+Versuch. Die Konten sollten demselben Tarif angehören (Google AI Pro), weil sie eine Modellliste teilen.
+
+> **Wichtig:** Google nennt das automatische Wechseln zwischen Konten ausdrücklich als nicht
+> unterstützt. Das Add-on wechselt offen und tarnt nichts, aber mit jedem Konto steigt das Risiko,
+> und eine Maßnahme von Google kann alle Konten treffen.
 Die Modelle liest das Add-on von Google ein und zeigt sie in der Auswahl „Standardmodell“ (z. B.
 *Gemini 4 Argon* oder *Gemini 3.8 Flash*, jeweils in Stufen wie Low, Medium und High). Pro Anfrage
 genügt im Feld `model` auch eine Kurzform wie `flash-3.8` oder `argon-4`; ohne Stufe gilt Medium.

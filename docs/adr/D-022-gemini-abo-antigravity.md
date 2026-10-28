@@ -14,8 +14,9 @@ und `codex_sub` (D-013) das Abo ihres Anbieters über dessen Befehlszeile nutzen
    **Antigravity CLI** (`agy`), ein statisch gelinktes Binary mit Headless-Modus
    (`agy -p … --output-format json`).
 2. **Google unterstützt es bei privaten Abos ausdrücklich nicht**, `agy` in andere Anwendungen
-   einzubinden („Wrapping `agy` inside third-party coding agents or applications […] is not
-   supported under consumer plans“); die Nutzungsbedingungen nennen Konten mit Fremdwerkzeugen
+   einzubinden oder automatisch zwischen Konten zu wechseln („Wrapping `agy` inside third-party coding
+   agents or applications, or automating account rotation, is not supported under consumer plans“;
+   zum Wechsel der Konten siehe [D-024](D-024-mehrere-google-konten.md)); die Nutzungsbedingungen nennen Konten mit Fremdwerkzeugen
    einschränkbar oder sperrbar. Der von Google empfohlene Weg für Fremdanwendungen ist der
    API-Schlüssel — den bietet das Add-on mit dem Provider `gemini` (D-007).
 3. Die Anmeldung ist das eigentliche Problem. Anders als bei Claude (`setup-token`) und Codex

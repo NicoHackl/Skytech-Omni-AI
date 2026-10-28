@@ -87,11 +87,28 @@ export interface AddonInfo {
   config_path: string | null
 }
 
+/** Zustand eines Google-Kontos: bereit, Kontingent aufgebraucht, von Google eingeschränkt,
+    Anmeldung abgelaufen oder nicht (mehr) angemeldet. */
+export type GeminiAccountState = 'ok' | 'exhausted' | 'restricted' | 'login_expired' | 'signed_out'
+
+/** Ein angemeldetes Google-Konto. `retry_at` gilt nur, solange es wartet. */
+export interface GeminiAccount {
+  id: string
+  label: string
+  state: GeminiAccountState
+  retry_at: string | null
+}
+
 /** Antwort von `GET /auth/gemini` und der Aktionen darunter: Stand der Anmeldung bei Google. */
 export interface GeminiLoginStatus {
   /** Ob die Google-Befehlszeile im Add-on vorhanden ist. */
   available: boolean
+  /** Mindestens ein Konto ist angemeldet. */
   signed_in: boolean
+  /** Alle Konten in der Reihenfolge, in der sie an die Reihe kommen. */
+  accounts: GeminiAccount[]
+  /** Name des Kontos, das sich gerade anmeldet; es steht noch nicht in `accounts`. */
+  pending_label: string | null
   /** `waiting` = Adresse da, Code fehlt; `checking` = Code übergeben, Google prüft. */
   state: 'idle' | 'waiting' | 'checking'
   /** Nur im Zustand `waiting` und nur über Home Assistant. */

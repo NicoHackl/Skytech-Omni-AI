@@ -40,6 +40,26 @@ from providers.base_provider import (
 from providers.claude_sub_provider import CLAUDE_MODELS
 from providers.codex_sub_provider import CODEX_MODELS
 from providers.gemini_provider import GEMINI_MODELS
+from providers.gemini_sub_accounts import (
+    DEFAULT_HOME,  # noqa: F401  (hier wieder ausgegeben, siehe Tests)
+    HOME_ENV,  # noqa: F401
+    TOKEN_BACKUP_SUFFIX,  # noqa: F401
+    TOKEN_FILE_NAME,  # noqa: F401
+    WORKSPACE_NAME,  # noqa: F401
+    Account,
+    backup_path,
+    base_home,
+    list_accounts,
+    mark_exhausted,
+    mark_needs_login,
+    mark_ok,
+    next_try_time,
+    read_token_file,
+    ready_accounts,
+    state_dir,
+    token_path,
+    workspace_dir,
+)
 
 log = logging.getLogger("omniai.gemini_sub")
 
@@ -54,20 +74,8 @@ AUTO_MODEL = "auto"
 
 AGY_BINARY = "agy"
 
-# Die CLI legt Anmeldung und Zustand unter $HOME/.gemini ab. HOME zeigt auf das
-# dauerhafte /data-Verzeichnis des Add-ons, sonst wäre die Anmeldung nach jedem
-# Neustart weg. Außerhalb des Containers (Tests, lokale Entwicklung) darf ein
-# anderer Ort vorgegeben werden.
-HOME_ENV = "OMNIAI_GEMINI_HOME"
-DEFAULT_HOME = "/data"
-
-# Eigenes, leeres Arbeitsverzeichnis. Die CLI darf darin ohne Rückfrage lesen
-# und schreiben; läge dort /data selbst, gehörten die Optionen mit allen
-# Zugängen dazu.
-WORKSPACE_NAME = "omniai-gemini-workspace"
-
-TOKEN_FILE_NAME = "antigravity-oauth-token"
-TOKEN_BACKUP_SUFFIX = ".bak"
+# Orte und Konten (Anmeldung, Zustand, Arbeitsbereich je Konto) stehen in
+# ``gemini_sub_accounts``.
 SETTINGS_FILE_NAME = "settings.json"
 
 # Zeitlimit eines CLI-Laufs. Gleicher Wert wie bei den anderen Providern, damit
@@ -254,31 +262,14 @@ AUTH_MARKER = (
 
 
 def agy_home() -> Path:
-    return Path(os.environ.get(HOME_ENV, "").strip() or DEFAULT_HOME)
+    """Basisverzeichnis; dort liegt das erste Konto, die weiteren in Unterordnern."""
+    return base_home()
 
 
-def state_dir() -> Path:
-    """Zustandsordner der CLI: Anmeldung, Einstellungen, Gespräche, Protokolle."""
-    return agy_home() / ".gemini" / "antigravity-cli"
-
-
-def token_path() -> Path:
-    return state_dir() / TOKEN_FILE_NAME
-
-
-def backup_path() -> Path:
-    path = token_path()
-    return path.with_name(path.name + TOKEN_BACKUP_SUFFIX)
-
-
-def workspace_dir() -> Path:
-    return agy_home() / WORKSPACE_NAME
-
-
-def agy_env() -> dict:
-    """Umgebung für jeden Aufruf der CLI — Lauf wie Anmeldung."""
+def agy_env(home: Path | None = None) -> dict:
+    """Umgebung für jeden Aufruf der CLI — Lauf wie Anmeldung. ``home`` ist das Konto."""
     env = {key: os.environ[key] for key in PASSTHROUGH_ENV if key in os.environ}
-    env["HOME"] = str(agy_home())
+    env["HOME"] = str(home or base_home())
     # Die CLI aktualisiert sich sonst im Hintergrund selbst; die Version im
     # Bild ist festgenagelt (Dockerfile).
     env["AGY_CLI_DISABLE_AUTO_UPDATE"] = "true"
@@ -290,29 +281,24 @@ def cli_available() -> bool:
     return shutil.which(AGY_BINARY, path=agy_env().get("PATH")) is not None
 
 
-def _read_token_file(path: Path) -> dict | None:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return data if isinstance(data, dict) and data else None
+_read_token_file = read_token_file
 
 
 def is_signed_in() -> bool:
-    """Liegt eine lesbare Anmeldung vor? Ob Google sie noch gelten lässt, zeigt erst ein Lauf."""
-    return _read_token_file(token_path()) is not None
+    """Ist mindestens ein Konto angemeldet? Ob Google sie gelten lässt, zeigt erst ein Lauf."""
+    return any(account.signed_in() for account in list_accounts())
 
 
-def backup_token() -> None:
-    """Sichert die Anmeldung, solange sie lesbar ist.
+def backup_token(home: Path | None = None) -> None:
+    """Sichert die Anmeldung eines Kontos, solange sie lesbar ist.
 
     Die CLI erneuert ihr Zugriffstoken und schreibt die Datei zurück. Bricht ein
     Zeitlimit sie dabei ab, bliebe eine halbe Datei und die Anmeldung wäre weg.
     """
-    source = token_path()
+    source = token_path(home)
     if _read_token_file(source) is None:
         return
-    target = backup_path()
+    target = backup_path(home)
     try:
         shutil.copyfile(source, target)
         target.chmod(0o600)
@@ -320,12 +306,12 @@ def backup_token() -> None:
         log.warning("Sicherung der Google-Anmeldung nicht möglich: %s", error)
 
 
-def restore_token_if_broken() -> None:
+def restore_token_if_broken(home: Path | None = None) -> None:
     """Stellt die gesicherte Anmeldung wieder her, wenn die Datei unlesbar ist."""
-    source = token_path()
+    source = token_path(home)
     if _read_token_file(source) is not None:
         return
-    backup = backup_path()
+    backup = backup_path(home)
     if _read_token_file(backup) is None:
         return
     try:
@@ -336,17 +322,15 @@ def restore_token_if_broken() -> None:
         log.error("Google-Anmeldung nicht wiederherstellbar: %s", error)
 
 
-def remove_token() -> None:
-    """Entfernt die Anmeldung samt Sicherung."""
-    for path in (token_path(), backup_path()):
+def remove_token(home: Path | None = None) -> None:
+    """Entfernt die Anmeldung eines Kontos samt Sicherung."""
+    for path in (token_path(home), backup_path(home)):
         try:
             path.unlink()
         except FileNotFoundError:
             pass
         except OSError as error:
             log.error("Google-Anmeldung nicht entfernbar: %s", error)
-    # Die Liste gehört zum Konto, das sich abgemeldet hat.
-    clear_models()
 
 
 # --- Vorbereitung und Aufräumen -------------------------------------------------
@@ -372,7 +356,7 @@ def _write_json_atomic(path: Path, data: dict) -> None:
     temp.replace(path)
 
 
-def prepare_state(level: str) -> Path:
+def prepare_state(level: str, home: Path | None = None) -> Path:
     """Legt Zustandsordner, Arbeitsbereich und Einstellungen der CLI an.
 
     Die Einstellungen enthalten die Freigaben der Werkzeuge. Schlägt das
@@ -383,10 +367,10 @@ def prepare_state(level: str) -> Path:
     :returns: den Arbeitsbereich.
     :raises RuntimeError: wenn sich Ordner oder Einstellungen nicht anlegen lassen.
     """
-    workspace = workspace_dir()
-    settings_path = state_dir() / SETTINGS_FILE_NAME
+    workspace = workspace_dir(home)
+    settings_path = state_dir(home) / SETTINGS_FILE_NAME
     try:
-        state_dir().mkdir(parents=True, exist_ok=True)
+        state_dir(home).mkdir(parents=True, exist_ok=True)
         workspace.mkdir(parents=True, exist_ok=True)
         workspace.chmod(0o700)
 
@@ -427,9 +411,9 @@ CONVERSATION_DIRS = ("conversations", "brain", "implicit")
 CONVERSATION_DB_PREFIX = "conversation_summaries.db"
 
 
-def snapshot_state() -> dict[str, set[str]]:
+def snapshot_state(home: Path | None = None) -> dict[str, set[str]]:
     """Merkt sich, was vor einem Lauf im Zustandsordner liegt."""
-    state = state_dir()
+    state = state_dir(home)
     snapshot: dict[str, set[str]] = {}
     for name in CONVERSATION_DIRS:
         try:
@@ -451,14 +435,16 @@ def _remove(path: Path) -> None:
         log.warning("Eintrag der Google-CLI nicht löschbar: %s", error)
 
 
-def cleanup_state(before: dict[str, set[str]], conversation_id: str = "") -> None:
+def cleanup_state(
+    before: dict[str, set[str]], conversation_id: str = "", home: Path | None = None
+) -> None:
     """Löscht, was ein Lauf an Gesprächsdaten hinterlassen hat.
 
     Das Add-on führt keinen Verlauf (docs/architektur.md). Die CLI legt Gespräche
     aber auf der Platte ab; sie sollen den Lauf nicht überdauern. Aufräumen darf
     nie scheitern lassen, was bereits beantwortet ist — Fehler landen im Log.
     """
-    state = state_dir()
+    state = state_dir(home)
     removed = 0
     for name in CONVERSATION_DIRS:
         directory = state / name
@@ -484,7 +470,7 @@ def cleanup_state(before: dict[str, set[str]], conversation_id: str = "") -> Non
 
     # Was der Agent im Arbeitsbereich angelegt hat, gehört keiner Anfrage mehr.
     try:
-        for entry in workspace_dir().iterdir():
+        for entry in workspace_dir(home).iterdir():
             _remove(entry)
             removed += 1
     except OSError:
@@ -672,7 +658,7 @@ def classify_failure(output: str) -> str | None:
 # merkt sich die Liste in einer Datei neben der Anmeldung, damit Oberfläche und
 # Schnittstelle sie sofort zeigen können, auch direkt nach einem Neustart.
 
-MODELS_FILE_NAME = "omniai-models.json"
+MODELS_FILE_NAME = "omniai-gemini-models.json"
 # So alt darf die Liste werden, bevor sie beim nächsten Abruf neu geholt wird.
 MODELS_MAX_AGE_SEKUNDEN = 6 * 3600
 MODELS_TIMEOUT_SEKUNDEN = 30
@@ -757,7 +743,8 @@ def parse_models(output: str) -> list[ModelInfo]:
 
 
 def models_path() -> Path:
-    return state_dir() / MODELS_FILE_NAME
+    # Eine Liste für alle Konten: sie gehören demselben Tarif (D-024).
+    return base_home() / MODELS_FILE_NAME
 
 
 def load_models() -> tuple[float, list[ModelInfo]]:
@@ -790,21 +777,28 @@ def clear_models() -> None:
         models_path().unlink()
 
 
-def fetch_models_locked(fallback: list[ModelInfo]) -> list[ModelInfo]:
+def fetch_models_locked(
+    fallback: list[ModelInfo], account: Account | None = None
+) -> list[ModelInfo]:
     """Fragt die CLI nach ihren Modellen. Nur mit gehaltener ``RUN_LOCK`` aufrufen.
 
-    Schlägt der Abruf fehl, bleibt die bisherige Liste (``fallback``): eine
-    verwaiste Liste ist besser als gar keine, und die Ursache steht im Log.
+    Gefragt wird ``account``, sonst das erste angemeldete Konto. Schlägt der Abruf
+    fehl, bleibt die bisherige Liste (``fallback``): eine verwaiste Liste ist besser
+    als gar keine, und die Ursache steht im Log.
     """
+    if account is None:
+        account = next((a for a in list_accounts() if a.signed_in() and not a.needs_login), None)
+    if account is None:
+        return fallback
     try:
-        workspace = prepare_state(resolve_tool_access())
+        workspace = prepare_state(resolve_tool_access(), account.home)
     except RuntimeError:
         return fallback
-    before = snapshot_state()
+    before = snapshot_state(account.home)
     try:
         result = run_agy(
             [AGY_BINARY, "models"],
-            env=agy_env(),
+            env=agy_env(account.home),
             cwd=workspace,
             timeout=MODELS_TIMEOUT_SEKUNDEN,
         )
@@ -812,7 +806,7 @@ def fetch_models_locked(fallback: list[ModelInfo]) -> list[ModelInfo]:
         log.warning("Modelle der Google-CLI nicht abrufbar: %s", error)
         return fallback
     finally:
-        cleanup_state(before)
+        cleanup_state(before, home=account.home)
 
     models = parse_models(result.stdout) or parse_models(f"{result.stdout}\n{result.stderr}")
     if result.returncode == 0 and not result.timed_out and not result.auth_required and models:
@@ -903,6 +897,31 @@ def pick_model(query: str, models: list[ModelInfo]) -> str:
     return variants[0].label
 
 
+class AccountQuotaExhausted(RuntimeError):
+    """Das Kontingent dieses Kontos ist aufgebraucht — das nächste Konto ist an der Reihe."""
+
+
+class AccountAuthExpired(RuntimeError):
+    """Google lässt die Anmeldung dieses Kontos nicht mehr gelten."""
+
+
+class AccountRestricted(RuntimeError):
+    """Google erlaubt diesem Konto die Nutzung nicht oder hat den Zugang eingeschränkt."""
+
+
+def format_retry_time(timestamp: float) -> str:
+    """``21:03`` — am selben Tag nur die Uhrzeit, sonst mit Datum (``29.10., 01:15``).
+
+    Die Zone kommt über ``TZ`` aus dem Bild (Berlin) und wird nicht mit angezeigt.
+    """
+    moment = time.localtime(timestamp)
+    today = time.localtime()
+    clock = time.strftime("%H:%M", moment)
+    if (moment.tm_year, moment.tm_yday) == (today.tm_year, today.tm_yday):
+        return clock
+    return f"{time.strftime('%d.%m.', moment)}, {clock}"
+
+
 class GeminiSubProvider(BaseProvider):
     """Führt Prompts über die Antigravity-CLI aus und nutzt dabei das Google-AI-Pro-Abo."""
 
@@ -962,11 +981,11 @@ class GeminiSubProvider(BaseProvider):
                 f"„{chosen_model}“ kennt Google Gemini (Abo) nicht. Ohne Angabe wählt es selbst."
             )
         if kind == "quota":
-            return RuntimeError(FEHLER_KONTINGENT)
+            return AccountQuotaExhausted(FEHLER_KONTINGENT)
         if kind == "account":
-            return RuntimeError(FEHLER_KONTO)
+            return AccountRestricted(FEHLER_KONTO)
         if kind == "auth":
-            return RuntimeError(FEHLER_ANMELDUNG_ABGELAUFEN)
+            return AccountAuthExpired(FEHLER_ANMELDUNG_ABGELAUFEN)
         return RuntimeError(FEHLER_CLI_ABGEBROCHEN)
 
     def _evaluate(self, result: AgyResult, chosen_model: str) -> dict:
@@ -974,7 +993,7 @@ class GeminiSubProvider(BaseProvider):
             raise ProviderTimeout(FEHLER_ZEITUEBERSCHREITUNG)
         if result.auth_required:
             log.error("Die Google-CLI verlangt eine neue Anmeldung")
-            raise RuntimeError(FEHLER_ANMELDUNG_ABGELAUFEN)
+            raise AccountAuthExpired(FEHLER_ANMELDUNG_ABGELAUFEN)
 
         envelope = parse_envelope(result.stdout)
         if envelope is not None:
@@ -1013,7 +1032,7 @@ class GeminiSubProvider(BaseProvider):
         # genaue Prüfung folgt unter der Sperre: ein laufender Lauf kann die
         # Datei gerade neu schreiben und sie nur für einen Augenblick unlesbar
         # machen.
-        if not token_path().exists() and not backup_path().exists():
+        if not any(account.has_files() for account in list_accounts()):
             log.error("Aufruf ohne Google-Anmeldung abgelehnt")
             raise RuntimeError(FEHLER_NICHT_ANGEMELDET)
 
@@ -1023,25 +1042,96 @@ class GeminiSubProvider(BaseProvider):
             log.warning("Anfrage wartete vergeblich auf die laufende Google-CLI")
             raise RuntimeError(FEHLER_BESETZT)
         try:
-            restore_token_if_broken()
-            if not is_signed_in():
+            for account in list_accounts():
+                restore_token_if_broken(account.home)
+            signed_in = [a for a in list_accounts() if a.signed_in()]
+            if not signed_in:
                 log.error("Aufruf ohne lesbare Google-Anmeldung abgelehnt")
                 raise RuntimeError(FEHLER_NICHT_ANGEMELDET)
+            usable = [a for a in signed_in if not a.needs_login]
+            if not usable:
+                raise AccountAuthExpired(FEHLER_ANMELDUNG_ABGELAUFEN)
+            ready = ready_accounts()
+            if not ready:
+                # Alle Konten warten auf ihren nächsten Versuch: kein Lauf, der nur
+                # einen schnellen Fehler brächte.
+                raise RuntimeError(self._exhausted_message(len(usable)))
             if needs_models:
-                models = fetch_models_locked([])
+                models = fetch_models_locked([], ready[0])
                 if models:
                     chosen_model = pick_model(chosen_model, models)
-            remaining = total - (time.monotonic() - started)
-            if remaining < MIN_RUN_SEKUNDEN:
-                raise RuntimeError(FEHLER_BESETZT)
-            return self._run(full_prompt, chosen_model, remaining)
+            return self._with_rotation(
+                ready, len(usable), full_prompt, chosen_model, total, started
+            )
         finally:
             RUN_LOCK.release()
 
-    def _run(self, full_prompt: str, chosen_model: str, remaining: float) -> dict:
+    @staticmethod
+    def _exhausted_message(account_count: int) -> str:
+        """Satz, wenn kein Konto mehr Kontingent hat; bei mehreren mit dem nächsten Versuch."""
+        retry = next_try_time()
+        if account_count <= 1 or retry is None:
+            return FEHLER_KONTINGENT
+        return (
+            "Bei allen angemeldeten Google-Konten ist das Kontingent aufgebraucht. "
+            f"Der nächste Versuch ist um {format_retry_time(retry)} möglich."
+        )
+
+    def _with_rotation(
+        self,
+        accounts: list[Account],
+        usable_count: int,
+        full_prompt: str,
+        chosen_model: str,
+        total: float,
+        started: float,
+    ) -> dict:
+        """Läuft mit dem ersten Konto, das Kontingent hat; ist es leer, mit dem nächsten.
+
+        Gewechselt wird nur bei einem aufgebrauchten Kontingent, einer ungültigen
+        Anmeldung oder einem eingeschränkten Konto — nie bei einer schlechten
+        Antwort. Der Wechsel ist offen und im Log zu sehen; das Add-on verbirgt
+        ihn vor Google nicht (D-024).
+        """
+        quota = restricted = False
+        last: Exception | None = None
+        for index, account in enumerate(accounts):
+            remaining = total - (time.monotonic() - started)
+            if remaining < MIN_RUN_SEKUNDEN:
+                if index == 0:
+                    raise RuntimeError(FEHLER_BESETZT)
+                raise ProviderTimeout(FEHLER_ZEITUEBERSCHREITUNG)
+            try:
+                answer = self._run(account, full_prompt, chosen_model, remaining)
+            except AccountQuotaExhausted as error:
+                mark_exhausted(account.id)
+                log.warning("Konto „%s“: Kontingent aufgebraucht", account.label)
+                quota, last = True, error
+            except AccountRestricted as error:
+                mark_exhausted(account.id, kind="account")
+                log.error("Konto „%s“: von Google eingeschränkt", account.label)
+                restricted, last = True, error
+            except AccountAuthExpired as error:
+                mark_needs_login(account.id)
+                log.error("Konto „%s“: Anmeldung gilt nicht mehr", account.label)
+                last = error
+            else:
+                mark_ok(account.id)
+                return answer
+            if index + 1 < len(accounts):
+                log.info("Wechsel auf das nächste Google-Konto")
+
+        if quota and (usable_count > 1 or len(accounts) > 1):
+            raise RuntimeError(self._exhausted_message(usable_count))
+        if restricted and not quota:
+            raise AccountRestricted(FEHLER_KONTO)
+        assert last is not None
+        raise last
+
+    def _run(self, account: Account, full_prompt: str, chosen_model: str, remaining: float) -> dict:
         level = resolve_tool_access()
-        workspace = prepare_state(level)
-        before = snapshot_state()
+        workspace = prepare_state(level, account.home)
+        before = snapshot_state(account.home)
 
         command = [
             AGY_BINARY,
@@ -1059,7 +1149,8 @@ class GeminiSubProvider(BaseProvider):
             command += ["--model", chosen_model]
 
         log.info(
-            "Anfrage an Google Gemini (Abo), Modell: %s, Werkzeuge: %s",
+            "Anfrage an Google Gemini (Abo), Konto: %s, Modell: %s, Werkzeuge: %s",
+            account.label,
             chosen_model or "Vorgabe der CLI",
             level,
         )
@@ -1068,7 +1159,11 @@ class GeminiSubProvider(BaseProvider):
         try:
             try:
                 result = run_agy(
-                    command, env=agy_env(), cwd=workspace, timeout=remaining, watch_auth=True
+                    command,
+                    env=agy_env(account.home),
+                    cwd=workspace,
+                    timeout=remaining,
+                    watch_auth=True,
                 )
             except FileNotFoundError as error:
                 log.error("Die Google-CLI wurde im Container nicht gefunden: %s", error)
@@ -1077,7 +1172,7 @@ class GeminiSubProvider(BaseProvider):
             if envelope is not None:
                 conversation_id = str(envelope.get("conversation_id") or "")
             answer = self._evaluate(result, chosen_model)
-            backup_token()
+            backup_token(account.home)
             return answer
         finally:
-            cleanup_state(before, conversation_id)
+            cleanup_state(before, conversation_id, account.home)

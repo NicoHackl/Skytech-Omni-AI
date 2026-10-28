@@ -38,7 +38,11 @@ if not os.path.exists(token):
     open(token, "w").write(json.dumps({{"token": {{"refresh_token": "x"}}}}))
     print(json.dumps({{"conversation_id": "k1", "status": "SUCCESS", "response": "{{}}"}}))
     sys.exit(0)
-answer = json.dumps({{"antwort": "Hallo aus dem Ablauf"}})
+if os.path.exists(os.path.join(home, "LEER")):
+    error = "Your AI credits balance is too low"
+    print(json.dumps({{"conversation_id": "k3", "status": "ERROR", "error": error}}))
+    sys.exit(3)
+answer = json.dumps({{"antwort": "Hallo aus dem Ablauf", "konto": os.path.basename(home)}})
 print(json.dumps({{"conversation_id": "k2", "status": "SUCCESS", "response": answer}}))
 """
 
@@ -93,13 +97,14 @@ def test_from_login_to_answer_and_back(client):
     # Anfragen laufen jetzt durch — mit Einstellungen und ohne Reste.
     antwort = client.post("/ask", json={"prompt": "Hallo", "provider": "gemini_sub"})
     assert antwort.status_code == 200
-    assert antwort.get_json() == {"antwort": "Hallo aus dem Ablauf"}
+    assert antwort.get_json()["antwort"] == "Hallo aus dem Ablauf"
     settings = json.loads((cli.state_dir() / "settings.json").read_text())
     assert "command(*)" in settings["permissions"]["deny"]
     assert list(cli.workspace_dir().iterdir()) == []
 
     # Abmelden: wieder ohne Zugang.
-    assert client.delete("/auth/gemini", environ_base=INGRESS).get_json()["signed_in"] is False
+    entfernt = client.delete("/auth/gemini/konto-1", environ_base=INGRESS).get_json()
+    assert entfernt["signed_in"] is False
     assert client.get("/status").get_json()["credentials"]["gemini_sub"] is False
     assert (
         client.post("/ask", json={"prompt": "Hallo", "provider": "gemini_sub"}).status_code == 500
@@ -123,3 +128,59 @@ def test_the_open_port_neither_shows_the_address_nor_starts_a_login(client):
     client.post("/auth/gemini/start", environ_base=INGRESS)
 
     assert client.get("/auth/gemini").get_json()["url"] is None
+
+
+def _login(client, label=""):
+    client.post("/auth/gemini/start", json={"label": label}, environ_base=INGRESS)
+    client.post("/auth/gemini/code", json={"code": CODE}, environ_base=INGRESS)
+    return _wait_idle(client)
+
+
+def test_two_accounts_share_the_load_when_the_first_runs_empty(client):
+    """Das Ziel von D-024: ist das erste Konto leer, antwortet das nächste — ohne dass
+    der Aufrufer etwas merkt."""
+    assert [a["label"] for a in _login(client, "Privat")["accounts"]] == ["Privat"]
+    status = _login(client, "Arbeit")
+    assert [(a["label"], a["state"]) for a in status["accounts"]] == [
+        ("Privat", "ok"),
+        ("Arbeit", "ok"),
+    ]
+
+    # Solange Kontingent da ist, antwortet das erste Konto ...
+    erste = client.post("/ask", json={"prompt": "Hallo", "provider": "gemini_sub"})
+    assert erste.get_json()["konto"] == "gemini-home"
+    # ... ist es leer, das zweite.
+    (cli.agy_home() / "LEER").write_text("", encoding="utf-8")
+    zweite = client.post("/ask", json={"prompt": "Hallo", "provider": "gemini_sub"})
+    assert zweite.status_code == 200
+    assert zweite.get_json()["konto"] == "konto-2"
+    status = _status(client)
+    assert [(a["label"], a["state"]) for a in status["accounts"]] == [
+        ("Privat", "exhausted"),
+        ("Arbeit", "ok"),
+    ]
+    assert status["accounts"][0]["retry_at"].endswith("Z")
+
+    # Nur das zweite Konto zu entfernen lässt das erste wieder an die Reihe kommen
+    # — nach seiner Wartezeit; bis dahin sagt die Antwort es.
+    (cli.agy_home() / "LEER").unlink()
+    entfernt = client.delete("/auth/gemini/konto-2", environ_base=INGRESS).get_json()
+    assert [a["label"] for a in entfernt["accounts"]] == ["Privat"]
+    gesperrt = client.post("/ask", json={"prompt": "Hallo", "provider": "gemini_sub"})
+    assert gesperrt.status_code == 500
+    assert "Kontingent" in gesperrt.get_json()["error"]
+
+
+def test_a_new_account_name_that_is_not_a_name_is_marked_at_its_field(client):
+    antwort = client.post("/auth/gemini/start", json={"label": "a;b"}, environ_base=INGRESS)
+
+    assert antwort.status_code == 422
+    assert "label" in antwort.get_json()["field_errors"]
+    assert _status(client)["state"] == "idle"
+
+
+def test_removing_an_unknown_account_answers_not_found(client):
+    antwort = client.delete("/auth/gemini/konto-9", environ_base=INGRESS)
+
+    assert antwort.status_code == 404
+    assert "gibt es nicht" in antwort.get_json()["error"]

@@ -13,8 +13,11 @@
   Add-on-Prozess lesbar (`0600`, Verzeichnis `0700`). Sie wird aus der Konfiguration nur dann neu
   geschrieben, wenn sich der eingetragene Wert geändert hat — sonst überschriebe ein Neustart die
   von der CLI erneuerten Tokens.
-- Die Anmeldung bei Google (`gemini_sub`) liegt als Datei unter `/data/.gemini/antigravity-cli/`
-  (Rechte `0600`), dazu eine Sicherung daneben. Sie entsteht im Add-on und erscheint nie in einer
+- Die Anmeldungen bei Google (`gemini_sub`) liegen je Konto als Datei unter `/data` (Rechte `0600`,
+  das erste in `/data/.gemini/antigravity-cli/`, weitere unter `/data/omniai-gemini-accounts/konto-N/`),
+  dazu eine Sicherung daneben. Die Kontenliste (`omniai-gemini-accounts.json`) enthält Namen,
+  Reihenfolge und Wartezeiten, keine Anmeldedaten; ihre Pfade sind relativ und werden beim Lesen auf
+  Ausbrüche geprüft. Sie entsteht im Add-on und erscheint nie in einer
   Antwort. Der **Code**, den der Nutzer von Google kopiert, und die **Anmeldeadresse** (sie trägt
   Zufallswerte der Sitzung) stehen nie im Log; der Code geht nur in die Eingabe der CLI. Die
   Adresse liefert das Add-on ausschließlich über den Ingress aus.
@@ -82,7 +85,7 @@ neben Port 8000 wird:
 - **Nur für Administratoren.** `panel_admin` (Vorgabe `true`, deshalb nicht eigens in `config.yaml` gesetzt) blendet die Oberfläche für andere Nutzer aus
   der Seitenleiste aus.
 - **Anmeldung bei Google nur über den Ingress.** Starten, Code einreichen, Abbrechen und Abmelden
-  (`/auth/gemini…`) gelten wie `PUT /settings`: nur von der Absenderadresse des Ingress-Proxys.
+  (`/auth/gemini…`, auch Konto hinzufügen und entfernen) gelten wie `PUT /settings`: nur von der Absenderadresse des Ingress-Proxys.
   Sonst könnte jeder, der Port 8000 erreicht, die Anmeldung des Betreibers entfernen oder eine
   fremde Anmeldung anstoßen.
 - **Zugänge nur schreiben.** `GET /settings` liefert jedes Zugangsfeld leer und dazu nur
@@ -177,7 +180,8 @@ Das Add-on speichert weder Texte noch Vektoren; im Log stehen nur Anzahl und Dim
 | Antwort des Modells | ja, im Durchlauf | nicht gespeichert | entfällt |
 | Anmeldezustand der Claude-CLI | ja | `/data/.claude` im Container | bis zur Deinstallation |
 | Anmeldezustand der Codex-CLI | ja | `/data/.codex` im Container | bis zur Deinstallation |
-| Anmeldung bei Google (Gemini-Abo) | ja | `/data/.gemini/antigravity-cli/` im Container, mit Sicherung | bis „Abmelden“ bzw. zur Deinstallation |
+| Anmeldungen bei Google (Gemini-Abo), je Konto | ja | `/data` im Container (`.gemini/antigravity-cli/` je Kontoordner), mit Sicherung | bis „Entfernen“ des Kontos bzw. zur Deinstallation |
+| Namen der Google-Konten (frei gewählt, z. B. „Privat“) | ja | `/data/omniai-gemini-accounts.json` | bis „Entfernen“ des Kontos |
 | Gespräche der Antigravity-CLI (Prompt, Antwort, Zusammenfassung) | während eines Laufs | unter `/data/.gemini/…` — die CLI legt sie selbst an | werden nach **jedem Lauf** gelöscht; von den Protokollen der CLI bleiben die jüngsten fünf |
 | Abgerufene Webseiten (Stufe `web`/`full`) | nur im Durchlauf | nicht gespeichert | entfällt |
 | Zugangsdaten | ja | `/data/options.json`, vom Supervisor verwaltet — geschrieben über den Reiter „Konfiguration“ oder die Seite „Einstellungen“ | bis zum Leeren bzw. „Entfernen“ |

@@ -40,6 +40,14 @@ export function formatDateTime(iso: string | null | undefined): string {
 }
 
 /** Deutsche Schreibweise, mit der Genauigkeit der Quelle — nicht mehr. */
+/** `21:03` am heutigen Tag, sonst `29.10.2026, 01:15` — für „nächster Versuch um …“. */
+export function formatWhen(iso: string | null | undefined): string {
+  const value = parse(iso)
+  if (!value) return EMPTY
+  const sameDay = DATE_FORMAT.format(value) === DATE_FORMAT.format(new Date())
+  return sameDay ? TIME_FORMAT.format(value) : formatDateTime(iso)
+}
+
 export function formatNumber(value: number | null | undefined, decimals = 0): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) return EMPTY
   return new Intl.NumberFormat('de-DE', {
