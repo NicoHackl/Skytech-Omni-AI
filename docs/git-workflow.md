@@ -39,7 +39,10 @@ Ein Vorhaben kann aus mehreren Arbeitspaketen bestehen — jedes Paket erzeugt e
 `dev/dev` und damit eine automatische Übernahme nach `dev/main`. Nach `main` geht trotzdem nur
 **ein** Pull Request:
 
-1. Vorhaben abgeschlossen, `dev/main` ist grün: `gh pr create --base main --head dev/main`.
+1. Vorhaben abgeschlossen, `dev/main` ist grün, dann gleich dem Repo-Besitzer zugewiesen:
+   `gh pr create --base main --head dev/main --assignee "$(gh repo view --json owner --jq .owner.login)"`.
+   Der Workflow [`pr-zuweisen.yaml`](../.github/workflows/pr-zuweisen.yaml) weist zusätzlich jeden
+   neu eröffneten Pull Request (auch von Dependabot) selbsttätig dem Besitzer zu.
 2. **Der User gibt den Pull Request frei.** Ein Agent merged ihn nie.
 3. Gemergt wird mit **Merge-Commit** (nicht Squash, nicht Rebase) — der Release-Job erkennt am
    zweiten Elternteil, welche Commits neu sind, und liest daraus die Changelog-Trailer.
@@ -208,6 +211,7 @@ andere Änderung durch `dev/main` und den Pull Request nach `main`.
 - Kein Commit und kein Merge von Hand auf `main`; kein Commit von Hand auf `dev/main`
 - Kein Merge von `dev/main` zurück nach `dev/dev`
 - Kein zweiter Pull Request nach `main`, solange einer offen ist
+- Kein Pull Request ohne Zuweisung an den Repo-Besitzer
 - Kein `Co-Authored-By`-Trailer und keine KI-Namensnennung in Commits oder Pull Requests
 - Keine Versionsnummer von Hand in `config.yaml` und kein von Hand gepflegter Changelog
 - Keine Secrets im Commit — vor dem Commit `git diff --staged` prüfen

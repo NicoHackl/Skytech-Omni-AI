@@ -25,7 +25,8 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
    Arbeitspaket neu angelegt, nicht auf einen anderen Branch ausgewichen. Nach jeder
    abgeschlossenen Aufgabe wird committet und gepusht. Danach prüft die CI und führt bei grünen
    Tests selbsttätig nach `dev/main` zusammen (nur in diese Richtung). Nach `main` geht **ein**
-   Pull Request von `dev/main`, den der User freigibt — nie ein Agent. **`main` und die Version
+   Pull Request von `dev/main`, den der User freigibt — nie ein Agent — und der beim Anlegen dem
+   Repo-Besitzer zugewiesen wird (`--assignee`). **`main` und die Version
    schreibt ausschließlich die CI**, und zwar erst nach dem Merge dieses Pull Requests — nie von
    Hand, nie durch einen Agenten; auf `dev/dev` und `dev/main` steht `version: "dev"` (D-025).
    Der Merge eines Pull Requests mit Änderung unter `skytech_omniai/` ist damit ein Release an
@@ -167,7 +168,9 @@ passende Datei lesen, statt zu raten:
 4. Betroffene `docs/`-Dateien im selben Arbeitspaket nachziehen.
 5. Committen — bei nutzerrelevanter Änderung mit `Changelog-<Kategorie>:`-Trailer (Regel 4) —
    und pushen auf `dev/dev`. Version, Changelog-Datei und `main` fasst nur die CI an; nach
-   dem Push ist nichts weiter zu tun, auch kein `git pull --rebase`.
+   dem Push ist nichts weiter zu tun, auch kein `git pull --rebase`. Das CI-Ergebnis wird
+   abgewartet (`gh run watch`); rot hat Vorrang (Regel 15). Ist ein Vorhaben abgeschlossen,
+   geht **ein** Pull Request `dev/main` → `main`, zugewiesen an den Repo-Besitzer.
 6. Neue Grundsatzentscheidung? → Eintrag in
    [docs/design-entscheidungen.md](docs/design-entscheidungen.md), ausführlich als ADR unter
    [docs/adr/](docs/adr/).
