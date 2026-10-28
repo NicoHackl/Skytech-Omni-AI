@@ -1,0 +1,86 @@
+# Release von Skytech OmniAI nach dem freigegebenen Pull Request dev/main → main.
+#
+# Nur der Merge eines Pull Requests löst das aus — Push auf main ist für alle
+# außer dem Release-Job gesperrt. Der Job stempelt den Stand von main mit Version
+# und Changelog und legt dazu einen Tag an. main ist der Stand, den Home
+# Assistant installiert. dev/dev und dev/main bleiben unberührt (version: "dev",
+# kein Changelog). Ablauf und Regeln: docs/git-workflow.md, Begründung: D-025.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Release
+    # Der eigene Release-Commit löst den Lauf noch einmal aus (Push mit Deploy-Key).
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    steps:
+      # Der Deploy-Key ist im Ruleset von main als einzige Ausnahme neben den
+      # Admins eingetragen. Fehlt er, liest checkout mit GITHUB_TOKEN; scheitern
+      # soll der Job dann erst, wenn wirklich etwas zu veröffentlichen ist.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Genau der gemergte Stand, samt Historie für die Ermittlung der Commits.
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+
+      # Merge-Commit: erster Elternteil ist das bisherige main (zuletzt
+      # veröffentlicht), zweiter der freigegebene Stand von dev/main. Bei einem
+      # Squash-Merge gibt es nur einen Elternteil — dann zählt der Commit selbst.
+      - name: Bezugsstand und Änderungen bestimmen
+        id: stand
+        run: |
+          if git rev-parse --verify --quiet "${GITHUB_SHA}^2" > /dev/null; then
+            echo "rev=$(git rev-parse "${GITHUB_SHA}^2")" >> "$GITHUB_OUTPUT"
+          else
+            echo "rev=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "base=$(git rev-parse "${GITHUB_SHA}^1")" >> "$GITHUB_OUTPUT"
+
+      - name: Version und Changelog in den Arbeitsbaum schreiben
+        id: plan
+        env:
+          RELEASE_BASE_REF: ${{ steps.stand.outputs.base }}
+        run: python3 scripts/release.py apply "${{ steps.stand.outputs.rev }}"
+
+      # Der Release-Commit wird direkt aus dem Baum gebaut statt gemergt — ein
+      # Konflikt ist damit ausgeschlossen. Elternteil: der gemergte Stand.
+      - name: Release-Commit und Tag auf main
+        if: steps.plan.outputs.bump != 'none'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          HAS_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
+        run: |
+          if [ "$HAS_DEPLOY_KEY" != "true" ]; then
+            echo "::error::Secret RELEASE_DEPLOY_KEY fehlt — ohne ihn darf der Job nicht nach main pushen (docs/git-workflow.md)."
+            exit 1
+          fi
+          export GIT_AUTHOR_NAME="github-actions[bot]"
+          export GIT_AUTHOR_EMAIL="41898282+github-actions[bot]@users.noreply.github.com"
+          export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+          export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+          git add skytech_omniai/config.yaml skytech_omniai/CHANGELOG.md
+          tree="$(git write-tree)"
+          commit="$(git commit-tree "$tree" -p "$GITHUB_SHA" \
+            -m "chore(release): Version ${VERSION}" \
+            -m "Veröffentlicht nach Freigabe des Pull Requests, Stand ${GITHUB_SHA::7}.")"
+          git tag -a "v${VERSION}" -m "Version ${VERSION}" "$commit"
+          # Alles oder nichts. main nimmt nur einen Fast-Forward an; ist main
+          # inzwischen weiter, scheitert der Push, und nichts ist verändert.
+          git push --atomic origin "${commit}:refs/heads/main" "refs/tags/v${VERSION}"
+          echo "### Version ${VERSION} veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Kein Release
+        if: steps.plan.outputs.bump == 'none'
+        run: echo "Seit dem letzten Release keine Änderung am Add-on — main bleibt, wie es ist." >> "$GITHUB_STEP_SUMMARY"

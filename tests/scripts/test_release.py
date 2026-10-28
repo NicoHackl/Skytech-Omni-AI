@@ -285,3 +285,17 @@ def test_build_plan_without_addon_commits_keeps_the_version():
 
     assert (plan.bump, plan.version) == (BUMP_NONE, "0.9.2")
     assert warnings == []
+
+
+def test_release_base_ref_is_overridable(monkeypatch):
+    """Der Release-Job setzt den Bezugsstand auf den ersten Elternteil des Merge-Commits."""
+    import importlib
+
+    import release
+
+    monkeypatch.setenv("RELEASE_BASE_REF", "abc1234")
+    try:
+        assert importlib.reload(release).RELEASE_BRANCH == "abc1234"
+    finally:
+        monkeypatch.delenv("RELEASE_BASE_REF")
+        importlib.reload(release)

@@ -1,11 +1,10 @@
-# Prüfungen und Release für Skytech OmniAI.
+# Prüfungen für Skytech OmniAI.
 #
-# Jeder Push auf agent/main durchläuft alle Prüfungen. Sind sie grün und hat
-# sich seit dem letzten Release etwas unter skytech_omniai/ geändert, legt der
-# Job "release" auf main einen Release-Commit an: der geprüfte Stand, gestempelt
-# mit Version und Changelog, dazu ein Tag. main ist der Stand, den Home
-# Assistant installiert. agent/main bleibt unberührt — kein Bot-Commit, kein
-# "git pull --rebase". Ablauf und Regeln: docs/git-workflow.md, Begründung: D-017.
+# Jeder Push auf dev/dev durchläuft alle Prüfungen. Sind sie grün, übernimmt der
+# Job "nach-dev-main" den Stand per Fast-Forward nach dev/main (einseitig, nie
+# zurück). Von dev/main nach main geht ein Pull Request, den der User freigibt;
+# erst dessen Merge löst das Release aus (.github/workflows/release.yaml).
+# Ablauf und Regeln: docs/git-workflow.md, Begründung: D-025.
 #
 # Lokal laufen dieselben Prüfungen über scripts/check.sh (--docker für Bild und
 # Smoke-Test). Actions sind auf Commit-SHAs festgenagelt; Dependabot hebt sie an.
@@ -14,18 +13,17 @@ name: CI
 
 on:
   push:
-    branches: [agent/main]
+    branches: [dev/dev]
   pull_request:
-    branches: [agent/main]
+    branches: [dev/dev]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 # Bei Pull Requests überholt ein neuerer Stand den laufenden Lauf. Auf
-# agent/main wird nie abgebrochen: ein laufender Release-Job darf nicht
-# mittendrin enden. Er hat zusätzlich eine eigene Gruppe, damit nie zwei
-# Releases gleichzeitig laufen.
+# dev/dev wird nie abgebrochen: eine laufende Übernahme nach dev/main darf nicht
+# mittendrin enden.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -190,59 +188,24 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  release:
-    name: Release
+  nach-dev-main:
+    name: Nach dev/main übernehmen
     needs: [python, frontend, addon-lint, docker, security, release-plan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/agent/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev/dev'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     concurrency:
-      group: release
+      group: dev-main
       cancel-in-progress: false
     steps:
-      # Der Deploy-Key ist im Ruleset von main als einzige Ausnahme neben den
-      # Admins eingetragen. Fehlt er, liest checkout mit GITHUB_TOKEN; scheitern
-      # soll der Job dann erst, wenn wirklich etwas zu veröffentlichen ist.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Genau der geprüfte Stand. Ist agent/main inzwischen weiter, kommt der
-          # Rest mit dem Lauf des neueren Pushs.
-          ref: ${{ github.sha }}
           fetch-depth: 0
-          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
-      - name: Version und Changelog in den Arbeitsbaum schreiben
-        id: plan
-        run: python3 scripts/release.py apply "$GITHUB_SHA"
-
-      # Der Release-Commit wird direkt aus dem Baum gebaut statt gemergt — ein
-      # Konflikt ist damit ausgeschlossen. Elternteile: das bisherige main und
-      # der veröffentlichte Stand von agent/main. Über diesen zweiten Elternteil
-      # findet der nächste Lauf heraus, was schon veröffentlicht ist.
-      - name: Release-Commit und Tag auf main
-        if: steps.plan.outputs.bump != 'none'
-        env:
-          VERSION: ${{ steps.plan.outputs.version }}
-          HAS_DEPLOY_KEY: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
+      # Nur Fast-Forward: Weicht dev/main von dev/dev ab, schlägt der Push fehl,
+      # statt etwas zu überschreiben. Die Richtung ist einseitig — nie zurück.
+      - name: Geprüften Stand nach dev/main übernehmen
         run: |
-          if [ "$HAS_DEPLOY_KEY" != "true" ]; then
-            echo "::error::Secret RELEASE_DEPLOY_KEY fehlt — ohne ihn darf der Job nicht nach main pushen (docs/git-workflow.md)."
-            exit 1
-          fi
-          export GIT_AUTHOR_NAME="github-actions[bot]"
-          export GIT_AUTHOR_EMAIL="41898282+github-actions[bot]@users.noreply.github.com"
-          export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
-          export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
-          git add skytech_omniai/config.yaml skytech_omniai/CHANGELOG.md
-          tree="$(git write-tree)"
-          commit="$(git commit-tree "$tree" -p origin/main -p "$GITHUB_SHA" \
-            -m "chore(release): Version ${VERSION}" \
-            -m "Veröffentlicht aus agent/main ${GITHUB_SHA::7}.")"
-          git tag -a "v${VERSION}" -m "Version ${VERSION}" "$commit"
-          # Alles oder nichts. main nimmt nur einen Fast-Forward an; ist main
-          # inzwischen weiter, scheitert der Push, und nichts ist verändert.
-          git push --atomic origin "${commit}:refs/heads/main" "refs/tags/v${VERSION}"
-          echo "### Version ${VERSION} veröffentlicht" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Kein Release
-        if: steps.plan.outputs.bump == 'none'
-        run: echo "Seit dem letzten Release keine Änderung am Add-on — main bleibt, wie es ist." >> "$GITHUB_STEP_SUMMARY"
+          git push origin "${GITHUB_SHA}:refs/heads/dev/main"
+          echo "### dev/main steht auf ${GITHUB_SHA::7}" >> "$GITHUB_STEP_SUMMARY"

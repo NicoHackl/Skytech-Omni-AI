@@ -1,6 +1,6 @@
 """Schnittstelle v1 für Skytech X (D-019).
 
-Vertrag: ``docs/contracts/omniai-api-v1.yaml`` (Kopie; Masterkopie im Repo
+Vertrag: ``contract/contract_skytech_x_omniai/omniai-api-v1.yaml`` (Kopie; Masterkopie im Repo
 Skytech-X-Backend). Anders als ``/ask`` ist jeder Aufruf hier mit einem Token
 geschützt, Fehler tragen zusätzlich einen stabilen Code, und Antworten lassen
 sich gegen ein JSON-Schema prüfen.
