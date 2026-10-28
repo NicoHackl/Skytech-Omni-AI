@@ -222,13 +222,13 @@ Provider nicht lahmlegen.
 
 | Datei | Zweck | Eingecheckt |
 |---|---|---|
-| `skytech_omniai/config.yaml` | Add-on-Konfiguration, Version und Optionsschema. **Einzige Quelle der Versionsnummer** — auf `agent/main` immer `dev`, die echte setzt der Release-Job auf `main` | ja |
+| `skytech_omniai/config.yaml` | Add-on-Konfiguration, Version und Optionsschema. **Einzige Quelle der Versionsnummer** — auf `dev/dev` immer `dev`, die echte setzt der Release-Job auf `main` nach dem Merge des Pull Requests | ja |
 | `skytech_omniai/CHANGELOG.md` | Änderungen je Version, erscheint im Update-Dialog von Home Assistant. Nur auf `main`, vom Release-Job aus den Changelog-Trailern erzeugt | nur auf `main` |
 | `skytech_omniai/build.yaml` | Basisimages je Architektur, festgenagelt | ja |
 | `skytech_omniai/requirements.txt` | Laufzeit-Abhängigkeiten mit festen Versionen | ja |
 | `requirements-dev.txt` | pytest, pytest-cov, PyYAML und ruff, nur für Entwicklung | ja |
 | `.hadolint.yaml` | Regeln für die Prüfung des Dockerfiles in der CI | ja |
-| `.github/dependabot.yml` | Wöchentliche Updates der Abhängigkeiten als PR gegen `agent/main` | ja |
+| `.github/dependabot.yml` | Wöchentliche Updates der Abhängigkeiten als PR gegen `dev/dev` | ja |
 | `.env.example` | Vorlage ohne echte Werte | ja |
 | `.env` | Lokale Werte, enthält Zugangsdaten | **nein** |
 | `/data/options.json` | Vom Supervisor geschrieben, liegt nur im Container. Das Add-on liest sie nur | **nein** |

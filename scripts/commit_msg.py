@@ -2,7 +2,7 @@
 
 Der Typ im Betreff bestimmt die Version, die Trailer "Changelog-<Kategorie>:"
 den Changelog (scripts/release.py). Ein Fehler darin lässt sich nach dem Push
-nicht mehr korrigieren — agent/main verbietet das Umschreiben der Historie.
+nicht mehr korrigieren — dev/dev verbietet das Umschreiben der Historie.
 Deshalb wird hier geprüft, solange der Commit noch lokal ist:
 
     python3 scripts/commit_msg.py <datei>          # als commit-msg-Hook

@@ -1,5 +1,5 @@
 # Wöchentliche Updates der festgenagelten Abhängigkeiten, als Pull Request
-# gegen agent/main. Die CI prüft jeden PR; nach dem Merge entscheidet der
+# gegen dev/dev. Die CI prüft jeden PR; nach dem Merge entscheidet der
 # Release-Job wie bei jedem anderen Push. Commit-Präfixe folgen Conventional
 # Commits, damit der Versionssprung stimmt (build → patch, ci → kein Release).
 #
@@ -11,7 +11,7 @@ version: 2
 updates:
   - package-ecosystem: pip
     directory: /skytech_omniai
-    target-branch: agent/main
+    target-branch: dev/dev
     schedule:
       interval: weekly
     commit-message:
@@ -20,7 +20,7 @@ updates:
 
   - package-ecosystem: pip
     directory: /
-    target-branch: agent/main
+    target-branch: dev/dev
     schedule:
       interval: weekly
     commit-message:
@@ -32,7 +32,7 @@ updates:
 
   - package-ecosystem: npm
     directory: /skytech_omniai/web
-    target-branch: agent/main
+    target-branch: dev/dev
     schedule:
       interval: weekly
     commit-message:
@@ -45,7 +45,7 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
-    target-branch: agent/main
+    target-branch: dev/dev
     schedule:
       interval: weekly
     commit-message:

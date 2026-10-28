@@ -2,7 +2,7 @@
 
 - **Datum:** 27.10.2026
 - **Status:** Geplant
-- **Betrifft:** neue Endpunkte `/v1/…`, Add-on-Option `api_token`, [contracts/omniai-api-v1.yaml](../contracts/omniai-api-v1.yaml)
+- **Betrifft:** neue Endpunkte `/v1/…`, Add-on-Option `api_token`, [contract/contract_skytech_x_omniai/omniai-api-v1.yaml](../../contract/contract_skytech_x_omniai/omniai-api-v1.yaml)
 
 ## Kontext
 

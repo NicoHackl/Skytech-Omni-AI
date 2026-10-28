@@ -6,9 +6,9 @@ name: CodeQL
 
 on:
   push:
-    branches: [agent/main]
+    branches: [dev/dev]
   pull_request:
-    branches: [agent/main]
+    branches: [dev/dev]
   schedule:
     # Montags 05:17 UTC: neue Abfragen finden auch Lücken in unverändertem Code.
     - cron: "17 5 * * 1"

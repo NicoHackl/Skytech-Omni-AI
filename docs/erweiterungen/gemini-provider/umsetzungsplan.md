@@ -10,7 +10,7 @@ dieses Vorhaben davon zählt:
 
 | Regel | Folge hier |
 |---|---|
-| Git (Regel 1) | Arbeit auf `agent/main`. **Jeder Push mit Änderung unter `skytech_omniai/` ist ein Release an alle Nutzer** (D-017) |
+| Git (Regel 1) | Arbeit auf `dev/dev`. **Der Merge des Pull Requests `dev/main` → `main` mit Änderung unter `skytech_omniai/` ist ein Release an alle Nutzer** (D-025) |
 | Changelog (Regel 4) | Trailer `Changelog-<Kategorie>:` aus Nutzersicht, nur bei nutzerrelevanter Änderung |
 | Doku (Regel 5) | Betroffene `docs/`-Dateien im selben Arbeitspaket, keine Nachreichung |
 | Nicht raten (Regel 7) | Die mit „ungeprüft“ markierten Punkte sind Prüfaufträge, keine Annahmen |
@@ -92,7 +92,7 @@ Eigener Beschluss, weil es die gemeinsame Schnittstelle berührt (D-005):
   Schema der Anfrage durch. Rückwärtskompatibel, die Prüfung mit `jsonschema` bleibt (D-020).
 - **Nutzungsdaten:** `usage` aus der Antwort als Attribut der (je Anfrage neuen) Provider-Instanz
   ablegen; `api_v1.py` liest es und füllt das Feld, das [../../roadmap.md](../../roadmap.md) (M5) als offen führt.
-- Beides nur, wenn Skytech X es braucht. Vertrag: [../../contracts/omniai-api-v1.yaml](../../contracts/omniai-api-v1.yaml)
+- Beides nur, wenn Skytech X es braucht. Vertrag: [../../../contract/contract_skytech_x_omniai/omniai-api-v1.yaml](../../../contract/contract_skytech_x_omniai/omniai-api-v1.yaml)
   ist eine Kopie, Änderungen zuerst im Repo Skytech-X-Backend.
 
 ### AP 1-5 — nur bei Entscheidung 2 = ja: Websuche

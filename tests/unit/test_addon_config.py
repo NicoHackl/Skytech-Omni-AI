@@ -87,7 +87,7 @@ def test_build_yaml_covers_exactly_the_supported_architectures(config):
 
 
 def test_version_is_the_dev_placeholder(config):
-    """Auf agent/main steht "dev" — die Version setzt nur der Release-Job (D-017)."""
+    """Auf dev/dev steht "dev" — die Version setzt nur der Release-Job (D-025)."""
     assert config["version"] == "dev"
 
 

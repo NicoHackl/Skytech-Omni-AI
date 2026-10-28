@@ -15,6 +15,18 @@ KI-Agenten gleichermaßen**. Diese Datei wiederholt sie nicht, sondern nennt nur
    Betreff und Changelog-Trailer, `pre-push` führt `scripts/check.sh` aus — dieselben Prüfungen
    wie die CI.
 
+## Vor dem Push
+
+Lokal läuft `scripts/check.sh` — dieselben Prüfungen wie in der CI, vollständig (eiserne Regel 15,
+[docs/test-strategie.md](docs/test-strategie.md#lokal--ci)). Danach das CI-Ergebnis abwarten; ein
+roter Lauf wird vor allem anderen behoben.
+
+## Pull Requests
+
+Gearbeitet wird auf `dev/dev`, die CI übernimmt grüne Stände nach `dev/main`. Nach `main` geht je
+Vorhaben **ein** Pull Request von `dev/main`, den der Maintainer freigibt. Ablauf:
+[docs/git-workflow.md](docs/git-workflow.md).
+
 ## Vor jedem Pull Request
 
 Die Checkliste steht in der PR-Vorlage
@@ -25,7 +37,8 @@ automatisch eingefügt.
 
 Alle Agenten ziehen ihre Regeln aus derselben Datei: `AGENTS.md`.
 `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` und `.cursor/rules/` sind reine
-Verweise darauf.
+Verweise darauf. KI-Accounts erscheinen nicht als Contributor: kein `Co-Authored-By`, keine
+Signatur in Commits oder Pull Requests.
 
 **Regeln werden ausschließlich in `AGENTS.md` geändert** — nie in einer der Verweisdateien.
 Sonst gilt für ein Tool etwas anderes als für die übrigen, und genau das soll die Struktur

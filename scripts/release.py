@@ -1,9 +1,10 @@
 """Release des Add-ons: Version und Changelog für den Release-Branch main.
 
-agent/main enthält nur den Quellstand — mit version: "dev" und ohne Changelog.
-Ein Release ist ein Commit auf main, dessen Inhalt der geprüfte Stand von
-agent/main ist, gestempelt mit Version und Changelog. Der Bot schreibt dadurch
-nie nach agent/main zurück. Regeln: docs/git-workflow.md, Begründung: D-017.
+dev/dev und dev/main enthalten nur den Quellstand — mit version: "dev" und ohne
+Changelog. Ein Release ist ein Commit auf main, der nach dem freigegebenen Pull
+Request von dev/main entsteht: der Stand von main, gestempelt mit Version und
+Changelog. Der Bot schreibt dadurch nie nach dev/dev oder dev/main zurück.
+Regeln: docs/git-workflow.md, Begründung: D-025.
 
 Lokal als Trockenlauf (vorher git fetch, damit origin/main aktuell ist):
 
@@ -11,10 +12,12 @@ Lokal als Trockenlauf (vorher git fetch, damit origin/main aktuell ist):
     python3 scripts/release.py apply    # schreibt beide Dateien in den Arbeitsbaum
 
 Grundlage sind die Commits seit dem zuletzt veröffentlichten Stand — das ist
-der jüngste gemeinsame Vorfahr von origin/main und HEAD, weil jeder
-Release-Commit den veröffentlichten Stand von agent/main als zweiten Elternteil
-trägt. Den Versionssprung bestimmen nur Commits, die skytech_omniai/ ändern;
-Changelog-Einträge kommen aus den Trailern aller Commits.
+der jüngste gemeinsame Vorfahr von main (vor dem Merge) und dem Stand, der
+hineingemergt wird. Der Bezugsstand ist über die Umgebungsvariable
+RELEASE_BASE_REF überschreibbar (Standard: origin/main); der Release-Job setzt
+sie auf den ersten Elternteil des Merge-Commits. Den Versionssprung bestimmen
+nur Commits, die skytech_omniai/ ändern; Changelog-Einträge kommen aus den
+Trailern aller Commits.
 """
 
 from __future__ import annotations
@@ -35,7 +38,7 @@ CONFIG_FILE = f"{ADDON_DIR}/config.yaml"
 CHANGELOG_FILE = f"{ADDON_DIR}/CHANGELOG.md"
 # Ort des Changelogs bis 0.9.2. Nur noch gelesen, solange main ihn so enthält.
 LEGACY_CHANGELOG_FILE = "CHANGELOG.md"
-RELEASE_BRANCH = "origin/main"
+RELEASE_BRANCH = os.environ.get("RELEASE_BASE_REF", "origin/main")
 DEV_VERSION = "dev"
 
 BUMP_NONE = "none"
@@ -253,7 +256,7 @@ def _git(*args: str) -> str:
 
 
 def released_base(rev: str) -> str:
-    """Zuletzt veröffentlichter Stand von agent/main, der in rev enthalten ist."""
+    """Zuletzt veröffentlichter Stand, der in rev enthalten ist."""
     try:
         return _git("merge-base", RELEASE_BRANCH, rev).strip()
     except subprocess.CalledProcessError as error:

@@ -142,9 +142,9 @@ scripts/check.sh                                # alle Prüfungen wie in der CI
 scripts/check.sh --docker                       # zusätzlich Bild bauen und Smoke-Test
 ```
 
-Gearbeitet wird auf `agent/main`. Jeder grüne Push mit Änderung am Add-on wird automatisch
-veröffentlicht: die CI setzt Version und Changelog und schreibt `main` — von Hand wird dort nichts
-geändert. Changelog-Einträge stehen als Trailer im Commit. Ablauf:
+Gearbeitet wird auf `dev/dev`. Grüne Stände übernimmt die CI nach `dev/main`; nach `main` geht
+ein Pull Request, den der Maintainer freigibt. Erst dessen Merge veröffentlicht das Add-on: die CI
+setzt Version und Changelog und schreibt `main` — von Hand wird dort nichts geändert. Changelog-Einträge stehen als Trailer im Commit. Ablauf:
 [docs/git-workflow.md](docs/git-workflow.md). Vor dem ersten Commit lesen:
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -159,4 +159,8 @@ geändert. Changelog-Einträge stehen als Trailer im Commit. Ablauf:
 
 ## Lizenz
 
-Privates Projekt, keine Lizenz erteilt.
+MIT — siehe [LICENSE](LICENSE).
+
+## Unterstützen
+
+Gefällt dir das Projekt? [Spendier mir einen Kaffee]({{BUYMEACOFFEE_URL}}).

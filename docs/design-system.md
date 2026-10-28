@@ -16,6 +16,8 @@ Das Vokabular ist eines. Was sich unterscheidet, sind ausschließlich die fünf 
 |---|---|---|---|
 | **Home Assistant** | `data-design="ha"` | `#18BCF2` | Projekte mit Bezug zu **Home Assistant**. Weiße bzw. schwarze Basis je nach Modus |
 | **FCR** | `data-design="fcr"` | `#8a1f33` (hell) / `#c2334c` (dunkel) | Projekte mit Bezug zum **FC Ruderting** |
+| **Skytech** | `data-design="skytech"` | `#007acc` (hell) / `#3aa0e8` (dunkel) | Web-Oberflächen der **Skytech**-Projekte. Für dieses Projekt nicht eingebaut — es nutzt `ha`; die Token-Werte stehen in der Referenz-`styles.css` der Vorlage |
+| **Skytech iOS** | kein Attribut — natives SwiftUI-Theme | `#007ACC` hell / `#3AA0E8` dunkel | **iOS-Apps** der Skytech-Projekte; hier nicht anwendbar |
 | *keine gesetzt* | fehlt oder unbekannt | Grau aus der Textskala | Sichtbares „noch nicht entschieden" — kein Zustand zum Ausliefern |
 
 Das Attribut steht am `<html>`-Element und wird zur Bauzeit gesetzt (`init-projekt.sh --design`),

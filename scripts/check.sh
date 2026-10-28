@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Alle Prüfungen, die auch die CI auf agent/main ausführt — lokal, vor dem Push.
+# Alle Prüfungen, die auch die CI auf dev/dev ausführt — lokal, vor dem Push.
 #
 #   scripts/check.sh            Linting, Tests, Bau der Oberfläche
 #   scripts/check.sh --docker   zusätzlich Image bauen und Smoke-Test

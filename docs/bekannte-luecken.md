@@ -10,19 +10,22 @@ wo nicht.
 |---|---|---|---|
 | API-Pfade | [frontend.md](frontend.md) beschreibt `/api/…` als Präfix | Die Endpunkte heißen `/ask`, `/models`, `/status`, `/health` ohne Präfix | Bewusst so, D-010. Beim Anlegen eines neuen Endpunkts kein `/api` voranstellen |
 | Auslieferung | [frontend.md](frontend.md) nennt einen Webserver mit SPA-Fallback | Flask liefert das Bündel selbst aus | Bewusst so, D-009. Kein nginx im Bild |
-| Vertrag v1 | [contracts/omniai-api-v1.yaml](contracts/omniai-api-v1.yaml) beschreibt `/v1/…` inklusive Agent-Läufen und Nutzungsdaten | Werkzeuge in Läufen nur mit `claude_sub`; `codex_sub` und `gemini` laufen ohne Werkzeuge als einzelne Anfrage. `/v1/completions` liefert keine Nutzungsdaten (M5) | Die Datei ist eine Kopie — geändert wird zuerst im Repo Skytech-X-Backend |
+| Vertrag v1 | [contract/contract_skytech_x_omniai/omniai-api-v1.yaml](../contract/contract_skytech_x_omniai/omniai-api-v1.yaml) beschreibt `/v1/…` inklusive Agent-Läufen und Nutzungsdaten | Werkzeuge in Läufen nur mit `claude_sub`; `codex_sub` und `gemini` laufen ohne Werkzeuge als einzelne Anfrage. `/v1/completions` liefert keine Nutzungsdaten (M5) | Die Datei ist eine Kopie — geändert wird zuerst im Repo Skytech-X-Backend |
 | Abbruch eines Laufs ohne Werkzeuge | Abbrechen beendet den Lauf | Eine laufende Einzelanfrage (`codex_sub`, `gemini`) lässt sich nicht unterbrechen; der Lauf endet erst mit ihrer Antwort und wird dann als abgebrochen gemeldet | Für lange Aufgaben `claude_sub` nehmen |
 
 ## Stolpersteine
 
-- **Ein Push auf `agent/main` ist ein Release.** Ändert er etwas unter `skytech_omniai/` und ist
-  die CI grün, bekommen alle Installationen das Update angeboten. Halbfertiges gehört auf einen
-  `feature/`-Branch (D-017).
-- **`main` ist kein Vorfahr von `agent/main`.** Jeder Release-Commit trägt Version und Changelog,
-  die es auf `agent/main` nicht gibt. Nie von `main` abzweigen und nie `main` in `agent/main`
-  mergen — sonst landen `version: "0.x.y"` und `skytech_omniai/CHANGELOG.md` im Arbeitsbranch,
-  und der Konsistenztest schlägt an.
-- **Ein Changelog-Trailer ist nach dem Push endgültig.** `agent/main` verbietet das Umschreiben
+- **Der Merge des Pull Requests nach `main` ist ein Release.** Ändert er etwas unter
+  `skytech_omniai/`, bekommen alle Installationen das Update angeboten. Halbfertiges gehört auf
+  einen `feature/`-Branch und bleibt aus `dev/main` heraus (D-025).
+- **`main` ist kein Vorfahr von `dev/dev` und `dev/main`.** Jeder Release-Commit trägt Version und
+  Changelog, die es auf `dev/dev` nicht gibt. Nie von `main` abzweigen und nie `main` nach `dev/dev`
+  oder `dev/main` mergen — sonst landen `version: "0.x.y"` und `skytech_omniai/CHANGELOG.md` im
+  Arbeitsbranch, und der Konsistenztest schlägt an.
+- **Der Pull Request nach `main` wird als Merge-Commit gemergt.** Bei Squash oder Rebase fehlt der
+  zweite Elternteil; der Release-Job fällt dann auf den Squash-Commit zurück, und die
+  Changelog-Trailer einzelner Commits gehen verloren.
+- **Ein Changelog-Trailer ist nach dem Push endgültig.** `dev/dev` verbietet das Umschreiben
   der Historie. Ein falscher Eintrag bleibt stehen; ergänzt wird mit dem nächsten Commit. Der
   commit-msg-Hook fängt Tippfehler in der Kategorie ab, den Wortlaut prüft er nicht.
 - **Die Oberfläche zeigt bei lokal gebautem Image „Version dev“.** Richtig so: die Nummer

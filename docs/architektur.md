@@ -222,7 +222,7 @@ Zusagen, auf die sich der gesamte Code verlässt:
 2. Jede Ausgabe an einen Aufrufer ist entweder das JSON des Modells oder ein deutscher Satz unter
    `error`.
 3. Die Versionsnummer steht nur in `skytech_omniai/config.yaml`; alles andere liest sie von dort.
-   Auf `agent/main` steht dort `dev`, die echte Nummer setzt der Release-Job auf `main` (D-017).
+   Auf `dev/dev` steht dort `dev`, die echte Nummer setzt der Release-Job auf `main` (D-025).
 4. `parse_json` ist der einzige Ort, an dem aus Modellausgabe eine Datenstruktur wird.
 5. `web/src/api.ts` ist der einzige Ort, an dem die Oberfläche `fetch` aufruft.
 

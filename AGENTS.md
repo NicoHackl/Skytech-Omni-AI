@@ -20,13 +20,16 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
 
 ## Eiserne Regeln (nicht verhandelbar)
 
-1. **Git:** Commit und Push erfolgen ausschließlich im Branch `agent/main` — nie direkt auf
-   `main`. Existiert der Branch weder lokal noch remote, wird er beim ersten Arbeitspaket neu
-   angelegt, nicht auf einen anderen Branch ausgewichen. Nach jeder abgeschlossenen Aufgabe wird
-   committet und gepusht. **`main` und die Version schreibt ausschließlich die CI** — nie von
-   Hand, nie durch einen Agenten; auf `agent/main` steht `version: "dev"` (D-017). Ein grüner
-   Push mit Änderung unter `skytech_omniai/` ist damit ein Release an alle Nutzer. Details:
-   [docs/git-workflow.md](docs/git-workflow.md).
+1. **Git:** Commit und Push erfolgen ausschließlich im Arbeitsbranch `dev/dev` — nie direkt auf
+   `dev/main` oder `main`. Existiert der Branch weder lokal noch remote, wird er beim ersten
+   Arbeitspaket neu angelegt, nicht auf einen anderen Branch ausgewichen. Nach jeder
+   abgeschlossenen Aufgabe wird committet und gepusht. Danach prüft die CI und führt bei grünen
+   Tests selbsttätig nach `dev/main` zusammen (nur in diese Richtung). Nach `main` geht **ein**
+   Pull Request von `dev/main`, den der User freigibt — nie ein Agent. **`main` und die Version
+   schreibt ausschließlich die CI**, und zwar erst nach dem Merge dieses Pull Requests — nie von
+   Hand, nie durch einen Agenten; auf `dev/dev` und `dev/main` steht `version: "dev"` (D-025).
+   Der Merge eines Pull Requests mit Änderung unter `skytech_omniai/` ist damit ein Release an
+   alle Nutzer. Details: [docs/git-workflow.md](docs/git-workflow.md).
 2. **Sprache Code:** Variablen, Funktionen, Klassen, Dateinamen **englisch**.
 3. **Sprache Text:** Kommentare, Commit-Messages, Log-Meldungen, UI-Texte, Labels und
    User-Hinweise **deutsch**.
@@ -58,13 +61,17 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
    dürfen intern abweichen; bei der Ausgabe an den User wird nach Berliner Zeit in dieses Format
    umgesetzt. Wie viel davon überhaupt angezeigt wird, regelt Regel 12 und
    [docs/nutzertexte.md](docs/nutzertexte.md).
-10. **Designsprache:** Es gibt zwei festgelegte, **einen Default gibt es nicht**, und geraten wird
+10. **Designsprache:** Es gibt vier festgelegte, **einen Default gibt es nicht**, und geraten wird
     nie:
     - **FCR** (`data-design="fcr"`) — Vereinsfarben des FC Ruderting — für Aufgaben und Projekte
       mit Bezug zum **FC Ruderting**.
     - **Home Assistant** (`data-design="ha"`) — Weiß bzw. Schwarz je nach Hell-/Dunkel-Modus,
       Akzentfarbe **`#18BCF2`** an Stelle des Rots — für Aufgaben und Projekte mit Bezug zu
       **Home Assistant**.
+    - **Skytech** (`data-design="skytech"`) — Markenblau `#007ACC` (hell) / `#3AA0E8` (dunkel) —
+      für Web-Oberflächen der **Skytech**-Projekte.
+    - **Skytech iOS** (`skytech-ios`) — dieselbe Markenfarbe als natives SwiftUI-Theme, ohne
+      `data-design` — für **iOS-Apps** der Skytech-Projekte.
 
     Für **jedes andere Projekt** und immer dann, wenn die Zuordnung nicht zweifelsfrei ist, wird
     die Farbwahl **erfragt, bevor die erste Zeile Oberfläche entsteht**. Die Frage entfällt nur,
@@ -90,6 +97,28 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
     reparieren. Muss Technisches in einer Oberfläche doch erreichbar sein (Support,
     Administration), steht es aufgeklappt oder auf einer eigenen Seite, nie in der Hauptzeile.
     Details und Beispiele: [docs/nutzertexte.md](docs/nutzertexte.md).
+13. **Keine KI-Accounts als Contributor:** Weder Commits noch Pull Requests tragen einen
+    `Co-Authored-By`-Trailer, ein „Generated with"-Zeichen oder sonst eine Namensnennung von
+    Claude, Codex, Gemini, Copilot oder einem anderen KI-Account. Auch Git-Autor und -Committer
+    sind der Mensch hinter dem Repo. Eine Voreinstellung des Werkzeugs, die eine solche Zeile
+    anhängt, wird überstimmt.
+14. **Lizenz und Unterstützung:** Das Repo hat eine `LICENSE` (MIT) im Wurzelverzeichnis, und die
+    `README.md` nennt sie im Abschnitt „Lizenz". Dieselbe `README.md` verlinkt im Abschnitt
+    „Unterstützen" den BuyMeACoffee-Link. Fehlt eines von beidem, ist das Repo nicht fertig
+    eingerichtet.
+15. **Lokal = CI:** Die Befehle in der Tabelle „Befehle" sind die **einzige** Definition der
+    Prüfung. Die CI führt exakt diese Prüfungen aus (`scripts/check.sh` ist der gemeinsame
+    Einstiegspunkt) — keine zweite, abweichende Befehlsliste in `.github/workflows/`. Vor jedem
+    Push läuft die **vollständige** Prüfung lokal, nicht nur der gerade betroffene Test. Ein
+    roter CI-Lauf nach dem Push hat Vorrang vor jeder neuen Aufgabe und wird in der Reihenfolge
+    behoben: Ursache finden, **lokal nachstellen**, beheben, erneut pushen. Details:
+    [docs/test-strategie.md](docs/test-strategie.md).
+16. **Projektübergreifende Verträge:** Schnittstellen zu anderen Skytech-Projekten stehen in
+    [`contract/`](contract/README.md) — dort gilt die Struktur `contract/contract_<projektpaar>/`.
+    Wer eine solche Schnittstelle ändert (Felder, Endpunkte, Semantik), liest zuerst
+    `contract/README.md` und den betreffenden Vertrag und zieht **beide Kopien** (dieses Repo und
+    die Gegenstelle) im **selben Arbeitspaket** nach. Der Master der HTTP-Schnittstelle liegt im
+    Backend; die Kopie hier bleibt inhaltlich unverändert.
 
 ## Befehle
 
@@ -104,7 +133,7 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
 | Release-Trockenlauf | `git fetch && python3 scripts/release.py plan` |
 
 Vor jedem Commit muss `scripts/check.sh` fehlerfrei durchlaufen. Dieselben Prüfungen laufen in
-GitHub bei jedem Push auf `agent/main` ([docs/test-strategie.md](docs/test-strategie.md)).
+GitHub bei jedem Push auf `dev/dev` ([docs/test-strategie.md](docs/test-strategie.md)).
 
 ## Wo steht was
 
@@ -119,12 +148,12 @@ passende Datei lesen, statt zu raten:
 | [docs/frontend.md](docs/frontend.md) | Frontend-Stack, Ordnerstruktur, Routing, API-Client, Seiten- und Formularmuster |
 | [docs/design-system.md](docs/design-system.md) | Design-Tokens, Klassenkatalog, Zustände, Responsiv, Icons, Barrierefreiheit |
 | [docs/nutzertexte.md](docs/nutzertexte.md) | Was der Nutzer zu sehen bekommt: Formatierung, Fehlermeldungen, Formulierung |
-| [docs/git-workflow.md](docs/git-workflow.md) | Branches, Commit-Format, Changelog-Trailer, Hooks, Versionierung, automatisches Release |
+| [docs/git-workflow.md](docs/git-workflow.md) | Branches (`dev/dev` → `dev/main` → `main`), Pull Request, Commit-Format, Changelog-Trailer, Hooks, Versionierung, automatisches Release |
 | [docs/test-strategie.md](docs/test-strategie.md) | Testarten, Pflicht-Testfälle, Coverage-Ziel, Jobs der CI |
 | [docs/design-entscheidungen.md](docs/design-entscheidungen.md) | Entscheidungs-Log — Quelle der Wahrheit fürs „warum" |
 | [docs/konfiguration.md](docs/konfiguration.md) | Env-Variablen, Config-Optionen, Secrets-Handhabung |
 | [docs/api-referenz.md](docs/api-referenz.md) | Endpunkte und öffentliche Schnittstellen |
-| [docs/contracts/omniai-api-v1.yaml](docs/contracts/omniai-api-v1.yaml) | Vertrag v1 mit Skytech X (OpenAPI, Kopie; Master im Backend-Repo) |
+| [contract/README.md](contract/README.md) | Projektübergreifende Verträge: Struktur, Regeln, Index der Gegenstellen (Vertrag v1 mit Skytech X: [contract/contract_skytech_x_omniai/omniai-api-v1.yaml](contract/contract_skytech_x_omniai/omniai-api-v1.yaml)) |
 | [docs/sicherheit-datenschutz.md](docs/sicherheit-datenschutz.md) | Secrets, personenbezogene Daten, externe Dienste |
 | [docs/bekannte-luecken.md](docs/bekannte-luecken.md) | Abweichungen Spec ↔ Code, Stolpersteine, offene Bugs |
 | [docs/roadmap.md](docs/roadmap.md) | Meilensteine und Umsetzungsstand |
@@ -137,7 +166,7 @@ passende Datei lesen, statt zu raten:
 3. Implementieren, dann `scripts/check.sh` grün bekommen (Tests, Linting, Bau — wie die CI).
 4. Betroffene `docs/`-Dateien im selben Arbeitspaket nachziehen.
 5. Committen — bei nutzerrelevanter Änderung mit `Changelog-<Kategorie>:`-Trailer (Regel 4) —
-   und pushen auf `agent/main`. Version, Changelog-Datei und `main` fasst nur die CI an; nach
+   und pushen auf `dev/dev`. Version, Changelog-Datei und `main` fasst nur die CI an; nach
    dem Push ist nichts weiter zu tun, auch kein `git pull --rebase`.
 6. Neue Grundsatzentscheidung? → Eintrag in
    [docs/design-entscheidungen.md](docs/design-entscheidungen.md), ausführlich als ADR unter

@@ -1,30 +1,49 @@
 # Git-Workflow
 
-> Die Grundregel — Commit und Push ausschließlich im Branch `agent/main` — steht in
+> Die Grundregel — Commit und Push ausschließlich im Branch `dev/dev` — steht in
 > [`AGENTS.md`](../AGENTS.md). Hier steht der ausführliche Ablauf.
 
 ## Branch-Modell
 
 | Branch | Zweck |
 |---|---|
-| `agent/main` | Arbeitsbranch für KI-Agenten und laufende Entwicklung. Enthält nur Quellstand: `version: "dev"`, kein Changelog. **Nur Menschen und Agenten schreiben hier, nie die CI.** |
-| `main` | Release-Branch — den installiert Home Assistant. **Schreibt ausschließlich die CI.** |
+| `dev/dev` | Arbeitsbranch für KI-Agenten und laufende Entwicklung. Enthält nur Quellstand: `version: "dev"`, kein Changelog. **Nur Menschen und Agenten schreiben hier, nie die CI.** |
+| `dev/main` | Geprüfter Zwischenstand. **Wird ausschließlich von der CI befüllt**, per Fast-Forward aus `dev/dev` — nie von Hand, nie zurück. |
+| `main` | Release-Branch — den installiert Home Assistant. **Schreibt ausschließlich die CI**, nach dem Merge des freigegebenen Pull Requests. |
 | `feature/<kurzname>` | Optional für größere, klar abgegrenzte Vorhaben |
 
-Jeder Commit auf `main` ist ein Release: der geprüfte Stand von `agent/main`, gestempelt mit
-Version (`skytech_omniai/config.yaml`) und Changelog (`skytech_omniai/CHANGELOG.md`). Er hat
-zwei Elternteile — das vorige `main` und den veröffentlichten Stand von `agent/main` — und
-unterscheidet sich von diesem nur in diesen beiden Dateien. Ein Ruleset sperrt `main` für alle
-außer dem Release-Job und den Admins. Begründung: D-017.
+```text
+dev/dev ──push──▶ CI: alles grün? ──ja──▶ dev/main ──Pull Request──▶ main ──Merge──▶ Release
+                                          (automatisch,             (Freigabe        (Version,
+                                           einseitig)                 durch User)      Changelog, Tag)
+```
 
-Weil die CI nie nach `agent/main` schreibt, braucht es nach einem Release **kein**
+Jeder Commit auf `main`, der etwas unter `skytech_omniai/` verändert hat, wird mit einem
+Release-Commit abgeschlossen: der gemergte Stand, gestempelt mit Version
+(`skytech_omniai/config.yaml`) und Changelog (`skytech_omniai/CHANGELOG.md`). Ein Ruleset sperrt
+`main` für alle außer dem Release-Job und den Admins und verlangt für Änderungen einen
+Pull Request mit Freigabe. Begründung: D-025.
+
+Weil die CI nie nach `dev/dev` schreibt, braucht es nach einem Release **kein**
 `git pull --rebase`. Nötig ist es nur, wenn jemand anderes (ein zweiter Agent, ein gemergter
-Dependabot-PR) inzwischen auf `agent/main` gepusht hat — dann weist Git den Push ab, und
+Dependabot-PR) inzwischen auf `dev/dev` gepusht hat — dann weist Git den Push ab, und
 `git pull --rebase` löst es ohne Konflikt im Changelog, denn es gibt dort keine Datei mehr.
 
 Wird ein Merge-Konflikt pauschal zugunsten einer Seite aufgelöst („Branch X hat Vorrang"), wird
 vorher geprüft, was die andere Seite dabei verliert: `git log <ziel>..<quelle>` und umgekehrt.
 Eine Seite pauschal gewinnen zu lassen ist zulässig — sie ungesehen gewinnen zu lassen nicht.
+
+## Pull Request nach main
+
+Ein Vorhaben kann aus mehreren Arbeitspaketen bestehen — jedes Paket erzeugt einen Push auf
+`dev/dev` und damit eine automatische Übernahme nach `dev/main`. Nach `main` geht trotzdem nur
+**ein** Pull Request:
+
+1. Vorhaben abgeschlossen, `dev/main` ist grün: `gh pr create --base main --head dev/main`.
+2. **Der User gibt den Pull Request frei.** Ein Agent merged ihn nie.
+3. Gemergt wird mit **Merge-Commit** (nicht Squash, nicht Rebase) — der Release-Job erkennt am
+   zweiten Elternteil, welche Commits neu sind, und liest daraus die Changelog-Trailer.
+4. Solange ein Pull Request offen ist, wird kein zweiter angelegt.
 
 ## Commit-Format
 
@@ -46,7 +65,8 @@ fix(api): Zeitzone bei Tageswechsel korrigiert
 docs(architektur): Datenfluss aktualisiert
 ```
 
-Der Rumpf ist nur nötig, wenn das „warum" nicht aus der Betreffzeile hervorgeht.
+Der Rumpf ist nur nötig, wenn das „warum" nicht aus der Betreffzeile hervorgeht. Es steht
+**kein** `Co-Authored-By` und keine KI-Signatur im Commit (eiserne Regel 13).
 
 **Der Typ bestimmt die Version** (siehe [Versionierung](#versionierung)). Ein `feat` als `fix`
 getarnt ergibt die falsche Version — der Typ ist deshalb keine Stilfrage.
@@ -72,7 +92,7 @@ Commits ohne nutzerrelevante Änderung (Refactoring, Tests, Doku für Entwickler
 Trailer. Hat ein Release gar keinen, schreibt der Release-Job „Interne Verbesserungen ohne
 sichtbare Änderung.“ und warnt.
 
-**Ein Trailer ist nach dem Push nicht mehr korrigierbar** — `agent/main` verbietet das
+**Ein Trailer ist nach dem Push nicht mehr korrigierbar** — `dev/dev` verbietet das
 Umschreiben der Historie. Deshalb prüft der commit-msg-Hook Betreff und Kategorien, solange der
 Commit lokal ist (vor dem Push lässt sich mit `git commit --amend` noch alles ändern). Ist doch
 ein falscher Eintrag hinausgegangen, bleibt er stehen; ein ergänzender Eintrag folgt mit dem
@@ -85,17 +105,20 @@ nächsten Commit.
    ohne dass man es ihm ansieht — genau daran ist am 18.08.2026 ein Arbeitspaket verlorengegangen:
    der Arbeitsbranch entstand aus einem veralteten lokalen Stand, der fehlende Commit war damit
    nie enthalten und wurde beim späteren Merge stillschweigend überschrieben.
-2. Auf `agent/main` wechseln — existiert er lokal nicht, wird er von `origin/agent/main`
-   angelegt: `git checkout agent/main 2>/dev/null || git checkout -b agent/main origin/agent/main`
+2. Auf `dev/dev` wechseln — existiert er lokal nicht, wird er von `origin/dev/dev`
+   angelegt: `git checkout dev/dev 2>/dev/null || git checkout -b dev/dev origin/dev/dev`
 3. Existiert der Branch bereits, aktuellen Stand holen: `git pull --rebase`
-4. Ändern, dann `scripts/check.sh` grün bekommen — dieselben Prüfungen wie in der CI (Details:
-   [test-strategie.md](test-strategie.md))
+4. Ändern, dann `scripts/check.sh` grün bekommen — dieselben Prüfungen wie in der CI, vollständig
+   (eiserne Regel 15, [test-strategie.md](test-strategie.md#lokal--ci))
 5. Betroffene `docs/`-Dateien aktualisieren
 6. `git add` gezielt — **nie** `git add -A` ohne vorherige Prüfung von `git status`
 7. Committen, bei nutzerrelevanter Änderung mit `Changelog-<Kategorie>:`-Trailer
-8. Pushen auf `agent/main` — beim allerersten Push auf einen neuen Branch
-   `git push -u origin agent/main`, danach reicht `git push`. Der pre-push-Hook führt
+8. Pushen auf `dev/dev` — beim allerersten Push auf einen neuen Branch
+   `git push -u origin dev/dev`, danach reicht `git push`. Der pre-push-Hook führt
    `scripts/check.sh` vorher noch einmal aus.
+
+Nach dem Push das CI-Ergebnis abwarten (`gh run watch`) und erst danach die nächste Aufgabe
+beginnen. Rot → Regel 15: lokal nachstellen, beheben, erneut pushen.
 
 Ein Commit bildet **eine** abgeschlossene Änderung ab. Sammelcommits über mehrere unabhängige
 Themen sind nicht zulässig — sie machen ein späteres `git revert` unmöglich.
@@ -116,7 +139,7 @@ Commit-Messages dort nur noch als Warnung, weil sie dann schon veröffentlicht s
 
 ## Versionierung
 
-[Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`. Auf `agent/main` steht
+[Semantic Versioning](https://semver.org/lang/de/): `MAJOR.MINOR.PATCH`. Auf `dev/dev` steht
 in `skytech_omniai/config.yaml` immer `version: "dev"` — das ist die Konvention der
 Home-Assistant-Community-Add-ons, und der Add-on-Linter kennt sie. Die echte Version setzt
 **nur** der Release-Job ([`scripts/release.py`](../scripts/release.py)), auch Agenten setzen sie
@@ -136,33 +159,39 @@ Versionssprung und fertiger Changelog-Abschnitt.
 
 ## Release
 
-Ein Release ist vollautomatisch und folgt auf jeden grünen Push auf `agent/main`, der seit dem
-letzten Release etwas unter `skytech_omniai/` geändert hat. Ablauf im Job `release` von
-[`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml):
+Ein Release folgt auf den **Merge des freigegebenen Pull Requests** `dev/main` → `main`, sofern
+dabei etwas unter `skytech_omniai/` neu ist. Ablauf im Workflow
+[`.github/workflows/release.yaml`](../.github/workflows/release.yaml):
 
-1. Alle Prüfjobs grün (Python, Oberfläche, Add-on-Linter, Image mit Smoke-Test, Sicherheit).
-2. Zuletzt veröffentlicht ist der jüngste gemeinsame Vorfahr von `main` und dem geprüften Stand
-   (`git merge-base`) — das funktioniert, weil jeder Release-Commit den veröffentlichten Stand
-   als zweiten Elternteil trägt.
+1. Der Merge löst den Lauf aus. Die Prüfungen sind bereits vorher gelaufen: auf `dev/dev` und
+   noch einmal im Pull Request selbst ([`ci.yaml`](../.github/workflows/ci.yaml)).
+2. Bezugsstand ist der erste Elternteil des Merge-Commits (das bisherige, zuletzt
+   veröffentlichte `main`), neu sind die Commits des zweiten Elternteils (`dev/main`).
 3. `scripts/release.py apply` schreibt in den Arbeitsbaum: die Version in `config.yaml` und
    `skytech_omniai/CHANGELOG.md` — den bisherigen Changelog von `main` mit dem neuen Abschnitt
    obenauf, gebaut aus den Trailern. Home Assistant zeigt diese Datei beim Update an.
 4. Der Release-Commit `chore(release): Version X.Y.Z` wird mit `git commit-tree` direkt aus
-   diesem Baum gebaut (Eltern: `main` und der geprüfte Stand) — kein Merge, also kein Konflikt.
+   diesem Baum gebaut (Elternteil: der Merge-Commit) — kein Merge, also kein Konflikt.
 5. Annotierter Tag `vX.Y.Z`, dann `git push --atomic` von `main` und Tag — alles oder nichts.
+   Der eigene Release-Commit löst den Workflow nicht erneut aus.
 
-Hat sich unter `skytech_omniai/` nichts geändert (nur `docs/`, `tests/`, CI), laufen die
-Prüfungen, aber es gibt kein Release. Solche Änderungen und ihre Trailer gehen mit dem nächsten
-Release nach `main`.
+Hat sich unter `skytech_omniai/` nichts geändert (nur `docs/`, `tests/`, CI), gibt es kein
+Release. Solche Änderungen und ihre Trailer gehen mit dem nächsten Release nach `main`.
 
 Der Push nach `main` geht über einen Deploy-Key (Secret `RELEASE_DEPLOY_KEY`), den das Ruleset von
 `main` neben den Admins als einzige Ausnahme kennt. Fehlt das Secret, bricht der Job erst dann
 ab, wenn wirklich etwas zu veröffentlichen ist.
 
+**Dependabot** öffnet seine Pull Requests gegen `dev/dev`. Nach dem Merge laufen sie wie jede
+andere Änderung durch `dev/main` und den Pull Request nach `main`.
+
 ## Was nie passiert
 
 - Kein `git push --force` auf gemeinsam genutzte Branches
-- Kein Commit und kein Merge von Hand auf `main`
+- Kein Commit und kein Merge von Hand auf `main`; kein Commit von Hand auf `dev/main`
+- Kein Merge von `dev/main` zurück nach `dev/dev`
+- Kein zweiter Pull Request nach `main`, solange einer offen ist
+- Kein `Co-Authored-By`-Trailer und keine KI-Namensnennung in Commits oder Pull Requests
 - Keine Versionsnummer von Hand in `config.yaml` und kein von Hand gepflegter Changelog
 - Keine Secrets im Commit — vor dem Commit `git diff --staged` prüfen
 - Keine generierten Artefakte (`dist/`, `node_modules/`, `.venv/`, Caches) im Repo

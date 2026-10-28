@@ -74,7 +74,7 @@ Nie geloggt werden: Passwörter, Tokens, API-Keys, personenbezogene Daten. Siehe
 
 - Neue Abhängigkeit nur, wenn sie mehr Aufwand spart, als sie an Wartung kostet. Eine
   10-Zeilen-Hilfsfunktion rechtfertigt kein zusätzliches Paket.
-- Versionen werden gepinnt (`skytech_omniai/requirements.txt`, `requirements-dev.txt`, `skytech_omniai/web/package-lock.json`, Actions in `.github/workflows/` per Commit-SHA). Dependabot schlägt Updates wöchentlich als PR gegen `agent/main` vor.
+- Versionen werden gepinnt (`skytech_omniai/requirements.txt`, `requirements-dev.txt`, `skytech_omniai/web/package-lock.json`, Actions in `.github/workflows/` per Commit-SHA). Dependabot schlägt Updates wöchentlich als PR gegen `dev/dev` vor.
 - Eine neue Laufzeit-Abhängigkeit ist eine Design-Entscheidung → Eintrag in
   [design-entscheidungen.md](design-entscheidungen.md).
 - Im Add-on-Bild sind zusätzlich festgenagelt: die Basisimages je Architektur (`build.yaml`) und
