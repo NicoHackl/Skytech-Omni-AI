@@ -1,7 +1,7 @@
 name: "Skytech OmniAI"
 # Die echte Version setzt der Release-Job beim Veröffentlichen auf main
 # (scripts/release.py, D-017). Auf agent/main steht hier immer "dev".
-version: "0.14.0"
+version: "0.15.0"
 slug: "skytech_omniai"
 description: "Modulare KI-Brücke für Home Assistant — Claude, ChatGPT und Google Gemini über das jeweilige Abo, dazu Gemini per API-Schlüssel"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
@@ -47,6 +47,11 @@ options:
   codex_auth_json: ""
   openai_api_key: ""
   gemini_api_key: ""
+  # Standardmodell für "gemini_sub" (Google AI Pro über die Antigravity-CLI), z. B.
+  # "Gemini 4 Argon (High)" oder die Kurzform "flash-3.8". Leer = die CLI wählt
+  # selbst. Die gültigen Bezeichnungen zeigt die Seite "Einstellungen" nach der
+  # Anmeldung bei Google.
+  gemini_sub_model: ""
   # Token für die Schnittstelle v1 (Skytech X, D-019). Leer = /v1 lehnt alles ab.
   # Mindestens 32 zufällige Zeichen, z. B. openssl rand -base64 32.
   api_token: ""
@@ -65,4 +70,5 @@ schema:
   codex_auth_json: "password?"
   openai_api_key: "password?"
   gemini_api_key: "password?"
+  gemini_sub_model: "str?"
   api_token: "password?"

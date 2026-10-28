@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from settings import merge_update, public_view, revision
 
 STORED = {
@@ -117,3 +119,35 @@ def test_the_google_subscription_accepts_only_the_automatic_model():
 
     _, errors = merge_update(STORED, {"provider": "gemini_sub", "model": "gemini-flash-latest"})
     assert set(errors) == {"model"}
+
+
+def test_the_google_subscription_default_model_is_saved_as_typed():
+    """Die Bezeichnungen kennt nur die Google-Befehlszeile; geprüft wird die Form."""
+    merged, errors = merge_update(
+        STORED, {"provider": "gemini_sub", "gemini_sub_model": " Gemini 4 Argon (High) "}
+    )
+
+    assert errors == {}
+    assert merged["gemini_sub_model"] == "Gemini 4 Argon (High)"
+    assert merged["model"] == "auto"
+
+
+@pytest.mark.parametrize("wert", ["flash-3.8", "argon-4", "", "Gemini 3.8 Flash (Medium)"])
+def test_the_google_subscription_default_model_accepts_names_and_short_forms(wert):
+    _, errors = merge_update(STORED, {"gemini_sub_model": wert})
+
+    assert errors == {}
+
+
+@pytest.mark.parametrize("wert", ["a" * 200, "x; rm -rf /", "<script>", "Zeile\nzwei"])
+def test_the_google_subscription_default_model_rejects_what_is_no_name(wert):
+    _, errors = merge_update(STORED, {"gemini_sub_model": wert})
+
+    assert set(errors) == {"gemini_sub_model"}
+
+
+def test_the_google_subscription_default_model_is_shown_back():
+    view = public_view({**STORED, "gemini_sub_model": "flash-3.8"})
+
+    assert view["options"]["gemini_sub_model"] == "flash-3.8"
+    assert "gemini_sub_model" not in view["secrets_set"]

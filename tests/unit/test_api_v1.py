@@ -137,6 +137,9 @@ def test_the_google_subscription_is_available_only_with_a_login(client):
     assert eintrag["features"] == {"tools": False, "structuredOutput": True, "usage": False}
     assert eintrag["models"] == []
 
+    gemini_sub_provider.store_models([gemini_sub_provider.ModelInfo("Gemini 4 Argon (High)")])
+    assert available()["models"] == ["Gemini 4 Argon (High)"]
+
 
 def test_unknown_v1_path_answers_in_contract_format(client):
     antwort = client.post("/v1/gibt-es-nicht", headers=AUTH, json={})

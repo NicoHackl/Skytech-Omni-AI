@@ -381,6 +381,11 @@ class GeminiLogin:
             return FEHLER_NICHT_GESPEICHERT
 
         cli.backup_token()
+        models = cli.parse_models(verify.stdout)
+        if models:
+            cli.store_models(models)
+        else:
+            log.warning("Aus der Ausgabe der Google-CLI ließen sich keine Modelle lesen")
         # Die Modellnamen stehen nur hier im Log: sie sind die Grundlage für
         # eine spätere feste Liste und enthalten nichts Persönliches.
         log.info(

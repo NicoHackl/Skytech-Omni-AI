@@ -116,14 +116,17 @@ Liefert die auswählbaren Werte, damit Automatisierungen sie nicht fest verdraht
     "claude_sub": { "models": ["sonnet", "opus", "haiku"], "default": null },
     "codex_sub": { "models": ["gpt-5.6-sol", "…"], "default": null },
     "gemini": { "models": ["gemini-flash-latest", "…"], "default": "gemini-flash-latest" },
-    "gemini_sub": { "models": [], "default": null }
+    "gemini_sub": { "models": ["Gemini 4 Argon (High)", "…"], "default": null }
   }
 }
 ```
 
-`gemini_sub` hat keine feste Liste: seine Modelle kennt die Google-Befehlszeile erst nach der
-Anmeldung. Pro Anfrage lässt sich über `model` jede Bezeichnung nennen, die sie versteht (etwa
-„Gemini 3.6 Flash (High)“); eine unbekannte beantwortet sie mit einem Fehler.
+Die Modelle von `gemini_sub` stehen nicht im Code: sie kommen von der Google-Befehlszeile und sind
+erst nach der Anmeldung bekannt (vorher `[]`). `default` ist dort die Option `gemini_sub_model`.
+Pro Anfrage lässt sich im Feld `model` die Bezeichnung aus der Liste nennen oder eine Kurzform
+(`flash-3.8`, `argon-4`); die Regeln stehen in [konfiguration.md](konfiguration.md#modelle-bei-google-gemini-abo).
+Eine unbekannte oder mehrdeutige Eingabe lehnt die Anfrage mit `400` und einem Satz ab, der die
+Auswahl nennt.
 
 ## `GET /status`
 
@@ -250,6 +253,7 @@ haben dieselbe Form:
 | `POST /auth/gemini/start` | Startet die Anmeldung und liefert `waiting` mit Adresse. `400`, wenn schon ein Konto angemeldet ist oder die CLI fehlt; `409`, wenn gerade eine Anfrage läuft |
 | `POST /auth/gemini/code` | Rumpf `{"code": "…"}`. Gibt den Code an die CLI weiter und liefert `checking`; den Ausgang zeigt danach `GET`. `422` mit `field_errors.code`, wenn die Eingabe nicht nach einem Code aussieht. Auch die ganze Adresse der Zielseite wird angenommen |
 | `POST /auth/gemini/cancel` | Bricht eine laufende Anmeldung ab |
+| `POST /auth/gemini/models` | Holt die Modelle der Befehlszeile neu und liefert `{"models": ["…"]}`. Läuft gerade eine Anfrage, bleibt die bisherige Liste |
 | `DELETE /auth/gemini` | Entfernt die Anmeldung samt Sicherung. Widerrufen lässt sie sich nur im Google-Konto |
 
 **Nur über den Ingress**, außer `GET`: Aufrufe über Port 8000 werden mit `403` abgelehnt, und die

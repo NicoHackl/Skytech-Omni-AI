@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.15.0] — 28.10.2026
+
+### Hinzugefügt
+
+- Bei Google Gemini (Abo) lässt sich das Modell wählen, zum Beispiel Gemini 4 Argon oder Gemini 3.8 Flash. Die Liste kommt von Google und steht unter „Einstellungen“ in der Auswahl „Standardmodell“; pro Anfrage genügt auch eine Kurzform wie „flash-3.8“ oder „argon-4“.
+
 ## [0.14.0] — 28.10.2026
 
 ### Hinzugefügt

@@ -68,7 +68,9 @@ Das ist der von Google vorgesehene Weg; er wird nach Verbrauch abgerechnet.
 Unter **Einstellungen → Google-Anmeldung (Abo)** auf „Mit Google anmelden“ klicken, die Google-Seite
 öffnen, mit dem Konto anmelden, das Google AI Pro hat, den angezeigten Code kopieren und einfügen
 (Google lässt dafür etwa eine Minute Zeit). Danach als Anbieter „Google Gemini (Abo)“ wählen und
-speichern. Die Anmeldung entsteht im Add-on selbst und bleibt gespeichert.
+speichern. Die Anmeldung entsteht im Add-on selbst und bleibt gespeichert. Die Modelle (z. B.
+*Gemini 4 Argon*, *Gemini 3.8 Flash*) liest das Add-on von Google ein; pro Anfrage genügt im Feld
+`model` auch eine Kurzform wie `flash-3.8` oder `argon-4`.
 
 > **Risiko:** Google unterstützt es bei privaten Abos nicht, die Antigravity-Befehlszeile über
 > andere Anwendungen zu nutzen, und kann Konten dafür einschränken oder sperren. Die Nutzung

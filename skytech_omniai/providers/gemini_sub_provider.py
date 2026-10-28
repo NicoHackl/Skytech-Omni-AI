@@ -20,6 +20,7 @@ import contextlib
 import json
 import logging
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -344,6 +345,8 @@ def remove_token() -> None:
             pass
         except OSError as error:
             log.error("Google-Anmeldung nicht entfernbar: %s", error)
+    # Die Liste gehört zum Konto, das sich abgemeldet hat.
+    clear_models()
 
 
 # --- Vorbereitung und Aufräumen -------------------------------------------------
@@ -664,27 +667,280 @@ def classify_failure(output: str) -> str | None:
     return None
 
 
+# --- Modelle ------------------------------------------------------------------
+# Die CLI nennt ihre Modelle erst nach der Anmeldung (``agy models``). Das Add-on
+# merkt sich die Liste in einer Datei neben der Anmeldung, damit Oberfläche und
+# Schnittstelle sie sofort zeigen können, auch direkt nach einem Neustart.
+
+MODELS_FILE_NAME = "omniai-models.json"
+# So alt darf die Liste werden, bevor sie beim nächsten Abruf neu geholt wird.
+MODELS_MAX_AGE_SEKUNDEN = 6 * 3600
+MODELS_TIMEOUT_SEKUNDEN = 30
+MAX_MODEL_LABEL = 80
+# Stufen eines Modells stehen in Klammern hinter dem Namen, etwa „(High)“. Nennt
+# der Aufrufer ein Modell ohne Stufe, bekommt er die erste dieser Reihe, die es gibt.
+EFFORT_PREFERENCE = ("medium", "high", "low", "max")
+# Wie viele Namen eine Fehlermeldung höchstens aufzählt.
+MAX_LISTED_MODELS = 8
+
+_EFFORT_SUFFIX = re.compile(r"\s*\((low|medium|high|xhigh|max)\)\s*$", re.IGNORECASE)
+_BULLET = re.compile(r"^(?:[-*•>]|\d+[.)])\s+")
+_ANNOTATION = re.compile(
+    r"\s*(?:\((?:default|current|selected|recommended)\)"
+    r"|\[(?:default|current|selected|recommended)\]|[✓✔*←])\s*$",
+    re.IGNORECASE,
+)
+_COLUMNS = re.compile(r"\s{2,}|\t|\s[|│]\s")
+_SKIP_LINE_START = (
+    "fetching",
+    "available models",
+    "error",
+    "usage",
+    "warning",
+    "note",
+    "use ",
+    "run ",
+    "to select",
+    "tip",
+    "no models",
+    "loading",
+    "please",
+)
+_MODEL_LABEL = re.compile(r"^[\w .()\-:/+]{2,80}$")
+
+
+@dataclass(frozen=True)
+class ModelInfo:
+    """Ein Modell der CLI: die Bezeichnung für ``--model`` und weitere Namen dafür."""
+
+    label: str
+    aliases: tuple[str, ...] = ()
+
+
+def parse_models(output: str) -> list[ModelInfo]:
+    """Liest die Ausgabe von ``agy models``.
+
+    Das Zeilenformat ist nicht zugesichert; deshalb wird tolerant gelesen:
+    ab der Überschrift „Available models“ (falls vorhanden), Aufzählungszeichen
+    und Vermerke wie „(default)“ entfernt, eine erste Spalte als Bezeichnung,
+    weitere Spalten als Nebennamen. Zeilen, die nach einem Satz aussehen,
+    zählen nicht. Die Bezeichnung geht später unverändert an ``--model``.
+    """
+    lines = (output or "").splitlines()
+    for index, line in enumerate(lines):
+        if line.strip().lower().startswith("available models"):
+            lines = lines[index + 1 :]
+            break
+
+    found: dict[str, ModelInfo] = {}
+    for raw in lines:
+        line = _BULLET.sub("", raw.strip())
+        while (stripped := _ANNOTATION.sub("", line)) != line:
+            line = stripped
+        if not line or line.lower().startswith(_SKIP_LINE_START):
+            continue
+        columns = [column.strip() for column in _COLUMNS.split(line) if column.strip()]
+        if not columns:
+            continue
+        label, aliases = columns[0], columns[1:]
+        if (
+            label.endswith((":", "."))
+            or len(label.split()) > 8
+            or not _MODEL_LABEL.match(label)
+            or not re.search(r"[A-Za-z]", label)
+        ):
+            continue
+        found.setdefault(
+            label, ModelInfo(label, tuple(a for a in aliases if len(a) <= MAX_MODEL_LABEL))
+        )
+    return list(found.values())
+
+
+def models_path() -> Path:
+    return state_dir() / MODELS_FILE_NAME
+
+
+def load_models() -> tuple[float, list[ModelInfo]]:
+    """Die gemerkte Liste und der Zeitpunkt, an dem sie geholt wurde (``0.0`` ohne Liste)."""
+    try:
+        data = json.loads(models_path().read_text(encoding="utf-8"))
+        models = [
+            ModelInfo(str(entry["label"]), tuple(str(a) for a in entry.get("aliases", [])))
+            for entry in data["models"]
+        ]
+        return float(data["fetched_at"]), models
+    except (OSError, ValueError, KeyError, TypeError):
+        return 0.0, []
+
+
+def store_models(models: list[ModelInfo]) -> None:
+    payload = {
+        "fetched_at": time.time(),
+        "models": [{"label": m.label, "aliases": list(m.aliases)} for m in models],
+    }
+    try:
+        state_dir().mkdir(parents=True, exist_ok=True)
+        _write_json_atomic(models_path(), payload)
+    except OSError as error:
+        log.warning("Modellliste der Google-CLI nicht speicherbar: %s", error)
+
+
+def clear_models() -> None:
+    with contextlib.suppress(OSError):
+        models_path().unlink()
+
+
+def fetch_models_locked(fallback: list[ModelInfo]) -> list[ModelInfo]:
+    """Fragt die CLI nach ihren Modellen. Nur mit gehaltener ``RUN_LOCK`` aufrufen.
+
+    Schlägt der Abruf fehl, bleibt die bisherige Liste (``fallback``): eine
+    verwaiste Liste ist besser als gar keine, und die Ursache steht im Log.
+    """
+    try:
+        workspace = prepare_state(resolve_tool_access())
+    except RuntimeError:
+        return fallback
+    before = snapshot_state()
+    try:
+        result = run_agy(
+            [AGY_BINARY, "models"],
+            env=agy_env(),
+            cwd=workspace,
+            timeout=MODELS_TIMEOUT_SEKUNDEN,
+        )
+    except OSError as error:
+        log.warning("Modelle der Google-CLI nicht abrufbar: %s", error)
+        return fallback
+    finally:
+        cleanup_state(before)
+
+    models = parse_models(result.stdout) or parse_models(f"{result.stdout}\n{result.stderr}")
+    if result.returncode == 0 and not result.timed_out and not result.auth_required and models:
+        store_models(models)
+        log.info("Modelle der Google-CLI: %s", ", ".join(m.label for m in models))
+        return models
+    log.warning(
+        "Keine Modelle von der Google-CLI gelesen (Rückgabecode %s). Ausgabe: %s",
+        result.returncode,
+        f"{result.stdout}\n{result.stderr}".strip(),
+    )
+    return fallback
+
+
+def refresh_models(*, force: bool = False) -> list[ModelInfo]:
+    """Die Modelle der CLI — aus der Datei, bei fehlender oder alter Liste frisch geholt.
+
+    Läuft die CLI gerade für eine Anfrage, bleibt die Liste, wie sie ist: auf
+    die Sperre wird hier nicht gewartet, denn die Oberfläche fragt oft.
+    """
+    if not is_signed_in():
+        return []
+    fetched_at, models = load_models()
+    fresh = bool(models) and time.time() - fetched_at < MODELS_MAX_AGE_SEKUNDEN
+    if fresh and not force:
+        return models
+    if not RUN_LOCK.acquire(blocking=False):
+        return models
+    try:
+        return fetch_models_locked(models)
+    finally:
+        RUN_LOCK.release()
+
+
+def available_models() -> list[str]:
+    """Bezeichnungen für ``GET /models`` und die Oberfläche; leer ohne Anmeldung."""
+    return [model.label for model in refresh_models()]
+
+
+def _unknown_model_message(query: str, models: list[ModelInfo], matches: list[ModelInfo]) -> str:
+    families = {_EFFORT_SUFFIX.sub("", m.label).strip() for m in matches}
+    if len(families) > 1:
+        names = sorted(families)[:MAX_LISTED_MODELS]
+        return f"„{query}“ passt auf mehrere Modelle: {', '.join(names)}. Bitte genauer angeben."
+    labels = [m.label for m in models][:MAX_LISTED_MODELS]
+    more = " …" if len(models) > MAX_LISTED_MODELS else ""
+    return (
+        f"„{query}“ kennt Google Gemini (Abo) nicht. Zur Auswahl stehen: {', '.join(labels)}{more}."
+    )
+
+
+def pick_model(query: str, models: list[ModelInfo]) -> str:
+    """Findet zu einer Eingabe die Bezeichnung, die die CLI versteht.
+
+    Genau wie genannt (Groß- und Kleinschreibung egal) gilt zuerst; sonst reicht
+    eine Kurzform, deren Teile alle im Namen vorkommen — „flash-3.8“ findet
+    „Gemini 3.8 Flash (Medium)“, „argon-4“ findet „Gemini 4 Argon (Medium)“.
+    Gibt es das Modell in mehreren Stufen, gilt die erste aus ``EFFORT_PREFERENCE``,
+    sofern die Eingabe keine nennt. Passt die Eingabe auf mehrere Modelle oder auf
+    keines, bekommt der Aufrufer die Auswahl genannt.
+
+    :raises UnknownModel: wenn kein eindeutiges Modell passt.
+    """
+    wanted = query.strip()
+    lowered = wanted.lower()
+    for model in models:
+        if lowered == model.label.lower() or lowered in (a.lower() for a in model.aliases):
+            return model.label
+
+    tokens = [token for token in re.split(r"[\s_\-/]+", lowered) if token]
+
+    def contains(model: ModelInfo, token: str) -> bool:
+        haystack = " ".join((model.label, *model.aliases)).lower()
+        return re.search(rf"(?<![a-z0-9.]){re.escape(token)}(?![a-z0-9.])", haystack) is not None
+
+    matches = [m for m in models if tokens and all(contains(m, t) for t in tokens)]
+    families: dict[str, list[ModelInfo]] = {}
+    for model in matches:
+        families.setdefault(_EFFORT_SUFFIX.sub("", model.label).strip().lower(), []).append(model)
+    if len(families) != 1:
+        raise UnknownModel(_unknown_model_message(wanted, models, matches))
+
+    variants = next(iter(families.values()))
+    for effort in EFFORT_PREFERENCE:
+        for model in variants:
+            if re.search(rf"\({effort}\)\s*$", model.label, re.IGNORECASE):
+                return model.label
+    return variants[0].label
+
+
 class GeminiSubProvider(BaseProvider):
     """Führt Prompts über die Antigravity-CLI aus und nutzt dabei das Google-AI-Pro-Abo."""
 
-    def _resolve_model(self, model: str | None) -> str:
-        """Wählt das Modell: Anfrage, dann ``OMNIAI_MODEL``, sonst entscheidet die CLI.
+    @staticmethod
+    def _requested_model(model: str | None) -> str:
+        """Was verlangt wurde: die Anfrage, sonst die Option, sonst nichts („die CLI wählt“).
 
-        Was die Anfrage nennt, geht unverändert an die CLI; sie kennt ihre
-        Modelle und lehnt unbekannte ab. Ein add-on-weites Standardmodell, das
-        zu einem anderen Anbieter gehört (stehengeblieben nach dem Umstellen
-        des Anbieters), wird dagegen übergangen.
+        Ein add-on-weites Standardmodell, das zu einem anderen Anbieter gehört
+        (stehengeblieben nach dem Umstellen des Anbieters), wird übergangen.
         """
         chosen = (model or "").strip()
         if chosen and chosen != AUTO_MODEL:
             return chosen
-        default = os.environ.get("OMNIAI_MODEL", "").strip()
-        if not default or default == AUTO_MODEL:
+        for name in ("GEMINI_SUB_MODEL", "OMNIAI_MODEL"):
+            default = os.environ.get(name, "").strip()
+            if not default or default == AUTO_MODEL:
+                continue
+            if default in {*CLAUDE_MODELS, *CODEX_MODELS, *GEMINI_MODELS}:
+                log.warning(
+                    "Das Standardmodell gehört zu einem anderen Anbieter und wird übergangen"
+                )
+                continue
+            return default
+        return ""
+
+    def _resolve_model(self, model: str | None) -> str:
+        """Die Bezeichnung für ``--model`` — aus der gemerkten Liste der CLI, falls es eine gibt.
+
+        Ohne Liste (noch nicht abgerufen) geht die Eingabe unverändert an die CLI;
+        sie kennt ihre Modelle und lehnt unbekannte ab.
+
+        :raises UnknownModel: wenn die Liste bekannt ist und kein eindeutiges Modell passt.
+        """
+        requested = self._requested_model(model)
+        if not requested:
             return ""
-        if default in {*CLAUDE_MODELS, *CODEX_MODELS, *GEMINI_MODELS}:
-            log.warning("Das Standardmodell gehört zu einem anderen Anbieter und wird übergangen")
-            return ""
-        return default
+        _, models = load_models()
+        return pick_model(requested, models) if models else requested
 
     @staticmethod
     def _system_prompt() -> str:
@@ -699,9 +955,11 @@ class GeminiSubProvider(BaseProvider):
         """Wählt die Meldung für einen abgebrochenen Lauf — nach Merkmalen, nie mit Rohtext."""
         kind = classify_failure(output)
         if kind == "model" and chosen_model:
+            _, models = load_models()
+            if models:
+                return UnknownModel(_unknown_model_message(chosen_model, models, []))
             return UnknownModel(
-                f"„{chosen_model}“ kennt Google Gemini (Abo) nicht. Gültige Modelle nennt die "
-                "Google-Befehlszeile; ohne Angabe wählt sie selbst."
+                f"„{chosen_model}“ kennt Google Gemini (Abo) nicht. Ohne Angabe wählt es selbst."
             )
         if kind == "quota":
             return RuntimeError(FEHLER_KONTINGENT)
@@ -744,6 +1002,9 @@ class GeminiSubProvider(BaseProvider):
 
     def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
         chosen_model = self._resolve_model(model)
+        # Kennt das Add-on die Modelle noch nicht (etwa nach einem Update), holt es
+        # sie unter der Sperre, bevor es das gewünschte Modell auflöst.
+        needs_models = bool(chosen_model) and not load_models()[1]
         full_prompt = self._system_prompt() + "\n\n" + prompt + JSON_INSTRUCTION
         if len(full_prompt.encode("utf-8")) > MAX_PROMPT_BYTES:
             raise RuntimeError(FEHLER_ZU_LANG)
@@ -766,6 +1027,10 @@ class GeminiSubProvider(BaseProvider):
             if not is_signed_in():
                 log.error("Aufruf ohne lesbare Google-Anmeldung abgelehnt")
                 raise RuntimeError(FEHLER_NICHT_ANGEMELDET)
+            if needs_models:
+                models = fetch_models_locked([])
+                if models:
+                    chosen_model = pick_model(chosen_model, models)
             remaining = total - (time.monotonic() - started)
             if remaining < MIN_RUN_SEKUNDEN:
                 raise RuntimeError(FEHLER_BESETZT)

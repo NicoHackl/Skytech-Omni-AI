@@ -528,3 +528,64 @@ def test_an_unexpected_failure_of_the_login_gets_a_generic_sentence(client, logi
     text = antwort.get_json()["error"]
     assert "/data" not in text
     assert "Traceback" not in text
+
+
+# --- Modelle von Google Gemini (Abo) -------------------------------------------
+
+
+def _sign_in_and_store_models(*labels):
+    from providers import gemini_sub_provider as cli
+
+    cli.token_path().parent.mkdir(parents=True, exist_ok=True)
+    cli.token_path().write_text('{"token": {"refresh_token": "x"}}')
+    cli.store_models([cli.ModelInfo(label) for label in labels])
+
+
+def test_models_lists_the_models_of_the_google_cli_after_the_login(client, monkeypatch):
+    _sign_in_and_store_models("Gemini 4 Argon (High)", "Gemini 3.8 Flash (Medium)")
+    monkeypatch.setenv("GEMINI_SUB_MODEL", "Gemini 4 Argon (High)")
+
+    eintrag = client.get("/models").get_json()["providers"]["gemini_sub"]
+
+    assert eintrag["models"] == ["Gemini 4 Argon (High)", "Gemini 3.8 Flash (Medium)"]
+    assert eintrag["default"] == "Gemini 4 Argon (High)"
+
+
+def test_models_of_the_google_cli_are_empty_before_the_login(client):
+    eintrag = client.get("/models").get_json()["providers"]["gemini_sub"]
+
+    assert eintrag == {"models": [], "default": None}
+
+
+def test_the_model_refresh_needs_the_ingress(client, login):
+    antwort = client.post("/auth/gemini/models")
+
+    assert antwort.status_code == 403
+
+
+def test_the_model_refresh_returns_the_new_list(client, monkeypatch):
+    from providers import gemini_sub_provider as cli
+
+    _sign_in_and_store_models("Alt (High)")
+    monkeypatch.setattr(
+        cli, "run_agy", lambda *a, **k: cli.AgyResult(0, "Gemini 4 Argon (High)\n", "")
+    )
+
+    antwort = client.post("/auth/gemini/models", environ_base=INGRESS)
+
+    assert antwort.status_code == 200
+    assert antwort.get_json() == {"models": ["Gemini 4 Argon (High)"]}
+
+
+def test_status_shows_the_default_model_of_the_active_provider(client, monkeypatch):
+    """Google Gemini (Abo) hat eine eigene Option; das gemeinsame Feld gehört den anderen."""
+    monkeypatch.setenv("OMNIAI_MODEL", "sonnet")
+    monkeypatch.setenv("GEMINI_SUB_MODEL", "Gemini 4 Argon (High)")
+
+    assert client.get("/status").get_json()["default_model"] == "sonnet"
+
+    monkeypatch.setenv("AI_PROVIDER", "gemini_sub")
+    assert client.get("/status").get_json()["default_model"] == "Gemini 4 Argon (High)"
+
+    monkeypatch.delenv("GEMINI_SUB_MODEL")
+    assert client.get("/status").get_json()["default_model"] is None

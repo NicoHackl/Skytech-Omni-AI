@@ -89,6 +89,8 @@ export const api = {
     }),
   geminiLoginCancel: () => request<GeminiLoginStatus>('auth/gemini/cancel', { method: 'POST' }),
   geminiLogout: () => request<GeminiLoginStatus>('auth/gemini', { method: 'DELETE' }),
+  /* Modelle der Google-Befehlszeile neu abrufen (Tarif gewechselt, Liste veraltet). */
+  geminiModelsRefresh: () => request<{ models: string[] }>('auth/gemini/models', { method: 'POST' }),
 }
 
 /** Feldfehler aus einer abgelehnten Speicherung, sonst ein leeres Objekt. */

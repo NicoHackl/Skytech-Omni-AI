@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/Layout'
-import { providerLabel } from '../provider'
+import { SUBSCRIPTION_PROVIDER, providerLabel } from '../provider'
 import type { ModelsResponse } from '../types'
 
 /* Übersicht der auswählbaren Modelle je Anbieter. Dieselbe Quelle, die auch
@@ -54,7 +54,11 @@ export function Modelle() {
               {entry.models.length === 0 ? (
                 <div className="empty">
                   <Icon name="list" size={40} />
-                  <p>Für diesen Anbieter ist kein Modell hinterlegt.</p>
+                  <p>
+                    {key === SUBSCRIPTION_PROVIDER
+                      ? 'Die Modelle stehen nach der Anmeldung bei Google hier. Die Anmeldung geschieht in den Einstellungen.'
+                      : 'Für diesen Anbieter ist kein Modell hinterlegt.'}
+                  </p>
                 </div>
               ) : (
                 <div className="table-wrap">

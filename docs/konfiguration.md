@@ -37,11 +37,12 @@ Endpunkte: `GET /settings`, `PUT /settings` in [api-referenz.md](api-referenz.md
 | `codex_auth_json` | nein | leer | Anmeldung des ChatGPT-Abos: vollständiger Inhalt der Datei `auth.json`, die `codex login` anlegt |
 | `openai_api_key` | nein | leer | Alternative zum Abo: nach Verbrauch abgerechneter OpenAI-Schlüssel |
 | `gemini_api_key` | nein | leer | Schlüssel aus Google AI Studio |
-
-`gemini_sub` hat **keine Option**: seine Anmeldung entsteht auf der Seite „Einstellungen“ (siehe
-unten) und liegt als Datei unter `/data`, nicht in den Optionen. Auch das Standardmodell bleibt bei
-diesem Anbieter `auto`; ein Modell lässt sich pro Anfrage über das Feld `model` nennen.
+| `gemini_sub_model` | nein | leer | Standardmodell für `gemini_sub`: eine Bezeichnung wie `Gemini 4 Argon (High)` oder eine Kurzform wie `flash-3.8`. Leer = Google wählt. Siehe „Modelle bei Google Gemini (Abo)“ |
 | `api_token` | nein | leer | Token der Schnittstelle v1 für Skytech X, mindestens 32 Zeichen (z. B. `openssl rand -base64 32`). Leer = `/v1` lehnt jede Anfrage ab. Dasselbe Token in Skytech X unter „Anbindungen“ eintragen |
+
+`gemini_sub` hat **keinen Zugang unter den Optionen**: seine Anmeldung entsteht auf der Seite
+„Einstellungen“ (siehe unten) und liegt als Datei unter `/data`. Das gemeinsame Feld `model` bleibt
+bei diesem Anbieter `auto`; sein Standardmodell steht in `gemini_sub_model`.
 
 Für den aktiven Anbieter muss **einer** der passenden Zugänge gesetzt sein — sonst antwortet
 `/ask` mit einer Meldung, die sagt, welches Feld fehlt. Die Übersicht der Oberfläche zeigt
@@ -62,6 +63,7 @@ Aus den Optionen abgeleitet. Beim Betrieb außerhalb von Home Assistant werden s
 | `CODEX_AUTH_JSON` | nein | — | Anmeldung des ChatGPT-Abos, wird vom Provider ins Datenverzeichnis geschrieben |
 | `OPENAI_API_KEY` | nein | — | OpenAI-Schlüssel als Alternative zum Abo |
 | `GEMINI_API_KEY` | nein | — | Schlüssel für Google Gemini |
+| `GEMINI_SUB_MODEL` | nein | — | Standardmodell für Google Gemini (Abo), aus der Option `gemini_sub_model` |
 | `GOOGLE_API_KEY` | nein | — | Wird als zweiter gängiger Name ebenfalls akzeptiert |
 | `OMNIAI_API_TOKEN` | nein | — | Token der Schnittstelle v1 (aus der Option `api_token`) |
 | `HOME` | nein | `/data` | Die Claude-CLI legt ihren Zustand unter `$HOME/.claude` ab; über `/data` übersteht er einen Neustart |
@@ -119,6 +121,31 @@ Die Anmeldung liegt unter `/data/.gemini/antigravity-cli/` (Rechte `0600`), samt
 Die CLI erneuert sie selbst; das Add-on überschreibt sie nie. „Abmelden“ löscht sie aus dem Add-on.
 Den Zugriff widerrufen lässt sich zusätzlich im Google-Konto unter „Sicherheit“. Gilt die
 Anmeldung später nicht mehr, meldet das Add-on es bei der nächsten Anfrage; dann erneut anmelden.
+
+### Modelle bei Google Gemini (Abo)
+
+Die Bezeichnungen kennt nur die Google-Befehlszeile, und erst nach der Anmeldung. Das Add-on holt
+die Liste deshalb selbst (`agy models`), merkt sie sich unter `/data/.gemini/…` und zeigt sie
+
+- in der Auswahl „Standardmodell“ auf der Seite „Einstellungen“, sobald „Google Gemini (Abo)“
+  gewählt ist (gespeichert in `gemini_sub_model`),
+- auf der Seite „Modelle“ und in `GET /models` sowie `GET /v1/capabilities`.
+
+Die Liste wird nach der Anmeldung gelesen, bei Bedarf nach sechs Stunden erneuert und lässt sich in der
+Karte „Google-Anmeldung“ mit „Modelle neu laden“ neu abrufen (etwa nach einem Tarifwechsel).
+
+Ein Modell kann auf drei Arten genannt werden — im Feld `model` einer Anfrage ebenso wie in
+`gemini_sub_model`:
+
+| Eingabe | Ergebnis |
+|---|---|
+| die Bezeichnung aus der Liste, z. B. `Gemini 4 Argon (High)` | genau dieses Modell (Groß- und Kleinschreibung egal) |
+| eine Kurzform, deren Teile alle im Namen stehen, z. B. `flash-3.8`, `argon-4`, `gemini-3.8-flash` | das Modell dazu; **ohne Stufe** gilt die erste vorhandene aus Medium, High, Low, Max. Mit Stufe (`flash-3.8-high`) genau diese |
+| nichts oder `auto` | Google wählt selbst |
+
+Passt eine Kurzform auf mehrere Modelle (`flash`) oder auf keines, bekommt der Aufrufer einen Satz mit
+der Auswahl, und die Anfrage startet gar nicht erst. Ist die Liste noch nicht bekannt, geht die Eingabe
+unverändert an die Befehlszeile.
 
 **Google unterstützt diesen Weg bei privaten Abos nicht** und kann Konten dafür einschränken oder
 sperren (Hintergrund: D-022 und [erweiterungen/gemini-provider/](erweiterungen/gemini-provider/README.md)).
