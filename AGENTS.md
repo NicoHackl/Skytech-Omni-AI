@@ -101,7 +101,7 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
 13. **Keine KI-Accounts als Contributor:** Weder Commits noch Pull Requests tragen einen
     `Co-Authored-By`-Trailer, ein „Generated with"-Zeichen oder sonst eine Namensnennung von
     Claude, Codex, Gemini, Copilot oder einem anderen KI-Account. Auch Git-Autor und -Committer
-    sind der Mensch hinter dem Repo. Eine Voreinstellung des Werkzeugs, die eine solche Zeile
+    sind der Mensch hinter dem Repo: `NicoHackl <113907470+NicoHackl@users.noreply.github.com>`. Eine Voreinstellung des Werkzeugs, die eine solche Zeile
     anhängt, wird überstimmt.
 14. **Lizenz und Unterstützung:** Das Repo hat eine `LICENSE` (MIT) im Wurzelverzeichnis, und die
     `README.md` nennt sie im Abschnitt „Lizenz". Dieselbe `README.md` verlinkt im Abschnitt
@@ -119,7 +119,7 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
     Wer eine solche Schnittstelle ändert (Felder, Endpunkte, Semantik), liest zuerst
     `contract/README.md` und den betreffenden Vertrag und zieht **beide Kopien** (dieses Repo und
     die Gegenstelle) im **selben Arbeitspaket** nach. Der Master der HTTP-Schnittstelle liegt im
-    Backend; die Kopie hier bleibt inhaltlich unverändert.
+    Backend; die Kopie hier bleibt wortgleich. Der Ordner heißt `contract_<master-besitzer>_<gegenstelle>`.
 
 ## Befehle
 

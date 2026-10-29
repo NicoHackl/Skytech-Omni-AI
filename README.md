@@ -163,4 +163,4 @@ MIT — siehe [LICENSE](LICENSE).
 
 ## Unterstützen
 
-Gefällt dir das Projekt? [Spendier mir einen Kaffee]({{BUYMEACOFFEE_URL}}).
+Gefällt dir das Projekt? [Spendier mir einen Kaffee](https://buymeacoffee.com/nicohackl).
