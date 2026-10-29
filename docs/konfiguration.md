@@ -14,6 +14,12 @@ kein einziger Zugangsdatenwert.
 - **Gilt sofort.** Nach dem Speichern setzt das Add-on die Umgebung neu; die Provider lesen ihre
   Werte bei jeder Anfrage. Ein Neustart ist nicht nötig. Eine Änderung im Reiter „Konfiguration“
   braucht dagegen weiterhin einen Neustart, weil dort niemand dem laufenden Prozess Bescheid sagt.
+- **Ein Bereich je Anbieter.** Die Seite ist in Bereiche geteilt, die in der Seitenleiste unter
+  „Einstellungen“ stehen: **Allgemein** (Anbieter, Standardmodell, Werkzeuge), **Claude**,
+  **ChatGPT**, **Google Gemini** (Schlüssel), **Google Gemini (Abo)** (Anmeldung der Google-Konten)
+  und **Skytech X** (Token der Schnittstelle). Jeder Bereich zeigt nur seine eigenen Felder. Der
+  Entwurf gilt für alle Bereiche gemeinsam: ein Wechsel verliert nichts, **Speichern** speichert
+  alles. Meldet der Server ein Feld als ungültig, öffnet die Seite den Bereich, in dem es steht.
 - **Zugänge** werden nie angezeigt, nur „Hinterlegt“ oder „Kein Zugang“. Ein leeres Feld behält
   den gespeicherten Wert, „Entfernen“ löscht ihn.
 - **Standardmodell** bietet nur Modelle des gewählten Anbieters an.
@@ -88,7 +94,7 @@ Deshalb wird diese Datei einmalig eingefügt.
    Anmeldung erfolgt mit dem ChatGPT-Konto, nicht mit einem API-Schlüssel — nur so zählen die
    Anfragen später auf das Abo.
 2. Den vollständigen Inhalt der dabei entstandenen Datei `~/.codex/auth.json` kopieren.
-3. Auf der Seite „Einstellungen“ in das Feld „Anmeldung des ChatGPT-Abos“ einfügen, als Anbieter
+3. Auf der Seite „Einstellungen“ im Bereich „ChatGPT“ in das Feld „Anmeldung des ChatGPT-Abos“ einfügen, als Anbieter
    „ChatGPT (Abo)“ wählen und speichern. (Im Reiter „Konfiguration“: Feld `codex_auth_json`,
    `provider` auf `codex_sub`, danach neu starten.)
 
@@ -106,7 +112,8 @@ wenn `codex_auth_json` leer ist.
 ## So kommt der Google-Zugang ins Add-on (Abo)
 
 Die Antigravity-CLI kennt weder ein Token (wie Claude) noch eine Datei zum Einfügen (wie Codex).
-Die Anmeldung geschieht deshalb **im Add-on selbst**, auf der Seite „Einstellungen“:
+Die Anmeldung geschieht deshalb **im Add-on selbst**, auf der Seite „Einstellungen“ im Bereich
+„Google Gemini (Abo)“:
 
 1. In der Karte „Google-Anmeldung (Abo)“ auf „Mit Google anmelden“ klicken.
 2. „Google-Seite öffnen“ und dort mit dem Konto anmelden, das Google AI Pro hat. Am besten ist der
@@ -158,7 +165,7 @@ Maßnahme von Google kann alle treffen.
 Die Bezeichnungen kennt nur die Google-Befehlszeile, und erst nach der Anmeldung. Das Add-on holt
 die Liste deshalb selbst (`agy models`), merkt sie sich unter `/data/.gemini/…` und zeigt sie
 
-- in der Auswahl „Standardmodell“ auf der Seite „Einstellungen“, sobald „Google Gemini (Abo)“
+- in der Auswahl „Standardmodell“ im Bereich „Allgemein“ der Seite „Einstellungen“, sobald „Google Gemini (Abo)“
   gewählt ist (gespeichert in `gemini_sub_model`),
 - auf der Seite „Modelle“ und in `GET /models` sowie `GET /v1/capabilities`.
 

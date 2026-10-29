@@ -116,7 +116,8 @@ Anders als bei Claude und ChatGPT gibt es für die Antigravity-CLI weder ein Tok
 zum Einfügen. Ohne Anmeldung druckt sie eine Google-Adresse und wartet 60 Sekunden auf den Code der
 Zielseite. Deshalb **entsteht die Anmeldung im Add-on selbst** (D-022):
 
-1. Seite „Einstellungen“ → Karte „Google-Anmeldung“ → `POST /auth/gemini/start`.
+1. Seite „Einstellungen“ → Bereich „Google Gemini (Abo)“ → Karte „Google-Anmeldung“ →
+   `POST /auth/gemini/start`.
    `gemini_sub_login` startet die CLI mit einem Probeauftrag und einer **Pty als Eingabe** (mit
    `/dev/null` liest sie nichts, mit einer Pipe gibt sie sofort auf), liest die Adresse von der
    Fehlerausgabe und reicht sie an die Oberfläche.

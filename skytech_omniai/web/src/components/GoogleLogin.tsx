@@ -176,7 +176,7 @@ export function GoogleLogin({
   const accounts = status?.accounts ?? []
 
   return (
-    <section className="card section-card">
+    <section className="card">
       <div className="card-head">
         <h2>Google-Anmeldung (Abo)</h2>
         <div className="sub">

@@ -274,6 +274,10 @@ select {
 .nav-item svg { flex-shrink: 0; }
 .nav-item .count { margin-left: auto; font-size: 12px; background: var(--surface-2); color: var(--text-3); padding: 1px 8px; border-radius: 999px; }
 .nav-item.active .count { background: var(--surface); color: var(--primary); }
+/* Obertab mit Unterpunkten: der Eintrag bleibt ohne Füllung, die Füllung trägt der aktive Unterpunkt. */
+.nav-item.open { color: var(--text); }
+.nav-sub { margin: 2px 0 6px 21px; padding-left: 8px; border-left: 1px solid var(--border); display: grid; gap: 1px; }
+.nav-item.sub { padding: 7px 12px; font-size: 13px; }
 
 .sidebar-foot { border-top: 1px solid var(--border); padding: 12px; display: flex; align-items: center; gap: 10px; }
 .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; font-weight: 700; font-size: 12px; flex-shrink: 0; }

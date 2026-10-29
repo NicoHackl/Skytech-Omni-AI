@@ -194,6 +194,7 @@ erfindet keine Synonyme (`.button`, `.panel`, `.chip` gibt es nicht).
 | `.sidebar` | Feste Navigationsspalte, `position: sticky` |
 | `.sidebar-brand` / `.crest` | Kopf der Sidebar mit quadratischem Logo-Kürzel |
 | `.nav` / `.nav-label` / `.nav-item` / `.nav-item.active` / `.count` | Navigation, Gruppenüberschrift, Eintrag, aktiver Eintrag, Zähler-Badge rechts |
+| `.nav-item.open` / `.nav-sub` / `.nav-item.sub` | Obertab mit Unterpunkten: der geöffnete Eintrag behält die Füllung nicht (`.open` färbt nur den Text), die Unterpunkte stehen in `.nav-sub` eingerückt mit Linie links, kleiner (13px) als `.nav-item`; die Füllung trägt allein der aktive Unterpunkt |
 | `.sidebar-foot` / `.avatar` / `.who` | Fuß der Sidebar, in allen Skytech-Add-ons gleich (D-018): Produkt-Icon, Name des Add-ons, darunter „Addon-Config“. Als `<a>` Link auf die Konfigurationsseite des Add-ons in HA (Hover wie `.nav-item`, Fokusring); ohne Supervisor ein `<div>` ohne Link. Komponente `AddonFoot` |
 | `.main` | Hauptspalte |
 | `.topbar` | Klebriger Seitenkopf: `h1`, `.sub`, `.spacer`, danach Aktionsbuttons |
