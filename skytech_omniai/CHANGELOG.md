@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.0.0] — 29.10.2026
+
+### Geändert
+
+- Die Einstellungen sind übersichtlicher: In der Seitenleiste hat jeder Anbieter (Claude, ChatGPT, Google Gemini, Google Gemini mit Abo) und Skytech X einen eigenen Bereich, Anbieter, Modell und Werkzeuge stehen unter „Allgemein“.
+- Google Gemini (Abo) heißt jetzt Google Gemini (AGY). Vor dem Update vorübergehend einen anderen Anbieter wählen, danach Gemini AGY und das Standardmodell neu einstellen. Google-Konten bleiben angemeldet.
+
 ## [0.16.1] — 28.10.2026
 
 ### Geändert
@@ -14,7 +21,7 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Hinzugefügt
 
-- Bei Google Gemini (AGY) lassen sich mehrere Google-Konten anmelden. Ist das Kontingent eines Kontos aufgebraucht, nimmt das Add-on das nächste. Die Karte „Google-Anmeldung“ zeigt jedes Konto mit seinem Zustand. Google nennt den automatischen Wechsel zwischen Konten ausdrücklich nicht unterstützt; mit jedem Konto steigt das Risiko, und eine Maßnahme kann alle treffen.
+- Bei Google Gemini (Abo) lassen sich mehrere Google-Konten anmelden. Ist das Kontingent eines Kontos aufgebraucht, nimmt das Add-on das nächste. Die Karte „Google-Anmeldung“ zeigt jedes Konto mit seinem Zustand. Google nennt den automatischen Wechsel zwischen Konten ausdrücklich nicht unterstützt; mit jedem Konto steigt das Risiko, und eine Maßnahme kann alle treffen.
 
 ### Geändert
 
@@ -24,13 +31,13 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Hinzugefügt
 
-- Bei Google Gemini (AGY) lässt sich das Modell wählen, zum Beispiel Gemini 4 Argon oder Gemini 3.8 Flash. Die Liste kommt von Google und steht unter „Einstellungen“ in der Auswahl „Standardmodell“; pro Anfrage genügt auch eine Kurzform wie „flash-3.8“ oder „argon-4“.
+- Bei Google Gemini (Abo) lässt sich das Modell wählen, zum Beispiel Gemini 4 Argon oder Gemini 3.8 Flash. Die Liste kommt von Google und steht unter „Einstellungen“ in der Auswahl „Standardmodell“; pro Anfrage genügt auch eine Kurzform wie „flash-3.8“ oder „argon-4“.
 
 ## [0.14.0] — 28.10.2026
 
 ### Hinzugefügt
 
-- Google Gemini lässt sich über das Google-AI-Pro-Abo nutzen. Unter „Einstellungen“ in der Karte „Google-Anmeldung“ einmal mit dem Google-Konto anmelden und den Anbieter „Google Gemini (AGY)“ wählen. Google unterstützt das bei privaten Abos nicht; die Nutzung geschieht auf eigenes Risiko.
+- Google Gemini lässt sich über das Google-AI-Pro-Abo nutzen. Unter „Einstellungen“ in der Karte „Google-Anmeldung“ einmal mit dem Google-Konto anmelden und den Anbieter „Google Gemini (Abo)“ wählen. Google unterstützt das bei privaten Abos nicht; die Nutzung geschieht auf eigenes Risiko.
 
 ### Geändert
 

@@ -1,7 +1,7 @@
 name: "Skytech OmniAI"
 # Die echte Version setzt der Release-Job beim Veröffentlichen auf main
 # (scripts/release.py, D-025). Auf dev/dev steht hier immer "dev".
-version: "0.16.1"
+version: "1.0.0"
 slug: "skytech_omniai"
 description: "Modulare KI-Brücke für Home Assistant — Claude, ChatGPT und Google Gemini über das jeweilige Abo, dazu Gemini per API-Schlüssel"
 url: "https://github.com/NicoHackl/Skytech-Omni-AI"
