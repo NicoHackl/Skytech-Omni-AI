@@ -1,7 +1,7 @@
 # Erweiterung: Gemini-Provider mit Google-AI-Pro-Abo
 
 > **Stand 28.10.2026: Der Abo-Weg ist umgesetzt** (Anbieter `gemini_agy`, Entscheidung
-> [D-022](../../adr/D-022-gemini-agy-antigravity.md)); die **Handprüfung mit einem echten Konto
+> [D-022](../../adr/D-022-gemini-abo-antigravity.md)); die **Handprüfung mit einem echten Konto
 > steht aus**. Der Ausbau des Schlüssel-Wegs (`gemini`) ist **nicht** umgesetzt und hier nur geplant.
 > Was das Add-on heute tut, steht in [../../architektur.md](../../architektur.md); Abweichungen davon
 > in [../../bekannte-luecken.md](../../bekannte-luecken.md).
@@ -37,7 +37,7 @@ Risikos anders entschieden; das steht so im ADR und wird nicht verschwiegen.
 
 | Spur | Stand | Wo |
 |---|---|---|
-| **Abo-Weg über `agy`** (`gemini_agy`) | **umgesetzt**, Handprüfung H1 bis H10 offen | Code: `skytech_omniai/providers/gemini_agy_*.py`; Entscheidung, Messungen und Handprüfung: [D-022](../../adr/D-022-gemini-agy-antigravity.md); Befunde zur CLI: [abo-weg-antigravity.md](abo-weg-antigravity.md) |
+| **Abo-Weg über `agy`** (`gemini_agy`) | **umgesetzt**, Handprüfung H1 bis H10 offen | Code: `skytech_omniai/providers/gemini_agy_*.py`; Entscheidung, Messungen und Handprüfung: [D-022](../../adr/D-022-gemini-abo-antigravity.md); Befunde zur CLI: [abo-weg-antigravity.md](abo-weg-antigravity.md) |
 | **API-Weg ausbauen** (`gemini`) | **offen**, nur geplant | [api-weg.md](api-weg.md), Arbeitspakete in [umsetzungsplan.md](umsetzungsplan.md) |
 
 ## Entscheidungen, die beim User liegen (Schlüssel-Weg)

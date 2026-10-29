@@ -79,7 +79,7 @@ nimmt das Add-on das nächste. Die Modelle (z. B.
 > Wechseln zwischen Konten nennt Google ausdrücklich nicht unterstützt; mit jedem Konto steigt das
 > Risiko, und eine Maßnahme kann alle treffen. Die Nutzung
 > geschieht auf eigenes Risiko — am besten mit einem Konto, dessen Verlust nicht schmerzt. Hintergrund:
-> [D-022](docs/adr/D-022-gemini-agy-antigravity.md).
+> [D-022](docs/adr/D-022-gemini-abo-antigravity.md).
 
 ## Nutzung
 

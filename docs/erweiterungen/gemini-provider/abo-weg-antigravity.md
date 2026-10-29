@@ -1,6 +1,6 @@
 # Abo-Weg über die Antigravity CLI (Entwurf `gemini_agy`)
 
-> **Status: umgesetzt als Anbieter `gemini_agy`** (D-022, [ADR](../../adr/D-022-gemini-agy-antigravity.md)).
+> **Status: umgesetzt als Anbieter `gemini_agy`** (D-022, [ADR](../../adr/D-022-gemini-abo-antigravity.md)).
 > Diese Datei hält die **Befunde zur CLI** fest, auf denen die Umsetzung beruht — den Steckbrief, die
 > Messungen vom 27.10.2026 und die Risiken. Wie das Add-on die CLI benutzt, steht in
 > [../../architektur.md](../../architektur.md); der Entwurf, der hier früher stand, ist durch den
@@ -187,4 +187,4 @@ zur Zeit.
 
 ## 6. Wiederaufnahme- und Rücknahmebedingungen
 
-Siehe „Rücknahmebedingung“ im [ADR](../../adr/D-022-gemini-agy-antigravity.md).
+Siehe „Rücknahmebedingung“ im [ADR](../../adr/D-022-gemini-abo-antigravity.md).

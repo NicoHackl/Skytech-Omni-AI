@@ -140,7 +140,7 @@ Heute kennt `/ask` nur `prompt`, `provider`, `model`; `/v1/completions` hat kein
 | **Provider-Schnittstelle** | `BaseProvider.execute(..., attachments=None)` mit `Attachment(name, mime_type, data)`. Ein Anbieter, der keine Anhänge kann, lehnt sie mit **einem Satz** ab („Dieser Anbieter nimmt keine Anhänge an. Anhänge gehen mit Gemini Web.“) und HTTP 400. Er ignoriert sie **nie** stillschweigend |
 | **Übergabe an die Bibliothek** | Sie erwartet Dateipfade. Die Brücke schreibt die Daten in ein eigenes Verzeichnis unter `/tmp` (Rechte `0600`), übergibt die Pfade und löscht sie **immer** danach (`finally`) |
 | **Grenzen** | Anzahl, Größe, erlaubte Typen: **Vorschlag**, im Spike an der Web-App gemessen und danach festgelegt. Zusätzlich Grenze für die Größe des Anfrage-Rumpfs in Flask. Ob der Ingress-Proxy von Home Assistant große Rümpfe annimmt, ist **ungeprüft** |
-| **`/v1`** | Erst nach Änderung des Vertrags im Master ([README F4](README.md#offene-fragen--vor-dem-genannten-arbeitspaket-zu-klären)). Bis dahin sagt `GET /v1/capabilities` nichts über Anhänge und der Vertrag bleibt wortgleich (eiserne Regel 16) |
+| **`/v1`** | Erst nach Änderung des Vertrags im Master ([README F4](README.md#entscheidungen-des-users)). Bis dahin sagt `GET /v1/capabilities` nichts über Anhänge und der Vertrag bleibt wortgleich (eiserne Regel 16) |
 | **Datenschutz** | Anhänge gehen an Google (Verbraucherkonto), siehe [Sicherheit](#sicherheit-und-datenschutz). Auf der Platte liegen sie nur für die Dauer der Anfrage |
 
 ## Oberfläche

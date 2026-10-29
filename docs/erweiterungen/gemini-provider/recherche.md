@@ -1,6 +1,6 @@
 # Recherche: Gemini mit dem Google-AI-Pro-Abo
 
-> **Hinweis (28.10.2026):** Diese Recherche entstand vor der Umsetzung des Abo-Wegs. Ihre Empfehlung (zurückstellen) hat der User verworfen — siehe [README.md](README.md) und [D-022](../../adr/D-022-gemini-agy-antigravity.md). Befunde und Quellen gelten unverändert.
+> **Hinweis (28.10.2026):** Diese Recherche entstand vor der Umsetzung des Abo-Wegs. Ihre Empfehlung (zurückstellen) hat der User verworfen — siehe [README.md](README.md) und [D-022](../../adr/D-022-gemini-abo-antigravity.md). Befunde und Quellen gelten unverändert.
 
 
 Stand: 27.10.2026. Alle Quellen an diesem Tag abgerufen. Google ändert Bedingungen und Produkte
@@ -85,7 +85,7 @@ KI-Agent in seinem Namen tut.
   gefunden. „Nicht belegt“ heißt aber nicht „erlaubt“: Googles Text nennt den Einsatz
   ausdrücklich nicht unterstützt.
 - Nicht auszuschließen, dass Google das später lockert. Die Bedingungen, unter denen die
-  Entscheidung überprüft wird, stehen im [ADR D-022](../../adr/D-022-gemini-agy-antigravity.md).
+  Entscheidung überprüft wird, stehen im [ADR D-022](../../adr/D-022-gemini-abo-antigravity.md).
 
 Gleiche Lage bei der alten Gemini CLI: Die
 [FAQ](https://geminicli.com/docs/resources/faq/) nennt „Using third-party software, tools, or
