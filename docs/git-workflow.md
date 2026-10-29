@@ -20,9 +20,12 @@ dev/dev ──push──▶ CI: alles grün? ──ja──▶ dev/main ──Pu
 
 Jeder Commit auf `main`, der etwas unter `skytech_omniai/` verändert hat, wird mit einem
 Release-Commit abgeschlossen: der gemergte Stand, gestempelt mit Version
-(`skytech_omniai/config.yaml`) und Changelog (`skytech_omniai/CHANGELOG.md`). Ein Ruleset sperrt
-`main` für alle außer dem Release-Job und den Admins und verlangt für Änderungen einen
-Pull Request mit Freigabe. Begründung: D-025.
+(`skytech_omniai/config.yaml`) und Changelog (`skytech_omniai/CHANGELOG.md`). Ein Ruleset verlangt
+für jede Änderung an `main` einen Pull Request (Merge-Commit) und sperrt Force-Push und Löschen;
+nur der Release-Job darf per Deploy-Key direkt schreiben. Es gibt bewusst keinen Admin-Bypass und
+keine Regel „Restrict updates": Die GitHub-App (iOS) kann keine Regel umgehen, der Pull Request
+ließe sich dort sonst nicht freigeben. Freigabe ist der Merge-Knopf des Repo-Besitzers, auch in
+der App. Begründung: D-025.
 
 Weil die CI nie nach `dev/dev` schreibt, braucht es nach einem Release **kein**
 `git pull --rebase`. Nötig ist es nur, wenn jemand anderes (ein zweiter Agent, ein gemergter
@@ -199,7 +202,7 @@ Hat sich unter `skytech_omniai/` nichts geändert (nur `docs/`, `tests/`, CI), g
 Release. Solche Änderungen und ihre Trailer gehen mit dem nächsten Release nach `main`.
 
 Der Push nach `main` und der Tag gehen über einen Deploy-Key (Secret `RELEASE_DEPLOY_KEY`), den das Ruleset von
-`main` neben den Admins als einzige Ausnahme kennt. Fehlt das Secret, bricht der Job erst dann
+`main` als einzige Ausnahme kennt. Fehlt das Secret, bricht der Job erst dann
 ab, wenn wirklich etwas zu veröffentlichen ist.
 
 **Dependabot** öffnet seine Pull Requests gegen `dev/dev`. Nach dem Merge laufen sie wie jede
