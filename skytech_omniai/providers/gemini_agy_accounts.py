@@ -30,6 +30,8 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
+from providers import google_accounts
+
 log = logging.getLogger("omniai.gemini_agy.accounts")
 
 # Die CLI legt Anmeldung und Zustand unter $HOME/.gemini ab. HOME zeigt auf das
@@ -63,8 +65,8 @@ ID_PATTERN = re.compile(r"^konto-(\d+)$")
 # Google). Der erste Zeitpunkt ist bewusst kurz: ein Versuch auf ein leeres Konto
 # kostet nur einen schnellen Fehler, ein zu spät freigegebenes Konto kostet
 # Antworten.
-BACKOFF_START_SEKUNDEN = 1800
-BACKOFF_MAX_SEKUNDEN = 5 * 3600
+BACKOFF_START_SEKUNDEN = google_accounts.BACKOFF_START_SECONDS
+BACKOFF_MAX_SEKUNDEN = google_accounts.BACKOFF_MAX_SECONDS
 
 _LOCK = threading.RLock()
 
@@ -202,28 +204,18 @@ def _write(accounts: list[Account]) -> None:
             for a in accounts
         ]
     }
-    path = accounts_path()
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temp = path.with_name(path.name + ".tmp")
-        temp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-        temp.chmod(0o600)
-        temp.replace(path)
-    except OSError as error:
-        log.error("Liste der Google-Konten nicht speicherbar: %s", error)
+        google_accounts.write_json(accounts_path(), payload)
+    except OSError:
+        log.error("Liste der Google-Konten nicht speicherbar")
         raise
 
 
 def _read() -> list[Account] | None:
     """Die gespeicherte Liste; ``None``, wenn es noch keine gibt."""
-    try:
-        data = json.loads(accounts_path().read_text(encoding="utf-8"))
-        entries = data["accounts"]
-    except FileNotFoundError:
+    entries = google_accounts.read_records(accounts_path())
+    if entries is None:
         return None
-    except (OSError, ValueError, KeyError, TypeError):
-        log.error("Liste der Google-Konten unlesbar, sie gilt als leer")
-        return []
     accounts = []
     for entry in entries:
         try:
@@ -353,11 +345,7 @@ def remove_account(account_id: str) -> Account | None:
 def ready_accounts(now: float | None = None) -> list[Account]:
     """Konten, die jetzt an der Reihe sein dürfen — in der Reihenfolge der Liste."""
     now = time.time() if now is None else now
-    return [
-        a
-        for a in list_accounts()
-        if a.signed_in() and not a.needs_login and a.exhausted_until <= now
-    ]
+    return google_accounts.ready_accounts(list_accounts(), now)
 
 
 def mark_exhausted(
@@ -369,7 +357,7 @@ def mark_exhausted(
     if account is None:
         return None
     strikes = account.strikes + 1
-    delay = min(BACKOFF_START_SEKUNDEN * 2 ** (strikes - 1), BACKOFF_MAX_SEKUNDEN)
+    delay = google_accounts.backoff_seconds(strikes)
     return update_account(account_id, strikes=strikes, exhausted_until=now + delay, problem=kind)
 
 
@@ -386,9 +374,4 @@ def mark_ok(account_id: str) -> None:
 
 def next_try_time() -> float | None:
     """Frühester Zeitpunkt, zu dem ein aufgebrauchtes Konto wieder versucht wird."""
-    times = [
-        a.exhausted_until
-        for a in list_accounts()
-        if a.signed_in() and not a.needs_login and a.exhausted_until > 0
-    ]
-    return min(times) if times else None
+    return google_accounts.next_try_time(list_accounts())

@@ -35,7 +35,7 @@ Endpunkte: `GET /settings`, `PUT /settings` in [api-referenz.md](api-referenz.md
 
 | Option | Pflicht | Vorgabe | Bedeutung |
 |---|---|---|---|
-| `provider` | ja | `claude_sub` | Aktiver Anbieter: `claude_sub`, `codex_sub`, `gemini` (Schlüssel) oder `gemini_agy` (Google-AI-Pro-Abo) |
+| `provider` | ja | `claude_sub` | Aktiver Anbieter: `claude_sub`, `codex_sub`, `gemini` (Schlüssel), `gemini_agy` (Antigravity) oder `gemini_web` (Web-App) |
 | `model` | ja | `auto` | Add-on-weites Standardmodell. `auto` heißt: der Anbieter entscheidet |
 | `tool_access` | ja | `web` | Welche Werkzeuge die Befehlszeilen benutzen dürfen: `off`, `web` oder `full` |
 | `claude_oauth_token` | nein | leer | Langlebiges Token des Claude-Pro/Max-Abos, erzeugt mit `claude setup-token` |
@@ -43,6 +43,7 @@ Endpunkte: `GET /settings`, `PUT /settings` in [api-referenz.md](api-referenz.md
 | `codex_auth_json` | nein | leer | Anmeldung des ChatGPT-Abos: vollständiger Inhalt der Datei `auth.json`, die `codex login` anlegt |
 | `openai_api_key` | nein | leer | Alternative zum Abo: nach Verbrauch abgerechneter OpenAI-Schlüssel |
 | `gemini_api_key` | nein | leer | Schlüssel aus Google AI Studio |
+| `gemini_web_model` | nein | leer | Standardmodell der Gemini-Web-App, nach Cookie-Anmeldung aus dem Konto gelesen |
 | `gemini_agy_model` | nein | leer | Standardmodell für `gemini_agy`: eine Bezeichnung wie `Gemini 4 Argon (High)` oder eine Kurzform wie `flash-3.8`. Leer = Google wählt. Siehe „Modelle bei Google Gemini (AGY)“ |
 | `api_token` | nein | leer | Token der Schnittstelle v1 für Skytech X, mindestens 32 Zeichen (z. B. `openssl rand -base64 32`). Leer = `/v1` lehnt jede Anfrage ab. Dasselbe Token in Skytech X unter „Anbindungen“ eintragen |
 
@@ -69,6 +70,7 @@ Aus den Optionen abgeleitet. Beim Betrieb außerhalb von Home Assistant werden s
 | `CODEX_AUTH_JSON` | nein | — | Anmeldung des ChatGPT-Abos, wird vom Provider ins Datenverzeichnis geschrieben |
 | `OPENAI_API_KEY` | nein | — | OpenAI-Schlüssel als Alternative zum Abo |
 | `GEMINI_API_KEY` | nein | — | Schlüssel für Google Gemini |
+| `OMNIAI_GEMINI_WEB_MODEL` | nein | — | Standardmodell der Web-App, aus `gemini_web_model` |
 | `GEMINI_AGY_MODEL` | nein | — | Standardmodell für Google Gemini (AGY), aus der Option `gemini_agy_model` |
 | `GOOGLE_API_KEY` | nein | — | Wird als zweiter gängiger Name ebenfalls akzeptiert |
 | `OMNIAI_API_TOKEN` | nein | — | Token der Schnittstelle v1 (aus der Option `api_token`) |
@@ -266,3 +268,27 @@ Fehler, kein Feature.
 
 Neu erzeugen, falls er je außerhalb von GitHub aufgetaucht ist — siehe
 [sicherheit-datenschutz.md](sicherheit-datenschutz.md#release-zugang).
+
+## Google Gemini (Web)
+
+- `provider: gemini_web`, `gemini_web_model: ""` lässt Google das Modell wählen.
+- Die Modelloption entspricht `OMNIAI_GEMINI_WEB_MODEL`; eine unbekannte Kennung führt
+  zu einer Meldung mit Auswahl, ohne Kontowechsel.
+- Anmeldung in den Einstellungen unter **Google Gemini (Web)**, unabhängig vom Speichern
+  der Add-on-Optionen. Ein privates Browserfenster mit dem separaten Konto öffnen,
+  bei Gemini anmelden, in den Entwicklerwerkzeugen die Cookie-Werte `__Secure-1PSID`
+  und `__Secure-1PSIDTS` kopieren und in die zwei Passwortfelder einfügen. Danach das
+  Fenster schließen, ohne sich vorher abzumelden. Die Eingabefelder werden beim
+  Absenden sofort geleert. Keine Werte an Support, Chat oder Protokolle weitergeben.
+- Höchstens zehn Konten. Das erste mit Kontingent wird verwendet. Leeres Kontingent
+  führt zu wachsender Wartezeit und zum nächsten Konto. Ungültige Anmeldung muss
+  entfernt und neu hinzugefügt werden. Eine Verbindungssperre pausiert alle Konten.
+- Bestehende Google-Konten für AGY und Web sind getrennte Anmeldungen.
+- Cookies sind keine Add-on-Optionen und werden nie in Antworten zurückgegeben.
+- Für lokale Entwicklung kann `OMNIAI_GEMINI_WEB_HOME` ein anderes Datenverzeichnis
+  bestimmen; im Add-on bleibt es `/data`.
+
+Die Handprüfung im echten Konto erfolgt nach Installation. Es gibt keine Zusage,
+wie lange eine Anmeldung auf der Serveradresse gültig bleibt. Google kann das Konto
+sperren. Die Werkzeugstufe wirkt hier nicht; Verbindungen zu anderen Google-Diensten
+im separaten Konto deaktivieren. Siehe [D-030](adr/D-030-gemini-web-inoffiziell.md).

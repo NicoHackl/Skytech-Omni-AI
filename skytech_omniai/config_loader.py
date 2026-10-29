@@ -100,6 +100,7 @@ OPTION_ENV_MAP = {
     "openai_api_key": "OPENAI_API_KEY",
     "gemini_api_key": "GEMINI_API_KEY",
     "gemini_agy_model": "GEMINI_AGY_MODEL",
+    "gemini_web_model": "OMNIAI_GEMINI_WEB_MODEL",
     "api_token": "OMNIAI_API_TOKEN",
 }
 

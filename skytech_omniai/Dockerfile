@@ -56,7 +56,15 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 
 COPY requirements.txt ./requirements.txt
-RUN /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+RUN /opt/venv/bin/pip install --no-cache-dir --only-binary=:all: -r requirements.txt
+
+# Lizenz und zugehöriger Quelltext der AGPL-Bibliothek (D-030).
+COPY third_party ./third_party
+RUN curl -fsSL -o /app/third_party/gemini-webapi/source.tar.gz \
+    https://files.pythonhosted.org/packages/92/37/8725aae8c10a359a00469eae4c20e2de58dfbd8ac8a558742a2541147e93/gemini_webapi-2.1.1.tar.gz \
+    && echo "4a9a5dc6a2ecb38c884e59ac651866a11d158dd5b65303a2d581ca1e1ee02a5f  /app/third_party/gemini-webapi/source.tar.gz" > /tmp/gemini-source.sha256 \
+    && sha256sum -c /tmp/gemini-source.sha256 \
+    && rm /tmp/gemini-source.sha256
 
 # Die Oberfläche wird hier gebaut und nicht in einer eigenen Bauphase: Node und
 # npm sind für die Claude-CLI ohnehin im Bild, und ein zweites Basisimage gibt
@@ -71,6 +79,7 @@ RUN npm run build --prefix /app/web \
 
 COPY config.yaml ./config.yaml
 COPY app.py ./app.py
+COPY gemini_web_routes.py ./gemini_web_routes.py
 COPY api_v1.py ./api_v1.py
 COPY runs.py ./runs.py
 COPY embeddings.py ./embeddings.py

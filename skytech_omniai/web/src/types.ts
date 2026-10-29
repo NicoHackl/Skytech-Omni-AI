@@ -2,7 +2,7 @@
    wider — weicht der Server ab, wird hier nachgezogen, nicht mit `any` umgangen. */
 
 /** Technischer Name eines Anbieters, so wie er in der Konfiguration steht. */
-export type ProviderName = 'claude_sub' | 'codex_sub' | 'gemini' | 'gemini_agy'
+export type ProviderName = 'claude_sub' | 'codex_sub' | 'gemini' | 'gemini_agy' | 'gemini_web'
 
 /** Was ein Anbieter an Modellen anbietet. `default` = null heißt: er entscheidet selbst. */
 export interface ProviderModels {
@@ -49,6 +49,7 @@ export interface SettingsOptions {
   gemini_api_key: string
   /** Standardmodell von „Google Gemini (AGY)“; leer heißt: Google wählt. */
   gemini_agy_model: string
+  gemini_web_model: string
   api_token: string
 }
 
@@ -116,4 +117,10 @@ export interface GeminiLoginStatus {
   seconds_left: number | null
   /** Grund, warum die letzte Anmeldung nicht geklappt hat, als fertiger Satz. */
   error: string | null
+}
+
+/** Konten von Gemini Web ohne Anmeldewerte. */
+export interface GeminiWebStatus {
+  accounts: GeminiAccount[]
+  signed_in: boolean
 }

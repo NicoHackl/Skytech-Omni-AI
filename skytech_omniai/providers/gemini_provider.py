@@ -13,7 +13,13 @@ import os
 import urllib.error
 import urllib.request
 
-from providers.base_provider import JSON_INSTRUCTION, BaseProvider, ProviderTimeout, UnknownModel
+from providers.base_provider import (
+    JSON_INSTRUCTION,
+    Attachment,
+    BaseProvider,
+    ProviderTimeout,
+    UnknownModel,
+)
 
 log = logging.getLogger("omniai.gemini")
 
@@ -204,7 +210,14 @@ class GeminiProvider(BaseProvider):
         )
         return RuntimeError(HTTP_FEHLERTEXTE.get(exc.code, FEHLER_ALLGEMEIN))
 
-    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
+    def execute(
+        self,
+        prompt: str,
+        model: str | None = None,
+        timeout: int | None = None,
+        attachments: list[Attachment] | None = None,
+    ) -> dict:
+        self.reject_attachments(attachments)
         api_key = self._build_api_key()
         chosen_model = self._resolve_model(model)
 

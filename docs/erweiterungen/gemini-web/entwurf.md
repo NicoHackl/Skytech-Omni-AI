@@ -1,9 +1,9 @@
 # Entwurf: Anbieter „Gemini Web“
 
-> Plan, **nicht umgesetzt**. Namen von Dateien, Funktionen und Optionen sind Vorschläge und
-> werden bei der Umsetzung nur geändert, wenn der Code etwas anderes verlangt. Offene Fragen stehen
-> in [README.md](README.md#offene-fragen--vor-dem-genannten-arbeitspaket-zu-klären), Befunde in
-> [recherche.md](recherche.md).
+> Ursprünglicher Entwurf. Der aktuelle Umsetzungsstand und die noch offenen Punkte
+> stehen in [README.md](README.md). Aussagen über Anhänge im HTTP-Endpunkt sind bis
+> Abschluss von AP 9 weiterhin geplant. Der gemeinsame Kern wurde auf Ablage und
+> Auswahlfunktionen begrenzt, siehe D-030.
 
 ## Überblick
 

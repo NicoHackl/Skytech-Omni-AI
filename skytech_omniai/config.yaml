@@ -52,11 +52,13 @@ options:
   # selbst. Die gültigen Bezeichnungen zeigt die Seite "Einstellungen" nach der
   # Anmeldung bei Google.
   gemini_agy_model: ""
+  # Modell der Web-App; die Liste wird nach der Cookie-Anmeldung gelesen.
+  gemini_web_model: ""
   # Token für die Schnittstelle v1 (Skytech X, D-019). Leer = /v1 lehnt alles ab.
   # Mindestens 32 zufällige Zeichen, z. B. openssl rand -base64 32.
   api_token: ""
 schema:
-  provider: "list(claude_sub|codex_sub|gemini|gemini_agy)"
+  provider: "list(claude_sub|codex_sub|gemini|gemini_agy|gemini_web)"
   # Gemeinsame Liste für alle Provider: die ersten Einträge gehören zu
   # "claude_sub", die "gpt-*"-Einträge zu "codex_sub", die "gemini-*"-Einträge
   # zu "gemini". "gemini_agy" hat keine feste Liste (nur "auto"): seine Modelle
@@ -71,4 +73,5 @@ schema:
   openai_api_key: "password?"
   gemini_api_key: "password?"
   gemini_agy_model: "str?"
+  gemini_web_model: "str?"
   api_token: "password?"

@@ -66,3 +66,5 @@ neue Laufzeit-Abhängigkeit.
 | D-029 | 28.10.2026 | Projektübergreifende Verträge liegen unter `contract/contract_<projektpaar>/` mit Index; der OpenAPI-Vertrag mit Skytech X zog von `docs/contracts/` nach `contract/contract_skytech_x_omniai/` (eiserne Regel 16) | Aktiv | Gleiche Struktur wie die anderen Skytech-Repos. Die Kopie bleibt inhaltlich unverändert (Master im Backend). Ordnername nach der Master-Regel `contract_<master-besitzer>_<gegenstelle>` (User, 28.10.2026): der Besitzer des Masters steht vorn. |
 
 | D-031 | 29.10.2026 | `gemini_sub` heißt ohne Alias `gemini_agy`, angezeigt als „Google Gemini (AGY)“; Kontodatenpfade bleiben erhalten | Aktiv | Vom User bestätigt; kein externer Aufrufer verwendet den alten Schlüssel. [ADR](adr/D-031-umbenennung-gemini-agy.md). |
+
+| D-030 | 29.10.2026 | Gemini Web über `gemini-webapi==2.1.1`, temporäre Chats, mehrere Cookie-Konten, private Cache-Pfade und AGPL-Hinweis | Aktiv, Handprüfung offen | User bestätigt; Kontotest nach Installation. [ADR](adr/D-030-gemini-web-inoffiziell.md). |

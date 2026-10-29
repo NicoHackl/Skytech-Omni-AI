@@ -157,7 +157,26 @@ setzt Version und Changelog und schreibt `main` — von Hand wird dort nichts ge
 | Beschreibung im Add-on-Store | [skytech_omniai/info.md](skytech_omniai/info.md) |
 | Änderungen je Version | [skytech_omniai/CHANGELOG.md](https://github.com/NicoHackl/Skytech-Omni-AI/blob/main/skytech_omniai/CHANGELOG.md) auf `main` — auch im Update-Dialog von Home Assistant |
 
+## Google Gemini (Web)
+
+In den Einstellungen unter **Google Gemini (Web)** ein separates Google-Konto mit den
+beiden Anmeldewerten aus dem Browser hinzufügen. Die aufklappbare Anleitung erklärt
+jeden Schritt. Danach den Anbieter unter **Allgemein** wählen. Modelle werden aus dem
+Konto gelesen. Jede Anfrage startet einen neuen temporären Chat.
+
+Google erlaubt diesen inoffiziellen Zugang nicht und kann Konten sperren. Nur ein
+separates Konto ohne persönliche Daten verwenden. Der Kontotest auf dem HA-Server
+steht noch aus, insbesondere die Haltbarkeit der Anmeldung. Die Werkzeugauswahl des
+Add-ons steuert die Funktionen der Gemini-Web-App nicht.
+
 ## Lizenz
+
+Der inoffizielle Anbieter **Google Gemini (Web)** verwendet
+[gemini-webapi](https://github.com/HanaokaYuzu/Gemini-API) unter **AGPL-3.0**.
+Lizenztext und zugehöriger Bibliotheksquelltext liegen dem Add-on-Image bei; der
+Integrationscode liegt in diesem öffentlichen Repository. Die MIT-Lizenz des eigenen
+Codes hebt die Pflichten der AGPL für die Bibliothek und deren Kombination nicht auf.
+Siehe [D-030](docs/adr/D-030-gemini-web-inoffiziell.md).
 
 MIT — siehe [LICENSE](LICENSE).
 

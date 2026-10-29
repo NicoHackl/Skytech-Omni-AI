@@ -3,6 +3,7 @@ import type {
   AskInput,
   AskResponse,
   GeminiLoginStatus,
+  GeminiWebStatus,
   ModelsResponse,
   SettingsInput,
   SettingsResponse,
@@ -69,6 +70,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 /* Jeder Endpunkt ist ein benannter Eintrag — kein roher Pfad in einer Seite. */
 export const api = {
+  geminiWebStatus: () => request<GeminiWebStatus>('auth/gemini-web'),
+  geminiWebAdd: (input: { label: string; psid: string; psidts: string }) =>
+    request<GeminiWebStatus>('auth/gemini-web', { method: 'POST', body: JSON.stringify(input) }),
+  geminiWebRemove: (id: string) =>
+    request<GeminiWebStatus>(`auth/gemini-web/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  geminiWebModelsRefresh: () =>
+    request<{ models: string[] }>('auth/gemini-web/models', { method: 'POST' }),
   status: () => request<StatusResponse>('status'),
   /* Name und HA-Konfigurationsseite des Add-ons für den Sidebar-Fuß (D-018). */
   addon: () => request<AddonInfo>('addon'),

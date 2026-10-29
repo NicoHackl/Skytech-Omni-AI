@@ -132,3 +132,13 @@ wo nicht.
 
 Wird ein Punkt behoben, wird er hier **gelöscht** und mit einem Changelog-Trailer im Commit vermerkt.
 Eine Liste voller erledigter Einträge liest niemand mehr.
+
+## Gemini Web: offene Handprüfung
+
+Der Anbieter ist lokal mit Attrappen und auf beiden Alpine-Architekturen geprüft.
+Ein echtes separates Google-Konto testet der User nach Installation im HA-Add-on.
+Bis dahin sind Cookie-Haltbarkeit, reale Modellnamen, Kontingentfehler, tatsächlicher
+Google-Verlauf und Upload-Grenzen ungeprüft. Die Bibliothek darf jederzeit durch eine
+Änderung der Web-App brechen. Nutzung von Google nicht erlaubt, Kontosperre möglich.
+Die Werkzeugstufe wirkt hier nicht. AGPL-Bibliothek im MIT-Repository, Lizenz und
+Quellarchiv im Image: [D-030](adr/D-030-gemini-web-inoffiziell.md).

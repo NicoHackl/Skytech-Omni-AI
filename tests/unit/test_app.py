@@ -27,7 +27,13 @@ def test_models_lists_every_provider(client):
     """Normalfall: Automatisierungen können die gültigen Werte abfragen."""
     daten = client.get("/models").get_json()
 
-    assert set(daten["providers"]) == {"claude_sub", "codex_sub", "gemini", "gemini_agy"}
+    assert set(daten["providers"]) == {
+        "claude_sub",
+        "codex_sub",
+        "gemini",
+        "gemini_agy",
+        "gemini_web",
+    }
     # Die Modelle kennt die Google-Befehlszeile erst nach der Anmeldung.
     assert daten["providers"]["gemini_agy"] == {"models": [], "default": None}
     assert daten["providers"]["gemini"]["default"] == "gemini-flash-latest"
@@ -48,6 +54,7 @@ def test_status_reports_credentials_as_yes_or_no(client, monkeypatch):
         "codex_sub": False,
         "gemini": True,
         "gemini_agy": False,
+        "gemini_web": False,
     }
     # Der Wert selbst taucht nirgends in der Antwort auf.
     assert "geheim" not in json.dumps(daten, ensure_ascii=False)
@@ -62,6 +69,7 @@ def test_status_without_credentials(client):
         "codex_sub": False,
         "gemini": False,
         "gemini_agy": False,
+        "gemini_web": False,
     }
     assert daten["default_model"] is None
 

@@ -98,3 +98,9 @@ anfordern; die Werkzeuge liefert das Backend über MCP (D-019,
 Beschlossen, aber noch nicht gebaut → hier mit Status `offen`.
 Gebaut, aber abweichend von der Doku → [bekannte-luecken.md](bekannte-luecken.md).
 Warum so entschieden → [design-entscheidungen.md](design-entscheidungen.md).
+
+## Gemini Web
+
+Google Gemini (Web), Cookie-Konten, temporäre Chats und dynamische Modelllisten sind
+implementiert. Kontotest im HA-Add-on durch den User offen. Anhänge und Abschlussprüfung
+sind Teil desselben Vorhabens; siehe [Erweiterung](erweiterungen/gemini-web/README.md).

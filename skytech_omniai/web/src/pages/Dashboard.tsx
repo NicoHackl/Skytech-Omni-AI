@@ -12,7 +12,7 @@ import type { StatusResponse } from '../types'
    Schlüssel taucht hier weder ganz noch gekürzt auf. */
 
 /** Reihenfolge der Zugangskacheln, gleich wie im Auswahlfeld der Konfiguration. */
-const CREDENTIAL_KEYS = ['claude_sub', 'codex_sub', 'gemini', 'gemini_agy']
+const CREDENTIAL_KEYS = ['claude_sub', 'codex_sub', 'gemini', 'gemini_agy', 'gemini_web']
 
 export function Dashboard() {
   const [status, setStatus] = useState<StatusResponse | null>(null)
@@ -134,11 +134,11 @@ export function Dashboard() {
                   <p className="tile-copy">
                     {status.credentials[key] ? (
                       <span className="pill ok">
-                        {key === 'gemini_agy' ? 'Angemeldet' : 'Zugang hinterlegt'}
+                        {(key === 'gemini_agy' || key === 'gemini_web') ? 'Angemeldet' : 'Zugang hinterlegt'}
                       </span>
                     ) : (
                       <span className="pill muted">
-                        {key === 'gemini_agy' ? 'Nicht angemeldet' : 'Kein Zugang'}
+                        {(key === 'gemini_agy' || key === 'gemini_web') ? 'Nicht angemeldet' : 'Kein Zugang'}
                       </span>
                     )}
                   </p>

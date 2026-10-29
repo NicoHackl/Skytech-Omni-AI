@@ -4,7 +4,7 @@ import { ApiError, api, fieldErrorsOf } from '../api'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/Layout'
 import { useToast } from '../components/Toast'
-import { MODEL_AUTO, SUBSCRIPTION_PROVIDER } from '../provider'
+import { MODEL_AUTO, DYNAMIC_MODEL_OPTIONS } from '../provider'
 import { DEFAULT_SECTION, SETTINGS_SECTIONS, sectionsWithErrors } from '../settingsSections'
 import type {
   ModelsResponse,
@@ -101,7 +101,7 @@ export function Einstellungen() {
     try {
       const options: SettingsInput['options'] = { ...draft }
       // Das gemeinsame Auswahlfeld kann keine Bezeichnung von Google tragen.
-      if (draft.provider === SUBSCRIPTION_PROVIDER) options.model = MODEL_AUTO
+      if (DYNAMIC_MODEL_OPTIONS[draft.provider]) options.model = MODEL_AUTO
       for (const key of removed) options[key] = null
       const saved = await api.saveSettings({ options, stored_revision: loaded.stored_revision })
       adopt(saved)

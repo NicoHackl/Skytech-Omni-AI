@@ -32,6 +32,7 @@ from pathlib import Path
 from providers.base_provider import (
     JSON_INSTRUCTION,
     TOOL_ACCESS_OFF,
+    Attachment,
     BaseProvider,
     ProviderTimeout,
     UnknownModel,
@@ -1019,7 +1020,14 @@ class GeminiAgyProvider(BaseProvider):
         )
         raise self._failure(output, chosen_model)
 
-    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
+    def execute(
+        self,
+        prompt: str,
+        model: str | None = None,
+        timeout: int | None = None,
+        attachments: list[Attachment] | None = None,
+    ) -> dict:
+        self.reject_attachments(attachments)
         chosen_model = self._resolve_model(model)
         # Kennt das Add-on die Modelle noch nicht (etwa nach einem Update), holt es
         # sie unter der Sperre, bevor es das gewünschte Modell auflöst.

@@ -1,6 +1,6 @@
 import {
   MODEL_AUTO,
-  SUBSCRIPTION_PROVIDER,
+  DYNAMIC_MODEL_OPTIONS,
   TOOL_ACCESS_FULL,
   providerLabel,
   toolAccessLabel,
@@ -26,8 +26,9 @@ export function Allgemein() {
   const { draft, catalog, locked, errors: serverErrors, patch } = useSettingsForm()
 
   function changeModel(value: string) {
-    // Google Gemini (AGY) hat sein eigenes Feld; das gemeinsame bleibt dort „auto“.
-    if (draft.provider === SUBSCRIPTION_PROVIDER) patch({ gemini_agy_model: value, model: MODEL_AUTO })
+    // Dynamische Google-Zugänge haben eigene Felder; das gemeinsame bleibt „auto“.
+    const key = DYNAMIC_MODEL_OPTIONS[draft.provider]
+    if (key) patch({ [key]: value, model: MODEL_AUTO })
     else patch({ model: value })
   }
 
@@ -39,9 +40,10 @@ export function Allgemein() {
 
   const providers = Object.keys(catalog?.providers ?? {})
   const providerModels = catalog?.providers[draft.provider]?.models ?? []
-  // Bei Google Gemini (AGY) gilt eine eigene Option; leer heißt „Google wählt“.
-  const subscription = draft.provider === SUBSCRIPTION_PROVIDER
-  const modelKey = subscription ? 'gemini_agy_model' : 'model'
+  // Bei dynamischen Google-Modellen gilt eine eigene Option; leer heißt „Google wählt“.
+  const dynamicKey = DYNAMIC_MODEL_OPTIONS[draft.provider]
+  const subscription = Boolean(dynamicKey)
+  const modelKey = dynamicKey ?? 'model'
   const autoValue = subscription ? '' : MODEL_AUTO
   const modelValue = draft[modelKey]
   // Ein gesetztes Modell, das nicht in der Liste steht (im Reiter „Konfiguration“
@@ -102,7 +104,7 @@ export function Allgemein() {
               <small>
                 {models.length === 0
                   ? 'Die Modelle stehen nach der Anmeldung bei Google hier zur Auswahl.'
-                  : 'Die Liste kommt von Google. Pro Anfrage genügt auch eine Kurzform wie „flash-3.8“ oder „argon-4“.'}
+                  : 'Die Liste kommt von Google. Pro Anfrage kann ein anderes Modell gewählt werden.'}
               </small>
             ) : null}
             <FieldError errors={errors} name={modelKey} />
@@ -123,7 +125,7 @@ export function Allgemein() {
               {TOOL_ACCESS_HINTS[draft.tool_access] ?? ''} Gilt für Claude, ChatGPT und
               Google Gemini (AGY), dort ohne Befehle: „Alle Werkzeuge“ wirkt wie
               „Web-Recherche“. Google Gemini mit Schlüssel antwortet immer aus seinem
-              Wissen.
+              Wissen. Bei Google Gemini (Web) hat diese Auswahl keine Wirkung.
             </small>
             <FieldError errors={errors} name="tool_access" />
           </label>

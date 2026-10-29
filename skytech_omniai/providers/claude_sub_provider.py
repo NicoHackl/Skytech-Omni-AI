@@ -13,6 +13,7 @@ from providers.base_provider import (
     TOOL_ACCESS_FULL,
     TOOL_ACCESS_OFF,
     TOOL_ACCESS_WEB,
+    Attachment,
     BaseProvider,
     ProviderTimeout,
     resolve_tool_access,
@@ -161,7 +162,14 @@ class ClaudeSubProvider(BaseProvider):
             chosen = os.environ.get("OMNIAI_MODEL", "").strip()
         return chosen
 
-    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
+    def execute(
+        self,
+        prompt: str,
+        model: str | None = None,
+        timeout: int | None = None,
+        attachments: list[Attachment] | None = None,
+    ) -> dict:
+        self.reject_attachments(attachments)
         env = self._build_env()
         full_prompt = prompt + JSON_INSTRUCTION
 

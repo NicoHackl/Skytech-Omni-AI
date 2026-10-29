@@ -178,7 +178,7 @@ export function GoogleLogin({
   return (
     <section className="card">
       <div className="card-head">
-        <h2>Google-Anmeldung (Abo)</h2>
+        <h2>Google-Anmeldung (AGY)</h2>
         <div className="sub">
           Für „Google Gemini (AGY)“ — nutzt das Kontingent von Google AI Pro, auf Wunsch mit mehreren
           Konten

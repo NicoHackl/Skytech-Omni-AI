@@ -241,3 +241,23 @@ verlassen.
 - An die Anbieter gehen nur die für die Aufgabe nötigen, verdichteten Daten — nie ganze
   Zustandsabbilder des Smart Homes, nie personenbezogene Daten ohne ausdrückliche Freigabe.
 - Harte Sicherheitsgrenzen sind durch eine KI nicht änderbar.
+
+## Gemini Web: Cookies und Verbraucherkonto
+
+Die beiden Anmeldewerte gewähren Kontozugriff und werden wie Passwörter behandelt.
+Sie gelangen ausschließlich im Rumpf einer Ingress-Anfrage zum Add-on; kein Wert
+kommt in Antworten, URLs, Dateipfade oder Logs. Kontenverzeichnisse tragen `0700`,
+Cookie- und Sitzungsdateien `0600`, auch beim atomaren Schreiben. Der unsichere
+Standard-Dateiname der Bibliothek wird ersetzt. Deren Protokollierung ist deaktiviert;
+Fehler werden als eigene, bekannte Kategorie übersetzt, ohne Ausnahme-Rohtext.
+
+Bei Entfernen schließt das Add-on zuerst die Sitzung samt Hintergrundaufgaben und
+löscht dann deren Ablage. Der Zugriff lässt sich zusätzlich im Google-Konto widerrufen.
+Nur ein separates Konto ohne persönliche Daten und ohne Gmail-/Drive-Anbindung verwenden.
+Die Nutzung ist inoffiziell und kann zur Kontosperre führen. Jede Anfrage geht an Google
+und startet einen temporären Chat; dies ist keine Zusage gegen Verarbeitung der Daten
+beim Anbieter. Die Werkzeugstufe des Add-ons kontrolliert diesen Zugang nicht.
+
+Der User führt den ersten Kontotest nach Installation durch. Die lokale Testprüfung
+belegt keine reale Cookie-Haltbarkeit oder zugesicherten Kontingente. Lizenz und
+zugehöriger Bibliotheksquelltext liegen im Image bei; siehe [D-030](adr/D-030-gemini-web-inoffiziell.md).
