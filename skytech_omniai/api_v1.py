@@ -29,6 +29,8 @@ from providers.gemini_agy_provider import available_models as gemini_agy_models
 from providers.gemini_agy_provider import is_signed_in as gemini_agy_signed_in
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
+from providers.gemini_web_provider import available_models as gemini_web_models
+from providers.gemini_web_provider import is_signed_in as gemini_web_signed_in
 from runs import MAX_CONCURRENT_RUNS, MAX_RUN_MINUTES, RunConflict, RunManager
 
 log = logging.getLogger("omniai.v1")
@@ -50,6 +52,7 @@ PROVIDERS = {
     # Die Modelle kennt die Google-Befehlszeile erst nach der Anmeldung; die Liste
     # wird beim Abruf geholt (Funktion statt Liste).
     "gemini_agy": {"name": "Google Gemini (AGY)", "models": gemini_agy_models, "default": None},
+    "gemini_web": {"name": "Google Gemini (Web)", "models": gemini_web_models, "default": None},
 }
 
 # Anbieter, die in Läufen Werkzeuge (MCP) aufrufen können.
@@ -103,6 +106,7 @@ def credentials_present() -> dict[str, bool]:
         # Kein Wert in der Umgebung, sondern die Anmeldung, die im Add-on selbst
         # entstanden ist (Einstellungen → Google-Anmeldung).
         "gemini_agy": gemini_agy_signed_in(),
+        "gemini_web": gemini_web_signed_in(),
     }
 
 

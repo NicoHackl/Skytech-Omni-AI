@@ -1,8 +1,9 @@
 # Umsetzungsplan
 
-Arbeitspakete für die [Umbenennung](umbenennung-agy.md) und den Anbieter „Gemini Web“
-([Entwurf](entwurf.md)). **AP 0 geklärt, AP 1 umgesetzt; weitere Pakete folgen.** Vor AP 1 und AP 8 sind die offenen Fragen
-aus [README.md](README.md#offene-fragen--vor-dem-genannten-arbeitspaket-zu-klären) zu klären.
+Die Pakete AP 0 bis AP 8 sind umgesetzt. Der gemeinsame Kontenkern wurde auf Ablage,
+Listenlesen, Reihenfolge und Wartezeit begrenzt; Gründe stehen in D-030. AP 9 wartet
+auf die Entscheidung über lokale Dateigrenzen. AP 11 führt der User nach Installation
+durch. Die folgende Liste bleibt als Planungshistorie; aktueller Stand: [README](README.md).
 
 ## Rahmen für jedes Arbeitspaket
 

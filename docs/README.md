@@ -45,3 +45,7 @@ nicht stillschweigend schöngeschrieben.
 - Nicht zutreffende Dateien werden **gelöscht**, nicht mit Platzhaltertext stehengelassen.
   Ein leeres Gerüst ist schlimmer als eine fehlende Datei, weil ein Agent es für vollständig hält.
 - Änderungen an Verhalten und Doku gehören ins **selbe** Arbeitspaket.
+
+Gemini Web: [Umsetzungsstand und Handprüfung](erweiterungen/gemini-web/README.md),
+[Vorprüfung](erweiterungen/gemini-web/spike-ergebnis.md),
+[Entscheidung D-030](adr/D-030-gemini-web-inoffiziell.md).

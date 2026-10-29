@@ -12,8 +12,8 @@ nutzen — ohne zusätzliche Kosten pro Anfrage.
 
 ## Was das Add-on kann
 
-- **Vier Zugänge, gleiche Bedienung.** Angebunden sind **Claude (Abo)**, **ChatGPT (Abo)**,
-  **Google Gemini (AGY)** über Google AI Pro und **Google Gemini** mit Schlüssel. Weitere Anbieter wie lokale Modelle lassen sich ergänzen, ohne dass sich für
+- **Fünf Zugänge, gleiche Bedienung.** Angebunden sind **Claude (Abo)**, **ChatGPT (Abo)**,
+  **Google Gemini (AGY)** und **Google Gemini (Web)** über Google AI Pro und **Google Gemini** mit Schlüssel. Weitere Anbieter wie lokale Modelle lassen sich ergänzen, ohne dass sich für
   bestehende Automatisierungen etwas ändert.
 - **Das Abo statt Kosten pro Anfrage.** Über die jeweilige Befehlszeile zählt jede Anfrage auf das
   Kontingent deines Abos.
@@ -252,3 +252,17 @@ curl http://<HA-IP>:8000/status
 
 > **Hinweis zur Sicherheit:** Port 8000 ist nicht durch ein Passwort geschützt. Er gehört ins
 > Heimnetz und nicht ins Internet. Wer ausschließlich die Oberfläche nutzt, braucht ihn nicht.
+
+## Google Gemini (Web)
+
+Der inoffizielle Zugang nutzt das Kontingent der Gemini-Web-App. In den Einstellungen
+unter Google Gemini (Web) lassen sich bis zu zehn separate Google-Konten über die
+Anmeldewerte des Browsers hinzufügen; eine aufklappbare Anleitung steht dort.
+Die Modellliste kommt nach der Anmeldung vom Konto. Google erlaubt diese Nutzung
+nicht und kann Konten sperren. Nur Konten ohne persönliche Daten verwenden.
+Die Werkzeugauswahl des Add-ons hat hier keine Wirkung. Der erste Test mit einem
+echten Konto findet nach Installation dieses Updates statt.
+
+Bibliothek: [gemini-webapi](https://github.com/HanaokaYuzu/Gemini-API), AGPL-3.0.
+Lizenz und Bibliotheksquelltext liegen im Add-on bei. Integrationscode:
+[Skytech OmniAI](https://github.com/NicoHackl/Skytech-Omni-AI).

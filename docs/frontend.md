@@ -129,7 +129,7 @@ Seitenwechsel nicht neu montiert werden.
 
 Die Seite „Einstellungen“ ist in Bereiche geteilt, damit nicht alle Anbieter in einem langen
 Formular stehen: **Allgemein**, **Claude**, **ChatGPT**, **Google Gemini**,
-**Google Gemini (AGY)** und **Skytech X**. Aufbau:
+**Google Gemini (AGY)**, **Google Gemini (Web)** und **Skytech X**. Aufbau:
 
 - `settingsSections.ts` ist die **eine** Tabelle der Bereiche (Adresse, Name, Zeile unter dem
   Titel, zugehörige Optionen). Seitenleiste, Kopfzeile und die Zuordnung eines Feldfehlers zu
@@ -388,3 +388,7 @@ Daraus folgt für die Arbeit an der Oberfläche:
 9. Kein Rohwert im Markup: Zeitstempel, Zahlen und Leerwerte laufen durch `format.ts`, keine
    technische ID, kein Statuscode und kein Zonenzusatz ist sichtbar (eiserne Regel 12,
    Prüfliste in [nutzertexte.md](nutzertexte.md)).
+
+Der Bereich „Google Gemini (Web)“ (`gemini-web`) verwaltet Cookie-Konten unabhängig
+vom Speichern des Formulars. Anmeldewerte werden beim Absenden aus den Eingabefeldern
+gelöscht; Hilfestellung und Lizenzquelle stehen aufklappbar.

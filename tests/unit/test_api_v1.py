@@ -107,7 +107,7 @@ def test_capabilities_report_availability_without_secrets(client, monkeypatch):
     daten = client.get("/v1/capabilities", headers=AUTH).get_json()
 
     by_id = {p["id"]: p for p in daten["providers"]}
-    assert set(by_id) == {"claude_sub", "codex_sub", "gemini", "gemini_agy"}
+    assert set(by_id) == {"claude_sub", "codex_sub", "gemini", "gemini_agy", "gemini_web"}
     assert by_id["gemini"]["available"] is True
     assert by_id["claude_sub"]["available"] is False
     assert by_id["gemini"]["defaultModel"] == "gemini-flash-latest"

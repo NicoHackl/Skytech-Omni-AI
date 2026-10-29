@@ -19,6 +19,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from waitress import serve
 from werkzeug.exceptions import NotFound
 
+import gemini_web_routes
 from api_v1 import api_v1
 from config_loader import OPTIONS_PATH, apply_options_to_env, load_options, read_addon_version
 from providers.base_provider import resolve_tool_access
@@ -32,6 +33,8 @@ from providers.gemini_agy_provider import is_signed_in as gemini_agy_signed_in
 from providers.gemini_agy_provider import refresh_models as gemini_agy_refresh_models
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
+from providers.gemini_web_provider import available_models as gemini_web_models
+from providers.gemini_web_provider import is_signed_in as gemini_web_signed_in
 from settings import merge_update, public_view, revision
 from supervisor_client import SupervisorClient, SupervisorRejected, SupervisorUnavailable
 
@@ -103,8 +106,15 @@ def ask():
     dem geparsten JSON des Modells oder mit ``{"error": "<deutscher Satz>"}``.
     """
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Bitte eine Anfrage mit Prompt übergeben."}), 400
+    attachments = payload.get("attachments")
+    if attachments is not None and attachments != []:
+        return jsonify(
+            {"error": "Anhänge sind über diese Schnittstelle noch nicht verfügbar."}
+        ), 400
     prompt = payload.get("prompt")
-    if not prompt:
+    if not isinstance(prompt, str) or not prompt.strip():
         return jsonify({"error": "Es wurde kein Prompt übergeben."}), 400
 
     try:
@@ -146,6 +156,10 @@ def models():
                 },
                 # Die Liste kommt von der Google-Befehlszeile (nach der Anmeldung), nicht
                 # aus dem Code; ``default`` ist die Option „gemini_agy_model“.
+                "gemini_web": {
+                    "models": gemini_web_models(),
+                    "default": os.environ.get("OMNIAI_GEMINI_WEB_MODEL", "").strip() or None,
+                },
                 "gemini_agy": {
                     "models": gemini_agy_models(),
                     "default": os.environ.get("GEMINI_AGY_MODEL", "").strip() or None,
@@ -160,6 +174,8 @@ def _default_model() -> str | None:
     Option, weil sein Auswahlfeld keine feste Liste haben kann."""
     if os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER) == "gemini_agy":
         return os.environ.get("GEMINI_AGY_MODEL", "").strip() or None
+    if os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER) == "gemini_web":
+        return os.environ.get("OMNIAI_GEMINI_WEB_MODEL", "").strip() or None
     return os.environ.get("OMNIAI_MODEL") or None
 
 
@@ -196,6 +212,7 @@ def status():
                 # Die Anmeldung entsteht im Add-on selbst (Seite „Einstellungen“)
                 # und liegt als Datei unter /data, nicht in der Umgebung.
                 "gemini_agy": gemini_agy_signed_in(),
+                "gemini_web": gemini_web_signed_in(),
             },
         }
     )
@@ -204,6 +221,9 @@ def status():
 def _from_ingress() -> bool:
     """Kommt die Anfrage über den Ingress von Home Assistant?"""
     return request.remote_addr == INGRESS_PROXY_ADDR
+
+
+app.register_blueprint(gemini_web_routes.create_blueprint(_from_ingress))
 
 
 def _stored_options(supervisor: SupervisorClient) -> tuple[dict, bool]:

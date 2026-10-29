@@ -1,9 +1,9 @@
 # Entwurf: Anbieter „Gemini Web“
 
-> Plan, **nicht umgesetzt**. Namen von Dateien, Funktionen und Optionen sind Vorschläge und
-> werden bei der Umsetzung nur geändert, wenn der Code etwas anderes verlangt. Offene Fragen stehen
-> in [README.md](README.md#offene-fragen--vor-dem-genannten-arbeitspaket-zu-klären), Befunde in
-> [recherche.md](recherche.md).
+> Ursprünglicher Entwurf. Der aktuelle Umsetzungsstand und die noch offenen Punkte
+> stehen in [README.md](README.md). Aussagen über Anhänge im HTTP-Endpunkt sind bis
+> Abschluss von AP 9 weiterhin geplant. Der gemeinsame Kern wurde auf Ablage und
+> Auswahlfunktionen begrenzt, siehe D-030.
 
 ## Überblick
 
@@ -140,7 +140,7 @@ Heute kennt `/ask` nur `prompt`, `provider`, `model`; `/v1/completions` hat kein
 | **Provider-Schnittstelle** | `BaseProvider.execute(..., attachments=None)` mit `Attachment(name, mime_type, data)`. Ein Anbieter, der keine Anhänge kann, lehnt sie mit **einem Satz** ab („Dieser Anbieter nimmt keine Anhänge an. Anhänge gehen mit Gemini Web.“) und HTTP 400. Er ignoriert sie **nie** stillschweigend |
 | **Übergabe an die Bibliothek** | Sie erwartet Dateipfade. Die Brücke schreibt die Daten in ein eigenes Verzeichnis unter `/tmp` (Rechte `0600`), übergibt die Pfade und löscht sie **immer** danach (`finally`) |
 | **Grenzen** | Anzahl, Größe, erlaubte Typen: **Vorschlag**, im Spike an der Web-App gemessen und danach festgelegt. Zusätzlich Grenze für die Größe des Anfrage-Rumpfs in Flask. Ob der Ingress-Proxy von Home Assistant große Rümpfe annimmt, ist **ungeprüft** |
-| **`/v1`** | Erst nach Änderung des Vertrags im Master ([README F4](README.md#offene-fragen--vor-dem-genannten-arbeitspaket-zu-klären)). Bis dahin sagt `GET /v1/capabilities` nichts über Anhänge und der Vertrag bleibt wortgleich (eiserne Regel 16) |
+| **`/v1`** | Erst nach Änderung des Vertrags im Master ([README F4](README.md#entscheidungen-des-users)). Bis dahin sagt `GET /v1/capabilities` nichts über Anhänge und der Vertrag bleibt wortgleich (eiserne Regel 16) |
 | **Datenschutz** | Anhänge gehen an Google (Verbraucherkonto), siehe [Sicherheit](#sicherheit-und-datenschutz). Auf der Platte liegen sie nur für die Dauer der Anfrage |
 
 ## Oberfläche

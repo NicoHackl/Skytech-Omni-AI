@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/Layout'
-import { SUBSCRIPTION_PROVIDER, providerLabel } from '../provider'
+import { DYNAMIC_MODEL_OPTIONS, providerLabel } from '../provider'
 import type { ModelsResponse } from '../types'
 
 /* Übersicht der auswählbaren Modelle je Anbieter. Dieselbe Quelle, die auch
@@ -55,7 +55,7 @@ export function Modelle() {
                 <div className="empty">
                   <Icon name="list" size={40} />
                   <p>
-                    {key === SUBSCRIPTION_PROVIDER
+                    {DYNAMIC_MODEL_OPTIONS[key]
                       ? 'Die Modelle stehen nach der Anmeldung bei Google hier. Die Anmeldung geschieht in den Einstellungen.'
                       : 'Für diesen Anbieter ist kein Modell hinterlegt.'}
                   </p>

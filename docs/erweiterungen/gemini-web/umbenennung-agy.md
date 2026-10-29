@@ -1,11 +1,9 @@
 # Umbenennung: `gemini_sub` wird zu „Gemini AGY“
 
-> Plan, **nicht umgesetzt**. Auftrag des Users vom 29.10.2026: Der Anbieter, der Gemini über die
-> Antigravity-CLI `agy` anspricht, wird umbenannt — **einschließlich des technischen Schlüssels und
-> ohne Übergang**. Der Anzeigename und der neue Schlüssel sind noch offen
-> ([README F1 und F2](README.md#offene-fragen--vor-dem-genannten-arbeitspaket-zu-klären)); die Tabellen
-> unten nennen die **angenommenen** Werte `Google Gemini (AGY)` und `gemini_agy` und müssen vor dem Bau
-> bestätigt werden.
+> Umgesetzt, siehe [D-031](../../adr/D-031-umbenennung-gemini-agy.md).
+> Der User hat Namen, Schlüssel und Erhalt der Datenpfade bestätigt. Die folgende
+> Tabelle hält den Umfang fest. Vor dem Update kann der neue Wert noch nicht gewählt
+> werden: vorübergehend Claude wählen, erst nach dem Update AGY einstellen.
 
 ## Warum
 
@@ -13,7 +11,7 @@ Der Name „Abo“ passt nicht mehr: Auch der neue Anbieter Gemini Web nutzt ein
 soll künftig der Weg, nicht das Wort „Abo“ — der eine geht über die Antigravity-CLI (`agy`), der
 andere über die Web-App.
 
-## Was sich ändert (angenommene Namen)
+## Was sich geändert hat
 
 | Was | Alt | Neu |
 |---|---|---|

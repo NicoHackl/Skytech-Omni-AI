@@ -66,6 +66,7 @@ Testanfragen.
               └──────────────► base_provider.parse_json ◄────────────────────┘
 
   gemini_agy_login (nur Anmeldung, nicht Teil der Anfrage) ──► Antigravity-CLI
+  gemini_web_provider ──► gemini_web_client (eigener Thread) ──► Gemini-Web-App
 
   config_loader.py liest beim Start /data/options.json und legt die Werte
   als Umgebungsvariablen ab, aus denen sich alle Komponenten bedienen.
@@ -218,7 +219,7 @@ nicht in der Wurzel steht.
 
 Zusagen, auf die sich der gesamte Code verlässt:
 
-1. Ein Zugangsdatenwert steht **ausschließlich** in der Umgebung. Er erscheint in keiner Antwort,
+1. Zugangsdaten stehen in der Umgebung oder den dokumentierten privaten Anmeldedateien unter `/data`. Er erscheint in keiner Antwort,
    keinem Log und keinem Markup — auch nicht gekürzt.
 2. Jede Ausgabe an einen Aufrufer ist entweder das JSON des Modells oder ein deutscher Satz unter
    `error`.
@@ -239,3 +240,21 @@ Port 8000, `npm run dev --prefix skytech_omniai/web` die Oberfläche auf Port 51
 dorthin.
 
 Konfiguration: [konfiguration.md](konfiguration.md).
+
+## Google Gemini (Web)
+
+`gemini_web` verwendet die asynchrone Bibliothek `gemini-webapi` über eine einzige
+Brücke in `providers/gemini_web_client.py`. Ein eigener Ereignisschleifen-Thread hält
+Clients je Konto; alle Operationen laufen nacheinander mit Frist und Abbruch.
+Jede Anfrage ist ein neuer temporärer Chat; die Brücke übergibt `temporary=True`.
+
+Kontenliste: `/data/omniai-gemini-web-accounts.json`. Kontenablage:
+`/data/omniai-gemini-web-accounts/konto-N/`, mit `cookies.json` und `session.json`.
+Modellliste: `/data/omniai-gemini-web-models.json`; globale Verbindungspause:
+`/data/omniai-gemini-web-pause.json`. Der Standard-Cache der Bibliothek wird ersetzt,
+weil er einen Cookie-Wert im Dateinamen verwendet. Keine Cookie-Werte in Pfaden.
+Gemeinsame Ablage und Wartezeiten mit AGY: `providers/google_accounts.py`.
+
+Die Modellliste wird nach Anmeldung und erfolgreichen Anfragen aus dem Konto gelesen.
+`/models` und `/v1/capabilities` lesen nur die gemerkte Liste; sie lösen keine Anfrage
+an Google aus. Die Werkzeugstufe wirkt auf diesen Zugang nicht. [D-030](adr/D-030-gemini-web-inoffiziell.md).

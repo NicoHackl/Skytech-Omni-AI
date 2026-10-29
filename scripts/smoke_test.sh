@@ -43,6 +43,13 @@ until curl -fsS "$base/health" >/dev/null 2>&1; do
 done
 echo "✓ /health antwortet"
 
+# Die inoffizielle Bibliothek muss im fertigen Alpine-Image tatsächlich importierbar sein.
+docker exec "$name" /opt/venv/bin/python -c "import gemini_webapi" || fail "Gemini Web fehlt im Image."
+docker exec "$name" test -s /app/third_party/gemini-webapi/LICENSE || fail "Lizenztext fehlt."
+docker exec "$name" test -s /app/third_party/gemini-webapi/source.tar.gz || fail "Quellarchiv fehlt."
+echo "✓ Gemini Web mit Lizenz und Quelltext vorhanden"
+
+
 health="$(curl -fsS "$base/health")"
 [ "$health" = '{"status":"ok"}' ] || fail "/health liefert unerwartet: $health"
 

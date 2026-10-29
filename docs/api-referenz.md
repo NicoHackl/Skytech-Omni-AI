@@ -74,7 +74,7 @@ Führt einen Prompt gegen den gewählten Anbieter aus.
 | Feld | Typ | Pflicht | Bedeutung |
 |---|---|---|---|
 | `prompt` | Text | ja | Die Frage an das Modell. Die Anweisung, ausschließlich JSON zu liefern, hängt das Add-on selbst an |
-| `provider` | Text | nein | `claude_sub`, `codex_sub`, `gemini` oder `gemini_agy`. Ohne Angabe gilt die Add-on-Konfiguration |
+| `provider` | Text | nein | `claude_sub`, `codex_sub`, `gemini`, `gemini_agy` oder `gemini_web`. Ohne Angabe gilt die Add-on-Konfiguration |
 | `model` | Text | nein | Modell für genau diese Anfrage. Erlaubt ist **jede** Kennung des Anbieters, auch eine, die nicht im Auswahlfeld steht |
 
 **Antwort `200`** — das geparste JSON des Modells, unverändert durchgereicht:
@@ -116,7 +116,8 @@ Liefert die auswählbaren Werte, damit Automatisierungen sie nicht fest verdraht
     "claude_sub": { "models": ["sonnet", "opus", "haiku"], "default": null },
     "codex_sub": { "models": ["gpt-5.6-sol", "…"], "default": null },
     "gemini": { "models": ["gemini-flash-latest", "…"], "default": "gemini-flash-latest" },
-    "gemini_agy": { "models": ["Gemini 4 Argon (High)", "…"], "default": null }
+    "gemini_agy": { "models": ["Gemini 4 Argon (High)", "…"], "default": null },
+    "gemini_web": { "models": [], "default": null }
   }
 }
 ```
@@ -138,7 +139,7 @@ Zustand des Add-ons, gedacht für die Oberfläche.
   "version": "0.9.0",
   "default_model": null,
   "tool_access": "web",
-  "credentials": { "claude_sub": true, "codex_sub": false, "gemini": false, "gemini_agy": false }
+  "credentials": { "claude_sub": true, "codex_sub": false, "gemini": false, "gemini_agy": false, "gemini_web": false }
 }
 ```
 
@@ -208,7 +209,7 @@ Anfrage arbeitet bereits mit dem neuen Stand.
 
 | Feld in `options` | Regel |
 |---|---|
-| `provider` | `claude_sub`, `codex_sub`, `gemini` oder `gemini_agy` |
+| `provider` | `claude_sub`, `codex_sub`, `gemini`, `gemini_agy` oder `gemini_web` |
 | `model` | `auto` oder ein Modell **des gewählten Anbieters** aus `GET /models` |
 | `tool_access` | `off`, `web` oder `full` |
 | Zugänge | fehlt oder `""` = unverändert, `null` = entfernen, sonst neuer Wert. `codex_auth_json` muss ein JSON-Objekt sein |
@@ -308,3 +309,29 @@ bestimmt dabei das `<base>`-Element — Einzelheiten in [architektur.md](archite
 
 Alle Aufrufe haben ein ausdrückliches Zeitlimit und ein definiertes Verhalten im Fehlerfall.
 Welche Daten dabei das Haus verlassen: [sicherheit-datenschutz.md](sicherheit-datenschutz.md).
+
+## Anmeldung für Gemini Web: `/auth/gemini-web`
+
+`gemini_web` wird von `/models`, `/status` und `/v1/capabilities` angeboten. Die Modellliste
+ist ohne Anmeldung leer. `credentials.gemini_web` ist wahr, wenn mindestens ein Konto
+lokal bereit ist; die Gültigkeit bei Google zeigt erst ein Aufruf. Standardmodell:
+`gemini_web_model`, Umgebung `OMNIAI_GEMINI_WEB_MODEL`.
+
+| Methode und Route | Bedeutung |
+|---|---|
+| `GET /auth/gemini-web` | `{accounts: [{id, label, state, retry_at}], signed_in}` ohne Cookies |
+| `POST /auth/gemini-web` | JSON mit `label` (optional), `psid`, `psidts`; Anmeldung prüfen und erst bei Erfolg speichern |
+| `DELETE /auth/gemini-web/<id>` | Client schließen, Konto und private Dateien entfernen |
+| `POST /auth/gemini-web/models` | Modelle vom ersten nutzbaren Konto neu lesen |
+
+Schreiben nur über den echten Ingress-Proxy; der Kopf `X-Ingress-Path` genügt nicht.
+Antworten enthalten keine Anmeldewerte und sind nicht zwischenzuspeichern.
+Zustände: `ok`, `exhausted`, `login_expired`; `retry_at` ist ein Maschinenzeitstempel.
+Eingabefehler liefern 400, fehlender Ingress 403, Anbieterfehler 503. Die Meldungen sind
+deutsche Sätze ohne Rohtexte der Bibliothek. Cookie-Eingaben sind auf 24 KiB begrenzt.
+
+`/v1` erhält keine neuen Anhangfelder. Die Vertragskopie bleibt unverändert.
+
+Bis AP 9 abgeschlossen ist, lehnt `/ask` nichtleere `attachments` ausdrücklich mit 400
+ab. Sie werden niemals stillschweigend übergangen. Die interne Provider-Brücke kann
+bereits Anhänge verarbeiten, die HTTP-Eingabe folgt nach Festlegung der lokalen Grenzen.

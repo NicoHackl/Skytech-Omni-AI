@@ -16,6 +16,7 @@ from providers.base_provider import (
     JSON_INSTRUCTION,
     TOOL_ACCESS_FULL,
     TOOL_ACCESS_OFF,
+    Attachment,
     BaseProvider,
     ProviderTimeout,
     UnknownModel,
@@ -291,7 +292,14 @@ class CodexSubProvider(BaseProvider):
             return FEHLER_ANMELDUNG_ABGELAUFEN
         return FEHLER_CLI_ABGEBROCHEN
 
-    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
+    def execute(
+        self,
+        prompt: str,
+        model: str | None = None,
+        timeout: int | None = None,
+        attachments: list[Attachment] | None = None,
+    ) -> dict:
+        self.reject_attachments(attachments)
         chosen_model = self._resolve_model(model)
         env = self._build_env()
         full_prompt = SYSTEM_PROMPT + "\n\n" + prompt + JSON_INSTRUCTION

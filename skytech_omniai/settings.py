@@ -26,6 +26,7 @@ PROVIDER_MODELS = {
     "codex_sub": CODEX_MODELS,
     "gemini": GEMINI_MODELS,
     "gemini_agy": GEMINI_AGY_MODELS,
+    "gemini_web": [],
 }
 
 # Felder, die die Oberfläche bearbeiten darf. Alles andere in den Optionen
@@ -149,6 +150,10 @@ def merge_update(current: dict, draft: dict) -> tuple[dict, dict[str, str]]:
     sub_model = _text(merged.get("gemini_agy_model"))
     if sub_model and not GEMINI_AGY_MODEL_PATTERN.match(sub_model):
         errors.setdefault("gemini_agy_model", FEHLER_GEMINI_ABO_MODELL)
+
+    web_model = _text(merged.get("gemini_web_model"))
+    if web_model and not GEMINI_AGY_MODEL_PATTERN.fullmatch(web_model):
+        errors.setdefault("gemini_web_model", FEHLER_GEMINI_ABO_MODELL)
 
     token = draft.get("api_token")
     if isinstance(token, str) and token.strip() and len(token.strip()) < API_TOKEN_MIN_LENGTH:

@@ -14,6 +14,7 @@ import logging
 import os
 import re
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 log = logging.getLogger("omniai.provider")
 
@@ -95,11 +96,26 @@ def resolve_tool_access() -> str:
     return DEFAULT_TOOL_ACCESS
 
 
+@dataclass(frozen=True)
+class Attachment:
+    """Geprüfter Anhang einer Anfrage; Rohdaten werden niemals protokolliert."""
+
+    name: str
+    mime_type: str
+    data: bytes
+
+
 class BaseProvider(ABC):
     """Schnittstelle, die jeder Provider (Claude, Gemini, …) erfüllen muss."""
 
     @abstractmethod
-    def execute(self, prompt: str, model: str | None = None, timeout: int | None = None) -> dict:
+    def execute(
+        self,
+        prompt: str,
+        model: str | None = None,
+        timeout: int | None = None,
+        attachments: list[Attachment] | None = None,
+    ) -> dict:
         """Führt den Prompt gegen den Provider aus und gibt geparstes JSON zurück.
 
         ``model`` wählt optional ein bestimmtes Modell innerhalb des Providers.
@@ -113,6 +129,14 @@ class BaseProvider(ABC):
         :raises NotJson: wenn die Antwort kein JSON ist.
         """
         raise NotImplementedError
+
+    @staticmethod
+    def reject_attachments(attachments: list[Attachment] | None) -> None:
+        """Anbieter ohne Unterstützung lehnen Anhänge ausdrücklich ab."""
+        if attachments:
+            raise ValueError(
+                "Dieser Anbieter nimmt keine Anhänge an. Anhänge gehen mit Gemini Web."
+            )
 
     def _resolve_model(self, model: str | None) -> str:
         return (model or "").strip()
