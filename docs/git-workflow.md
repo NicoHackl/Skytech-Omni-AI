@@ -20,9 +20,12 @@ dev/dev ──push──▶ CI: alles grün? ──ja──▶ dev/main ──Pu
 
 Jeder Commit auf `main`, der etwas unter `skytech_omniai/` verändert hat, wird mit einem
 Release-Commit abgeschlossen: der gemergte Stand, gestempelt mit Version
-(`skytech_omniai/config.yaml`) und Changelog (`skytech_omniai/CHANGELOG.md`). Ein Ruleset sperrt
-`main` für alle außer dem Release-Job und den Admins und verlangt für Änderungen einen
-Pull Request mit Freigabe. Begründung: D-025.
+(`skytech_omniai/config.yaml`) und Changelog (`skytech_omniai/CHANGELOG.md`). Ein Ruleset verlangt
+für jede Änderung an `main` einen Pull Request (Merge-Commit) und sperrt Force-Push und Löschen;
+nur der Release-Job darf per Deploy-Key direkt schreiben. Es gibt bewusst keinen Admin-Bypass und
+keine Regel „Restrict updates": Die GitHub-App (iOS) kann keine Regel umgehen, der Pull Request
+ließe sich dort sonst nicht freigeben. Freigabe ist der Merge-Knopf des Repo-Besitzers, auch in
+der App. Begründung: D-025.
 
 Weil die CI nie nach `dev/dev` schreibt, braucht es nach einem Release **kein**
 `git pull --rebase`. Nötig ist es nur, wenn jemand anderes (ein zweiter Agent, ein gemergter
@@ -39,10 +42,14 @@ Ein Vorhaben kann aus mehreren Arbeitspaketen bestehen — jedes Paket erzeugt e
 `dev/dev` und damit eine automatische Übernahme nach `dev/main`. Nach `main` geht trotzdem nur
 **ein** Pull Request:
 
-1. Vorhaben abgeschlossen, `dev/main` ist grün, dann gleich dem Repo-Besitzer zugewiesen:
+1. Nach der Übernahme **öffnet die CI selbsttätig** den Pull Request (Job „Nach dev/main übernehmen“
+   in [`ci.yaml`](../.github/workflows/ci.yaml)) und weist ihn dem Repo-Besitzer zu — nur wenn es neue
+   Commits gibt und noch keiner offen ist. Weitere Pushes aktualisieren den offenen Pull Request.
+   Voraussetzung: *Settings → Actions → General → Allow GitHub Actions to create and approve pull
+   requests*. Fehlt sie, warnt der Lauf; dann von Hand:
    `gh pr create --base main --head dev/main --assignee "$(gh repo view --json owner --jq .owner.login)"`.
    Der Workflow [`pr-zuweisen.yaml`](../.github/workflows/pr-zuweisen.yaml) weist zusätzlich jeden
-   neu eröffneten Pull Request (auch von Dependabot) selbsttätig dem Besitzer zu.
+   anderen neu eröffneten Pull Request (z. B. von Dependabot) dem Besitzer zu.
 2. **Der User gibt den Pull Request frei.** Ein Agent merged ihn nie.
 3. Gemergt wird mit **Merge-Commit** (nicht Squash, nicht Rebase) — der Release-Job erkennt am
    zweiten Elternteil, welche Commits neu sind, und liest daraus die Changelog-Trailer.
@@ -199,7 +206,7 @@ Hat sich unter `skytech_omniai/` nichts geändert (nur `docs/`, `tests/`, CI), g
 Release. Solche Änderungen und ihre Trailer gehen mit dem nächsten Release nach `main`.
 
 Der Push nach `main` und der Tag gehen über einen Deploy-Key (Secret `RELEASE_DEPLOY_KEY`), den das Ruleset von
-`main` neben den Admins als einzige Ausnahme kennt. Fehlt das Secret, bricht der Job erst dann
+`main` als einzige Ausnahme kennt. Fehlt das Secret, bricht der Job erst dann
 ab, wenn wirklich etwas zu veröffentlichen ist.
 
 **Dependabot** öffnet seine Pull Requests gegen `dev/dev`. Nach dem Merge laufen sie wie jede

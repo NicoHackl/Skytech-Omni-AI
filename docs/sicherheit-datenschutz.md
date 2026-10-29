@@ -210,7 +210,7 @@ verlassen.
 
 - Nach `main` — also an alle Installationen — schreibt nur der Release-Job, über einen
   Deploy-Key mit Schreibrecht (Secret `RELEASE_DEPLOY_KEY`). Das Ruleset von `main` lässt außer
-  ihm nur Repo-Admins zu; Force-Push und Löschen sind auf `main`, `dev/main` und `dev/dev` gesperrt; Änderungen an `main` laufen nur über einen freigegebenen Pull Request.
+  ihm nur Repo-Admins zu; Force-Push und Löschen sind auf `main`, `dev/main` und `dev/dev` gesperrt; Änderungen an `main` laufen nur über einen Pull Request, den der Repo-Besitzer mergt (auch in der GitHub-App; kein Admin-Bypass).
 - Der private Schlüssel existiert ausschließlich als GitHub-Secret, keine lokale Kopie. Taucht er
   je anderswo auf: Deploy-Key unter Settings → Deploy keys löschen, neuen erzeugen
   (`ssh-keygen -t ed25519`), öffentlichen Teil mit Schreibrecht eintragen, privaten als Secret
