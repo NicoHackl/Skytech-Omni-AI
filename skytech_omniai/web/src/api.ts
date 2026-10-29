@@ -78,26 +78,26 @@ export const api = {
   settings: () => request<SettingsResponse>('settings'),
   saveSettings: (data: SettingsInput) =>
     request<SettingsResponse>('settings', { method: 'PUT', body: JSON.stringify(data) }),
-  /* Anmeldung bei Google für „Google Gemini (Abo)“. Entsteht im Add-on selbst,
+  /* Anmeldung bei Google für „Google Gemini (AGY)“. Entsteht im Add-on selbst,
      weil die Befehlszeile kein Token zum Einfügen kennt. */
-  geminiLogin: () => request<GeminiLoginStatus>('auth/gemini'),
+  geminiLogin: () => request<GeminiLoginStatus>('auth/gemini-agy'),
   geminiLoginStart: (label: string) =>
-    request<GeminiLoginStatus>('auth/gemini/start', {
+    request<GeminiLoginStatus>('auth/gemini-agy/start', {
       method: 'POST',
       body: JSON.stringify({ label }),
     }),
   geminiLoginCode: (code: string) =>
-    request<GeminiLoginStatus>('auth/gemini/code', {
+    request<GeminiLoginStatus>('auth/gemini-agy/code', {
       method: 'POST',
       body: JSON.stringify({ code }),
     }),
-  geminiLoginCancel: () => request<GeminiLoginStatus>('auth/gemini/cancel', { method: 'POST' }),
+  geminiLoginCancel: () => request<GeminiLoginStatus>('auth/gemini-agy/cancel', { method: 'POST' }),
   geminiLogout: (accountId: string) =>
-    request<GeminiLoginStatus>(`auth/gemini/${encodeURIComponent(accountId)}`, {
+    request<GeminiLoginStatus>(`auth/gemini-agy/${encodeURIComponent(accountId)}`, {
       method: 'DELETE',
     }),
   /* Modelle der Google-Befehlszeile neu abrufen (Tarif gewechselt, Liste veraltet). */
-  geminiModelsRefresh: () => request<{ models: string[] }>('auth/gemini/models', { method: 'POST' }),
+  geminiModelsRefresh: () => request<{ models: string[] }>('auth/gemini-agy/models', { method: 'POST' }),
 }
 
 /** Feldfehler aus einer abgelehnten Speicherung, sonst ein leeres Objekt. */

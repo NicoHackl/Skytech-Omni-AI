@@ -33,7 +33,7 @@ Testanfragen.
 | Anbieter Claude | Claude-Code-CLI als Unterprozess | Nutzt das Pro/Max-Abo statt eines nach Verbrauch abgerechneten Schlüssels — D-006 |
 | Anbieter ChatGPT | Codex-CLI als Unterprozess (`codex exec`) | Dasselbe für das ChatGPT-Abo; die Anmeldung wird als `auth.json` eingetragen — D-013 |
 | Anbieter Gemini (Schlüssel) | `urllib` aus der Standardbibliothek | Das offizielle SDK zöge über pydantic-core eine Rust-Werkzeugkette ins musl-Bild nach — D-007 |
-| Anbieter Gemini (Abo) | Antigravity-CLI (`agy`) als Unterprozess, festgenagelt, rund 200 MB | Nutzt das Kontingent von Google AI Pro. Die Anmeldung entsteht im Add-on selbst, siehe unten — D-022. Von Google bei privaten Abos nicht unterstützt |
+| Anbieter Gemini (AGY) | Antigravity-CLI (`agy`) als Unterprozess, festgenagelt, rund 200 MB | Nutzt das Kontingent von Google AI Pro. Die Anmeldung entsteht im Add-on selbst, siehe unten — D-022. Von Google bei privaten Abos nicht unterstützt |
 | Oberfläche | React 18 + TypeScript + Vite | Festgelegter Stack, siehe [frontend.md](frontend.md) |
 | Auslieferung | Ein Container, ein Prozess | Die Oberfläche liegt als gebautes Bündel im Bild und wird von Flask ausgeliefert — D-009 |
 | Tests | pytest, ruff | Keine Netzzugriffe, keine echten Zugangsdaten — siehe [test-strategie.md](test-strategie.md) |
@@ -57,7 +57,7 @@ Testanfragen.
                   │            ┌────────────┘   └────────────┐            │
                   ▼            ▼                             ▼            ▼
    ┌─────────────────────┐ ┌──────────────────┐ ┌────────────────┐ ┌───────────────────┐
-   │ claude_sub_provider │ │codex_sub_provider│ │gemini_provider │ │gemini_sub_provider│
+   │ claude_sub_provider │ │codex_sub_provider│ │gemini_provider │ │gemini_agy_provider│
    │  Unterprozess       │ │  Unterprozess    │ │  HTTPS         │ │  Unterprozess     │
    └──────────┬──────────┘ └────────┬─────────┘ └───────┬────────┘ └─────────┬─────────┘
               ▼                     ▼                   ▼                    ▼
@@ -65,7 +65,7 @@ Testanfragen.
               │                     │                   │                    │
               └──────────────► base_provider.parse_json ◄────────────────────┘
 
-  gemini_sub_login (nur Anmeldung, nicht Teil der Anfrage) ──► Antigravity-CLI
+  gemini_agy_login (nur Anmeldung, nicht Teil der Anfrage) ──► Antigravity-CLI
 
   config_loader.py liest beim Start /data/options.json und legt die Werte
   als Umgebungsvariablen ab, aus denen sich alle Komponenten bedienen.
@@ -110,23 +110,23 @@ ist das eine Design-Entscheidung → [design-entscheidungen.md](design-entscheid
 
 Details zu Endpunkten: [api-referenz.md](api-referenz.md).
 
-## Google Gemini über das Abo (`gemini_sub`)
+## Google Gemini über das Abo (`gemini_agy`)
 
 Anders als bei Claude und ChatGPT gibt es für die Antigravity-CLI weder ein Token noch eine Datei
 zum Einfügen. Ohne Anmeldung druckt sie eine Google-Adresse und wartet 60 Sekunden auf den Code der
 Zielseite. Deshalb **entsteht die Anmeldung im Add-on selbst** (D-022):
 
-1. Seite „Einstellungen“ → Bereich „Google Gemini (Abo)“ → Karte „Google-Anmeldung“ →
-   `POST /auth/gemini/start`.
-   `gemini_sub_login` startet die CLI mit einem Probeauftrag und einer **Pty als Eingabe** (mit
+1. Seite „Einstellungen“ → Bereich „Google Gemini (AGY)“ → Karte „Google-Anmeldung“ →
+   `POST /auth/gemini-agy/start`.
+   `gemini_agy_login` startet die CLI mit einem Probeauftrag und einer **Pty als Eingabe** (mit
    `/dev/null` liest sie nichts, mit einer Pipe gibt sie sofort auf), liest die Adresse von der
    Fehlerausgabe und reicht sie an die Oberfläche.
 2. Der Nutzer meldet sich bei Google an, kopiert den Code von der Zielseite und fügt ihn ein
-   (`POST /auth/gemini/code`). Das Modul schreibt ihn in die Eingabe der CLI; sie tauscht den Code,
+   (`POST /auth/gemini-agy/code`). Das Modul schreibt ihn in die Eingabe der CLI; sie tauscht den Code,
    legt die Anmeldung als Datei im Heimatverzeichnis **dieses Kontos** ab und beantwortet den
    Probeauftrag.
 3. Ein **frischer** Prozess (`agy models`) prüft, dass die Anmeldung die Datei überdauert hat. Erst
-   dann gilt sie als angemeldet. Die Oberfläche fragt den Stand ab (`GET /auth/gemini`).
+   dann gilt sie als angemeldet. Die Oberfläche fragt den Stand ab (`GET /auth/gemini-agy`).
 
 Für jeden Aufruf der CLI — Anmeldung wie Anfrage — setzt das Add-on `SSH_CONNECTION`, `SSH_CLIENT`
 und `SSH_TTY`. Die CLI nimmt dann den Dateispeicher statt eines Schlüsselbunds, den es im Container

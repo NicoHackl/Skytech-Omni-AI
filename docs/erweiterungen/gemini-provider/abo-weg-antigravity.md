@@ -1,6 +1,6 @@
-# Abo-Weg über die Antigravity CLI (Entwurf `gemini_sub`)
+# Abo-Weg über die Antigravity CLI (Entwurf `gemini_agy`)
 
-> **Status: umgesetzt als Anbieter `gemini_sub`** (D-022, [ADR](../../adr/D-022-gemini-abo-antigravity.md)).
+> **Status: umgesetzt als Anbieter `gemini_agy`** (D-022, [ADR](../../adr/D-022-gemini-agy-antigravity.md)).
 > Diese Datei hält die **Befunde zur CLI** fest, auf denen die Umsetzung beruht — den Steckbrief, die
 > Messungen vom 27.10.2026 und die Risiken. Wie das Add-on die CLI benutzt, steht in
 > [../../architektur.md](../../architektur.md); der Entwurf, der hier früher stand, ist durch den
@@ -172,9 +172,9 @@ Parallelität, Bild) ist im Code angekommen:
 
 | Thema | Wo |
 |---|---|
-| Aufruf, Umgebung, Werkzeugregeln, Fehlerzuordnung, Aufräumen, Sicherung | `skytech_omniai/providers/gemini_sub_provider.py` |
-| Anmeldung (Pty, Adresse, Code, Prüfung) | `skytech_omniai/providers/gemini_sub_login.py` |
-| Endpunkte `/auth/gemini…` | `skytech_omniai/app.py`, beschrieben in [../../api-referenz.md](../../api-referenz.md) |
+| Aufruf, Umgebung, Werkzeugregeln, Fehlerzuordnung, Aufräumen, Sicherung | `skytech_omniai/providers/gemini_agy_provider.py` |
+| Anmeldung (Pty, Adresse, Code, Prüfung) | `skytech_omniai/providers/gemini_agy_login.py` |
+| Endpunkte `/auth/gemini-agy…` | `skytech_omniai/app.py`, beschrieben in [../../api-referenz.md](../../api-referenz.md) |
 | Oberfläche | `skytech_omniai/web/src/components/GoogleLogin.tsx` |
 | Bild (Version 1.4.8, SHA-512 je Architektur) | `skytech_omniai/Dockerfile` |
 | Architektur und Sicherheit | [../../architektur.md](../../architektur.md), [../../sicherheit-datenschutz.md](../../sicherheit-datenschutz.md) |
@@ -182,9 +182,9 @@ Parallelität, Bild) ist im Code angekommen:
 Spätere Erweiterungen: Modellauswahl (Liste aus `agy models`) und **mehrere Konten mit Wechsel** (D-024).
 
 Abweichungen vom früheren Entwurf: keine Option `gemini_auth_json` (die Anmeldung kommt nicht aus
-einem eingefügten Wert), Modelle aus `agy models` statt fester Liste (Option `gemini_sub_model` fürs Standardmodell), Befehle bei `full` nie freigegeben, nur ein Lauf
+einem eingefügten Wert), Modelle aus `agy models` statt fester Liste (Option `gemini_agy_model` fürs Standardmodell), Befehle bei `full` nie freigegeben, nur ein Lauf
 zur Zeit.
 
 ## 6. Wiederaufnahme- und Rücknahmebedingungen
 
-Siehe „Rücknahmebedingung“ im [ADR](../../adr/D-022-gemini-abo-antigravity.md).
+Siehe „Rücknahmebedingung“ im [ADR](../../adr/D-022-gemini-agy-antigravity.md).

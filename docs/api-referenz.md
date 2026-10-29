@@ -74,7 +74,7 @@ Führt einen Prompt gegen den gewählten Anbieter aus.
 | Feld | Typ | Pflicht | Bedeutung |
 |---|---|---|---|
 | `prompt` | Text | ja | Die Frage an das Modell. Die Anweisung, ausschließlich JSON zu liefern, hängt das Add-on selbst an |
-| `provider` | Text | nein | `claude_sub`, `codex_sub`, `gemini` oder `gemini_sub`. Ohne Angabe gilt die Add-on-Konfiguration |
+| `provider` | Text | nein | `claude_sub`, `codex_sub`, `gemini` oder `gemini_agy`. Ohne Angabe gilt die Add-on-Konfiguration |
 | `model` | Text | nein | Modell für genau diese Anfrage. Erlaubt ist **jede** Kennung des Anbieters, auch eine, die nicht im Auswahlfeld steht |
 
 **Antwort `200`** — das geparste JSON des Modells, unverändert durchgereicht:
@@ -116,15 +116,15 @@ Liefert die auswählbaren Werte, damit Automatisierungen sie nicht fest verdraht
     "claude_sub": { "models": ["sonnet", "opus", "haiku"], "default": null },
     "codex_sub": { "models": ["gpt-5.6-sol", "…"], "default": null },
     "gemini": { "models": ["gemini-flash-latest", "…"], "default": "gemini-flash-latest" },
-    "gemini_sub": { "models": ["Gemini 4 Argon (High)", "…"], "default": null }
+    "gemini_agy": { "models": ["Gemini 4 Argon (High)", "…"], "default": null }
   }
 }
 ```
 
-Die Modelle von `gemini_sub` stehen nicht im Code: sie kommen von der Google-Befehlszeile und sind
-erst nach der Anmeldung bekannt (vorher `[]`). `default` ist dort die Option `gemini_sub_model`.
+Die Modelle von `gemini_agy` stehen nicht im Code: sie kommen von der Google-Befehlszeile und sind
+erst nach der Anmeldung bekannt (vorher `[]`). `default` ist dort die Option `gemini_agy_model`.
 Pro Anfrage lässt sich im Feld `model` die Bezeichnung aus der Liste nennen oder eine Kurzform
-(`flash-3.8`, `argon-4`); die Regeln stehen in [konfiguration.md](konfiguration.md#modelle-bei-google-gemini-abo).
+(`flash-3.8`, `argon-4`); die Regeln stehen in [konfiguration.md](konfiguration.md#modelle-bei-google-gemini-agy).
 Eine unbekannte oder mehrdeutige Eingabe lehnt die Anfrage mit `400` und einem Satz ab, der die
 Auswahl nennt.
 
@@ -138,11 +138,11 @@ Zustand des Add-ons, gedacht für die Oberfläche.
   "version": "0.9.0",
   "default_model": null,
   "tool_access": "web",
-  "credentials": { "claude_sub": true, "codex_sub": false, "gemini": false, "gemini_sub": false }
+  "credentials": { "claude_sub": true, "codex_sub": false, "gemini": false, "gemini_agy": false }
 }
 ```
 
-Bei `gemini_sub` heißt `true`: Eine lesbare Anmeldung bei Google liegt vor. Ob Google sie noch
+Bei `gemini_agy` heißt `true`: Eine lesbare Anmeldung bei Google liegt vor. Ob Google sie noch
 gelten lässt, zeigt erst eine Anfrage.
 
 Zu den Zugängen kommt **ausschließlich** `true`/`false` zurück — nie der Wert, nie ein Ausschnitt
@@ -208,7 +208,7 @@ Anfrage arbeitet bereits mit dem neuen Stand.
 
 | Feld in `options` | Regel |
 |---|---|
-| `provider` | `claude_sub`, `codex_sub`, `gemini` oder `gemini_sub` |
+| `provider` | `claude_sub`, `codex_sub`, `gemini` oder `gemini_agy` |
 | `model` | `auto` oder ein Modell **des gewählten Anbieters** aus `GET /models` |
 | `tool_access` | `off`, `web` oder `full` |
 | Zugänge | fehlt oder `""` = unverändert, `null` = entfernen, sonst neuer Wert. `codex_auth_json` muss ein JSON-Objekt sein |
@@ -222,9 +222,9 @@ wird die Absenderadresse des Ingress-Proxys, nicht ein Kopf; Begründung als D-0
 
 **Antwort `200`** — wie `GET /settings`, mit dem neuen Stand.
 
-## Anmeldung bei Google: `/auth/gemini`
+## Anmeldung bei Google: `/auth/gemini-agy`
 
-Für den Anbieter `gemini_sub` (D-022, mehrere Konten D-024, Ablauf in [architektur.md](architektur.md)). Alle Antworten
+Für den Anbieter `gemini_agy` (D-022, mehrere Konten D-024, Ablauf in [architektur.md](architektur.md)). Alle Antworten
 haben dieselbe Form:
 
 ```json
@@ -246,7 +246,7 @@ haben dieselbe Form:
 | Feld | Bedeutung |
 |---|---|
 | `available` | Die Antigravity-CLI ist im Bild vorhanden |
-| `signed_in` | Mindestens ein Konto hat eine lesbare Anmeldung (wie `credentials.gemini_sub` in `/status`) |
+| `signed_in` | Mindestens ein Konto hat eine lesbare Anmeldung (wie `credentials.gemini_agy` in `/status`) |
 | `accounts` | Alle Konten in der Reihenfolge, in der sie an die Reihe kommen. `state`: `ok` (bereit), `exhausted` (Kontingent aufgebraucht), `restricted` (von Google eingeschränkt), `login_expired` (Anmeldung gilt nicht mehr), `signed_out`. `retry_at` (ISO, UTC) nennt bei `exhausted` und `restricted` den nächsten Versuch. Nie ein Pfad |
 | `pending_label` | Name des Kontos, das sich gerade anmeldet; es steht noch nicht in `accounts` |
 | `state` | `idle` (nichts läuft), `waiting` (Adresse ausgegeben, Code fehlt) oder `checking` (Code übergeben, Google prüft) |
@@ -256,12 +256,12 @@ haben dieselbe Form:
 
 | Aufruf | Wirkung |
 |---|---|
-| `GET /auth/gemini` | Stand. Offen wie `/status`, aber ohne `url` |
-| `POST /auth/gemini/start` | Startet die Anmeldung eines **neuen Kontos** und liefert `waiting` mit Adresse. Der Rumpf darf `{"label": "Name"}` tragen (höchstens 40 Zeichen, Buchstaben, Ziffern, einfache Satzzeichen; leer = „Konto N“); `422` mit `field_errors.label`, wenn der Name nicht passt oder schon zehn Konten da sind. `400`, wenn die CLI fehlt; `409`, wenn gerade eine Anfrage läuft |
-| `POST /auth/gemini/code` | Rumpf `{"code": "…"}`. Gibt den Code an die CLI weiter und liefert `checking`; den Ausgang zeigt danach `GET`. `422` mit `field_errors.code`, wenn die Eingabe nicht nach einem Code aussieht. Auch die ganze Adresse der Zielseite wird angenommen |
-| `POST /auth/gemini/cancel` | Bricht eine laufende Anmeldung ab |
-| `POST /auth/gemini/models` | Holt die Modelle der Befehlszeile neu und liefert `{"models": ["…"]}`. Läuft gerade eine Anfrage, bleibt die bisherige Liste |
-| `DELETE /auth/gemini/<id>` | Entfernt dieses Konto samt Anmeldung, Sicherung und Zustand. `404`, wenn es das Konto nicht gibt; `409`, wenn gerade eine Anfrage läuft. Widerrufen lässt sich der Zugriff nur im Google-Konto |
+| `GET /auth/gemini-agy` | Stand. Offen wie `/status`, aber ohne `url` |
+| `POST /auth/gemini-agy/start` | Startet die Anmeldung eines **neuen Kontos** und liefert `waiting` mit Adresse. Der Rumpf darf `{"label": "Name"}` tragen (höchstens 40 Zeichen, Buchstaben, Ziffern, einfache Satzzeichen; leer = „Konto N“); `422` mit `field_errors.label`, wenn der Name nicht passt oder schon zehn Konten da sind. `400`, wenn die CLI fehlt; `409`, wenn gerade eine Anfrage läuft |
+| `POST /auth/gemini-agy/code` | Rumpf `{"code": "…"}`. Gibt den Code an die CLI weiter und liefert `checking`; den Ausgang zeigt danach `GET`. `422` mit `field_errors.code`, wenn die Eingabe nicht nach einem Code aussieht. Auch die ganze Adresse der Zielseite wird angenommen |
+| `POST /auth/gemini-agy/cancel` | Bricht eine laufende Anmeldung ab |
+| `POST /auth/gemini-agy/models` | Holt die Modelle der Befehlszeile neu und liefert `{"models": ["…"]}`. Läuft gerade eine Anfrage, bleibt die bisherige Liste |
+| `DELETE /auth/gemini-agy/<id>` | Entfernt dieses Konto samt Anmeldung, Sicherung und Zustand. `404`, wenn es das Konto nicht gibt; `409`, wenn gerade eine Anfrage läuft. Widerrufen lässt sich der Zugriff nur im Google-Konto |
 
 **Nur über den Ingress**, außer `GET`: Aufrufe über Port 8000 werden mit `403` abgelehnt, und die
 Adresse wird dort nicht ausgeliefert. Wer den offenen Port erreicht, soll weder ein Konto anmelden

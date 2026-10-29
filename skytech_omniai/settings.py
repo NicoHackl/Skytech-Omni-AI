@@ -15,8 +15,8 @@ from providers.base_provider import DEFAULT_TOOL_ACCESS, TOOL_ACCESS_LEVELS
 from providers.claude_sub_provider import CLAUDE_MODELS
 from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER
+from providers.gemini_agy_provider import GEMINI_AGY_MODELS
 from providers.gemini_provider import GEMINI_MODELS
-from providers.gemini_sub_provider import GEMINI_SUB_MODELS
 
 # Welche Modelle zu welchem Anbieter gehören. Das Auswahlfeld in config.yaml
 # ist eine gemeinsame Liste für alle; auf der Seite „Einstellungen“ wird
@@ -25,7 +25,7 @@ PROVIDER_MODELS = {
     "claude_sub": CLAUDE_MODELS,
     "codex_sub": CODEX_MODELS,
     "gemini": GEMINI_MODELS,
-    "gemini_sub": GEMINI_SUB_MODELS,
+    "gemini_agy": GEMINI_AGY_MODELS,
 }
 
 # Felder, die die Oberfläche bearbeiten darf. Alles andere in den Optionen
@@ -42,7 +42,7 @@ FEHLER_GEMINI_ABO_MODELL = (
     "Bitte eine der angebotenen Bezeichnungen wählen oder das Feld leer lassen."
 )
 # Bezeichnungen wie „Gemini 4 Argon (High)“ oder Kurzformen wie „flash-3.8“.
-GEMINI_SUB_MODEL_PATTERN = re.compile(r"^[\w .()\-:/+]{1,80}$")
+GEMINI_AGY_MODEL_PATTERN = re.compile(r"^[\w .()\-:/+]{1,80}$")
 FEHLER_CHATGPT_ZUGANG = (
     "Das ist nicht der Inhalt der Datei „auth.json“. Bitte die Datei vollständig kopieren."
 )
@@ -146,9 +146,9 @@ def merge_update(current: dict, draft: dict) -> tuple[dict, dict[str, str]]:
     # Welche Bezeichnungen gelten, weiß nur die Google-Befehlszeile; geprüft wird
     # hier nur, dass es nach einer Bezeichnung aussieht. Eine falsche meldet der
     # Provider bei der ersten Anfrage mit der Auswahl.
-    sub_model = _text(merged.get("gemini_sub_model"))
-    if sub_model and not GEMINI_SUB_MODEL_PATTERN.match(sub_model):
-        errors.setdefault("gemini_sub_model", FEHLER_GEMINI_ABO_MODELL)
+    sub_model = _text(merged.get("gemini_agy_model"))
+    if sub_model and not GEMINI_AGY_MODEL_PATTERN.match(sub_model):
+        errors.setdefault("gemini_agy_model", FEHLER_GEMINI_ABO_MODELL)
 
     token = draft.get("api_token")
     if isinstance(token, str) and token.strip() and len(token.strip()) < API_TOKEN_MIN_LENGTH:

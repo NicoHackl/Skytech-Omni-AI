@@ -47,18 +47,21 @@ der Weg über die Web-App selbst, den die Bibliothek `gemini-webapi` nachbildet.
 E6 ist keine Entscheidung des Users, sondern folgt aus der Bibliothek. Sie steht hier, damit sie
 auffällt, falls der User einen anderen Weg erwartet hat.
 
-## Offene Fragen — vor dem genannten Arbeitspaket zu klären
+## Klärung durch den User am 29.10.2026
 
-Nichts davon wird geraten. Jede Zeile blockiert das genannte Arbeitspaket, nicht den ganzen Plan.
+- **F1/F2:** Namen „Google Gemini“, „Google Gemini (AGY)“, „Google Gemini (Web)“;
+  Schlüssel `gemini_agy` und `gemini_web`. Bestehende Datenpfade bleiben erhalten.
+- **F3:** Temporäre Chats verwenden; die Bibliothek unterstützt `temporary=True`.
+- **F4:** Anhänge zunächst in `/ask` als Base64; `/v1` bleibt ohne Anhänge.
+- **F5:** Kein externer Aufrufer verwendet `gemini_sub`.
+- **F6:** Der User prüft das separate Google-Konto nach Installation des Updates im
+  HA-Add-on. Der Kontotest blockiert den Bau nicht mehr. Haltbarkeit der Anmeldung,
+  tatsächliche Kontingente und Google-Grenzen bleiben bis dahin ausdrücklich ungeprüft.
 
-| Nr. | Frage | Blockiert | Vorschlag |
-|---|---|---|---|
-| F1 | **Anzeigenamen.** Im Auftrag stand „Gemini AGY“, in der Antwort „Google Gemini (AGY)“. Soll der neue Anbieter „Gemini Web“ oder „Google Gemini (Web)“ heißen? | AP 1, AP 8 | Einheitlich vier Namen: „Google Gemini“ (Schlüssel), „Google Gemini (AGY)“, „Google Gemini (Web)“ — Schlüssel `gemini_web` bleibt |
-| F2 | **Technischer Schlüssel des umbenannten Anbieters.** Angenommen wird `gemini_agy`. Mit ihm ziehen die Option `gemini_sub_model`, die Dateien `gemini_sub_*.py` und die Routen `/auth/gemini…` um. Die **Datenpfade** (`/data/.gemini`, `omniai-gemini-accounts…`) würden bei einer Umbenennung eine Neuanmeldung aller Konten erzwingen | AP 1 | Alles umbenennen außer den Datenpfaden ([umbenennung-agy.md](umbenennung-agy.md#was-ausdrücklich-bleibt)) |
-| F3 | **Verlauf im Konto.** Das Löschen der Chats wurde nicht gewählt, also bleibt jede Anfrage als Chat im Verlauf des Kontos. Die Bibliothek nennt „temporary chats“; ob sie sich für Anfragen nutzen lassen, prüft der Spike. Soll der Anbieter sie nutzen, wenn es geht? | AP 5 | Ja: kein Verlauf, kein Löschen nötig |
-| F4 | **Anhänge über `/v1`.** `/ask` kennt heute nur `prompt`, `provider`, `model`. `/ask` lässt sich allein hier erweitern. Der Vertrag für `/v1` hat seinen **Master im Backend von Skytech X**, das nicht in diesem Arbeitsordner liegt; dort müsste das Feld zuerst entstehen. Nur `/ask` jetzt, `/v1` nach Änderung im Master? Und: Übergabe als Base64 im JSON oder als Multipart? | AP 9 | `/ask` jetzt mit Base64; `/v1` erst nach Änderung im Master |
-| F5 | **Bruch durch die Umbenennung.** Wer `provider: gemini_sub` gespeichert hat, hat nach dem Update einen Wert, der nicht mehr im Schema steht. Erwartet wird, dass Home Assistant die Konfiguration dann ablehnt, bis `provider` umgestellt ist (**ungeprüft**, der Spike stellt es nach). Schickt Skytech X oder eine Automation `gemini_sub`? Das Add-on kennt den Schlüssel danach nicht mehr | AP 1 | Changelog-Eintrag mit Hinweis „vor dem Update den Anbieter wechseln“; Skytech X vorher benachrichtigen |
-| F6 | **Testkonto für den Spike.** Der Spike braucht die Cookies eines Wegwerf-Kontos. Cookies tragen die volle Anmeldung des Kontos. Wer führt den Spike aus? | AP 2 | Der User führt ein Skript lokal aus (`! python …`) und gibt nur das Ergebnis weiter — der Agent bekommt **keine** Cookies |
+Die lokale Vorprüfung hat die Installation und den Import von `gemini-webapi==2.1.1`
+auf beiden Alpine-Basisimages ohne Compiler bestätigt. Der Standard-Cache der Bibliothek
+verwendet einen Cookie-Wert im Dateinamen und muss in der Brücke ersetzt werden.
+Anhang-Grenzen werden vor AP 9 gesondert mit dem User geklärt.
 
 ## Dateien
 

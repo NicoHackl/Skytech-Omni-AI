@@ -5,7 +5,7 @@ import type { GeminiAccount, GeminiLoginStatus } from '../types'
 import { Icon } from './Icon'
 import { useToast } from './Toast'
 
-/* Anmeldung der Google-Konten für „Google Gemini (Abo)“ (D-024).
+/* Anmeldung der Google-Konten für „Google Gemini (AGY)“ (D-024).
 
    Die Google-Software hinter dem Anbieter kennt kein Token zum Einfügen. Sie
    gibt eine Adresse aus und wartet etwa eine Minute auf einen Code. Das Add-on
@@ -180,7 +180,7 @@ export function GoogleLogin({
       <div className="card-head">
         <h2>Google-Anmeldung (Abo)</h2>
         <div className="sub">
-          Für „Google Gemini (Abo)“ — nutzt das Kontingent von Google AI Pro, auf Wunsch mit mehreren
+          Für „Google Gemini (AGY)“ — nutzt das Kontingent von Google AI Pro, auf Wunsch mit mehreren
           Konten
         </div>
       </div>

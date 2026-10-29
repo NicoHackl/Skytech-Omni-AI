@@ -19,7 +19,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     path: 'allgemein',
     label: 'Allgemein',
     subtitle: 'Standardanbieter, Standardmodell und Werkzeuge',
-    fields: ['provider', 'model', 'gemini_sub_model', 'tool_access'],
+    fields: ['provider', 'model', 'gemini_agy_model', 'tool_access'],
   },
   {
     path: 'claude',
@@ -40,8 +40,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     fields: ['gemini_api_key'],
   },
   {
-    path: 'gemini-abo',
-    label: 'Google Gemini (Abo)',
+    path: 'gemini-agy',
+    label: 'Google Gemini (AGY)',
     subtitle: 'Anmeldung der Google-Konten',
     fields: [],
   },

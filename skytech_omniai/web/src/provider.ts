@@ -7,7 +7,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   claude_sub: 'Claude (Abo)',
   codex_sub: 'ChatGPT (Abo)',
   gemini: 'Google Gemini',
-  gemini_sub: 'Google Gemini (Abo)',
+  gemini_agy: 'Google Gemini (AGY)',
 }
 
 /** Beschriftung eines Anbieters, ersatzweise sein technischer Name. */
@@ -19,7 +19,7 @@ export function providerLabel(key: string): string {
 export const MODEL_AUTO = 'auto'
 
 /** Anbieter, dessen Modelle erst nach der Anmeldung bekannt sind; er hat eine eigene Option. */
-export const SUBSCRIPTION_PROVIDER = 'gemini_sub'
+export const SUBSCRIPTION_PROVIDER = 'gemini_agy'
 
 /* Werkzeugstufen der beiden Befehlszeilen. Der Nutzer liest, was die Stufe
    bewirkt, nicht den technischen Wert aus der Konfiguration (eiserne Regel 12). */

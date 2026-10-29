@@ -13,7 +13,7 @@ nutzen — ohne zusätzliche Kosten pro Anfrage.
 ## Was das Add-on kann
 
 - **Vier Zugänge, gleiche Bedienung.** Angebunden sind **Claude (Abo)**, **ChatGPT (Abo)**,
-  **Google Gemini (Abo)** über Google AI Pro und **Google Gemini** mit Schlüssel. Weitere Anbieter wie lokale Modelle lassen sich ergänzen, ohne dass sich für
+  **Google Gemini (AGY)** über Google AI Pro und **Google Gemini** mit Schlüssel. Weitere Anbieter wie lokale Modelle lassen sich ergänzen, ohne dass sich für
   bestehende Automatisierungen etwas ändert.
 - **Das Abo statt Kosten pro Anfrage.** Über die jeweilige Befehlszeile zählt jede Anfrage auf das
   Kontingent deines Abos.
@@ -109,7 +109,7 @@ Die Anmeldung geschieht im Add-on selbst, einmalig:
    Browser vorher schon bei Google angemeldet.
 3. Den Code kopieren, den Google danach anzeigt, einfügen und **Anmeldung abschließen**. Google
    lässt dafür etwa eine Minute Zeit.
-4. Als Anbieter **Google Gemini (Abo)** wählen und speichern.
+4. Als Anbieter **Google Gemini (AGY)** wählen und speichern.
 
 Die Anmeldung bleibt gespeichert und wird vom Add-on erneuert. **Entfernen** löscht ein Konto wieder.
 
@@ -167,8 +167,8 @@ die Modelle des gewählten Anbieters zur Auswahl; im Reiter „Konfiguration“ 
 - `sonnet` / `opus` / `haiku` — gehören zu `claude_sub`.
 - `gpt-*` — gehören zu `codex_sub`.
 - `gemini-*` — gehören zu `gemini`.
-- `gemini_sub` hat keine feste Liste in der Konfiguration: seine Modelle liest das Add-on nach der Anmeldung
-  von Google ein. Das Standardmodell wählst du auf der Seite „Einstellungen“ (Option `gemini_sub_model`).
+- `gemini_agy` hat keine feste Liste in der Konfiguration: seine Modelle liest das Add-on nach der Anmeldung
+  von Google ein. Das Standardmodell wählst du auf der Seite „Einstellungen“ (Option `gemini_agy_model`).
 
 Passen Anbieter und Modell nicht zusammen, sagt das Add-on das im Klartext. **Pro Anfrage** lässt
 sich im Rumpf von `/ask` weiterhin jede Modellkennung setzen — auch eine, die nicht im Auswahlfeld
@@ -203,7 +203,7 @@ Gesteuert wird das über die Option **`tool_access`**:
 Die Stufe heißt in den Einstellungen „Werkzeuge“ und gilt nach dem Speichern sofort. Ein im
 Reiter „Konfiguration“ vertippter Wert wird nicht übernommen, sondern fällt auf `web` zurück.
 
-> **Hinweis:** `tool_access` betrifft `claude_sub`, `codex_sub` und `gemini_sub`. Bei Google Gemini
+> **Hinweis:** `tool_access` betrifft `claude_sub`, `codex_sub` und `gemini_agy`. Bei Google Gemini
 > (Abo) führt das Add-on nie Befehle aus; „Alle Werkzeuge“ wirkt dort wie „Web-Recherche“. Google
 > Gemini mit Schlüssel hat keinen Web-Zugriff und antwortet allein aus seinem Trainingswissen.
 

@@ -129,7 +129,7 @@ Seitenwechsel nicht neu montiert werden.
 
 Die Seite „Einstellungen“ ist in Bereiche geteilt, damit nicht alle Anbieter in einem langen
 Formular stehen: **Allgemein**, **Claude**, **ChatGPT**, **Google Gemini**,
-**Google Gemini (Abo)** und **Skytech X**. Aufbau:
+**Google Gemini (AGY)** und **Skytech X**. Aufbau:
 
 - `settingsSections.ts` ist die **eine** Tabelle der Bereiche (Adresse, Name, Zeile unter dem
   Titel, zugehörige Optionen). Seitenleiste, Kopfzeile und die Zuordnung eines Feldfehlers zu

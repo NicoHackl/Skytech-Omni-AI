@@ -107,7 +107,7 @@ def test_capabilities_report_availability_without_secrets(client, monkeypatch):
     daten = client.get("/v1/capabilities", headers=AUTH).get_json()
 
     by_id = {p["id"]: p for p in daten["providers"]}
-    assert set(by_id) == {"claude_sub", "codex_sub", "gemini", "gemini_sub"}
+    assert set(by_id) == {"claude_sub", "codex_sub", "gemini", "gemini_agy"}
     assert by_id["gemini"]["available"] is True
     assert by_id["claude_sub"]["available"] is False
     assert by_id["gemini"]["defaultModel"] == "gemini-flash-latest"
@@ -121,23 +121,23 @@ def test_capabilities_report_availability_without_secrets(client, monkeypatch):
 
 def test_the_google_subscription_is_available_only_with_a_login(client):
     """Zugang ist hier keine Umgebungsvariable, sondern die Anmeldung im Add-on."""
-    from providers import gemini_sub_provider
+    from providers import gemini_agy_provider
 
     def available():
         daten = client.get("/v1/capabilities", headers=AUTH).get_json()
-        return {p["id"]: p for p in daten["providers"]}["gemini_sub"]
+        return {p["id"]: p for p in daten["providers"]}["gemini_agy"]
 
     assert available()["available"] is False
 
-    gemini_sub_provider.token_path().parent.mkdir(parents=True, exist_ok=True)
-    gemini_sub_provider.token_path().write_text('{"token": {"refresh_token": "x"}}')
+    gemini_agy_provider.token_path().parent.mkdir(parents=True, exist_ok=True)
+    gemini_agy_provider.token_path().write_text('{"token": {"refresh_token": "x"}}')
 
     eintrag = available()
     assert eintrag["available"] is True
     assert eintrag["features"] == {"tools": False, "structuredOutput": True, "usage": False}
     assert eintrag["models"] == []
 
-    gemini_sub_provider.store_models([gemini_sub_provider.ModelInfo("Gemini 4 Argon (High)")])
+    gemini_agy_provider.store_models([gemini_agy_provider.ModelInfo("Gemini 4 Argon (High)")])
     assert available()["models"] == ["Gemini 4 Argon (High)"]
 
 

@@ -1,5 +1,7 @@
 # D-022: Gemini über das Google-AI-Pro-Abo mit der Antigravity-CLI, Anmeldung im Add-on selbst
 
+> Seit [D-031](D-031-umbenennung-gemini-agy.md) heißt dieser Anbieter `gemini_agy` und „Google Gemini (AGY)“.
+
 - **Datum:** 28.10.2026
 - **Status:** Aktiv (Anmeldung mit echtem Konto noch nicht von Hand geprüft — siehe „Handprüfung“)
 - **Betrifft:** `providers/gemini_sub_provider.py`, `providers/gemini_sub_login.py`, `providers/factory.py`, `app.py` (`/auth/gemini…`), `settings.py`, `api_v1.py`, `Dockerfile`, `config.yaml`, `web/src/components/GoogleLogin.tsx`

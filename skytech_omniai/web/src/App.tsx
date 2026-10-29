@@ -8,7 +8,7 @@ import { Allgemein } from './pages/einstellungen/Allgemein'
 import { ChatGpt } from './pages/einstellungen/ChatGpt'
 import { Claude } from './pages/einstellungen/Claude'
 import { Gemini } from './pages/einstellungen/Gemini'
-import { GeminiAbo } from './pages/einstellungen/GeminiAbo'
+import { GeminiAgy } from './pages/einstellungen/GeminiAgy'
 import { SkytechX } from './pages/einstellungen/SkytechX'
 import { DEFAULT_SECTION } from './settingsSections'
 
@@ -30,7 +30,7 @@ export function App() {
           <Route path="claude" element={<Claude />} />
           <Route path="chatgpt" element={<ChatGpt />} />
           <Route path="gemini" element={<Gemini />} />
-          <Route path="gemini-abo" element={<GeminiAbo />} />
+          <Route path="gemini-agy" element={<GeminiAgy />} />
           <Route path="skytech-x" element={<SkytechX />} />
           <Route path="*" element={<Navigate to={settingsStart} replace />} />
         </Route>

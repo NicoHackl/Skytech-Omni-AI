@@ -26,8 +26,8 @@ export function Allgemein() {
   const { draft, catalog, locked, errors: serverErrors, patch } = useSettingsForm()
 
   function changeModel(value: string) {
-    // Google Gemini (Abo) hat sein eigenes Feld; das gemeinsame bleibt dort „auto“.
-    if (draft.provider === SUBSCRIPTION_PROVIDER) patch({ gemini_sub_model: value, model: MODEL_AUTO })
+    // Google Gemini (AGY) hat sein eigenes Feld; das gemeinsame bleibt dort „auto“.
+    if (draft.provider === SUBSCRIPTION_PROVIDER) patch({ gemini_agy_model: value, model: MODEL_AUTO })
     else patch({ model: value })
   }
 
@@ -39,9 +39,9 @@ export function Allgemein() {
 
   const providers = Object.keys(catalog?.providers ?? {})
   const providerModels = catalog?.providers[draft.provider]?.models ?? []
-  // Bei Google Gemini (Abo) gilt eine eigene Option; leer heißt „Google wählt“.
+  // Bei Google Gemini (AGY) gilt eine eigene Option; leer heißt „Google wählt“.
   const subscription = draft.provider === SUBSCRIPTION_PROVIDER
-  const modelKey = subscription ? 'gemini_sub_model' : 'model'
+  const modelKey = subscription ? 'gemini_agy_model' : 'model'
   const autoValue = subscription ? '' : MODEL_AUTO
   const modelValue = draft[modelKey]
   // Ein gesetztes Modell, das nicht in der Liste steht (im Reiter „Konfiguration“
@@ -121,7 +121,7 @@ export function Allgemein() {
             </select>
             <small>
               {TOOL_ACCESS_HINTS[draft.tool_access] ?? ''} Gilt für Claude, ChatGPT und
-              Google Gemini (Abo), dort ohne Befehle: „Alle Werkzeuge“ wirkt wie
+              Google Gemini (AGY), dort ohne Befehle: „Alle Werkzeuge“ wirkt wie
               „Web-Recherche“. Google Gemini mit Schlüssel antwortet immer aus seinem
               Wissen.
             </small>

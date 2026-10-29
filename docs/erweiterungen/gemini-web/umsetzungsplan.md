@@ -1,7 +1,7 @@
 # Umsetzungsplan
 
 Arbeitspakete für die [Umbenennung](umbenennung-agy.md) und den Anbieter „Gemini Web“
-([Entwurf](entwurf.md)). **Nichts davon ist begonnen.** Vor AP 1 und AP 8 sind die offenen Fragen
+([Entwurf](entwurf.md)). **AP 0 geklärt, AP 1 umgesetzt; weitere Pakete folgen.** Vor AP 1 und AP 8 sind die offenen Fragen
 aus [README.md](README.md#offene-fragen--vor-dem-genannten-arbeitspaket-zu-klären) zu klären.
 
 ## Rahmen für jedes Arbeitspaket
@@ -72,7 +72,11 @@ Genaues Vorgehen und Tabelle der Änderungen: [umbenennung-agy.md](umbenennung-a
 - **Abnahme:** Suche nach `gemini_sub` und `Gemini (Abo)` findet nur noch ADRs und `CHANGELOG.md`;
   `scripts/check.sh --docker` grün; Seitenleiste in beiden Modi und bei 375px angesehen.
 
-## AP 2 — Spike
+## AP 2 — Spike (Ablauf geändert durch den User)
+
+Der User führt den Kontotest erst nach Installation des Updates aus. Der Bau geht nach
+der lokalen Plattformprüfung weiter; kontobezogene Ergebnisse werden nicht vorweggenommen.
+Die Forderung „bevor gebaut wird“ unten ist damit für Kontotests aufgehoben.
 
 Ziel: Die „offen“-Punkte aus [recherche.md](recherche.md) beantworten, **bevor** gebaut wird. Ergebnis
 ist eine Datei `spike-ergebnis.md` in diesem Ordner, sonst nichts im Add-on.

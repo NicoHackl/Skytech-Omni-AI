@@ -65,9 +65,9 @@ Das ist der von Google vorgesehene Weg; er wird nach Verbrauch abgerechnet.
 
 ### Google Gemini über das Google-AI-Pro-Abo
 
-Unter **Einstellungen → Google Gemini (Abo)** auf „Mit Google anmelden“ klicken, die Google-Seite
+Unter **Einstellungen → Google Gemini (AGY)** auf „Mit Google anmelden“ klicken, die Google-Seite
 öffnen, mit dem Konto anmelden, das Google AI Pro hat, den angezeigten Code kopieren und einfügen
-(Google lässt dafür etwa eine Minute Zeit). Danach als Anbieter „Google Gemini (Abo)“ wählen und
+(Google lässt dafür etwa eine Minute Zeit). Danach als Anbieter „Google Gemini (AGY)“ wählen und
 speichern. Die Anmeldung entsteht im Add-on selbst und bleibt gespeichert. Mit „Weiteres Konto
 anmelden“ lassen sich mehrere Google-Konten anmelden; ist das Kontingent eines Kontos aufgebraucht,
 nimmt das Add-on das nächste. Die Modelle (z. B.
@@ -79,7 +79,7 @@ nimmt das Add-on das nächste. Die Modelle (z. B.
 > Wechseln zwischen Konten nennt Google ausdrücklich nicht unterstützt; mit jedem Konto steigt das
 > Risiko, und eine Maßnahme kann alle treffen. Die Nutzung
 > geschieht auf eigenes Risiko — am besten mit einem Konto, dessen Verlust nicht schmerzt. Hintergrund:
-> [D-022](docs/adr/D-022-gemini-abo-antigravity.md).
+> [D-022](docs/adr/D-022-gemini-agy-antigravity.md).
 
 ## Nutzung
 

@@ -1,12 +1,12 @@
-"""Tests der Kontenliste hinter „Google Gemini (Abo)“ (D-024)."""
+"""Tests der Kontenliste hinter „Google Gemini (AGY)“ (D-024)."""
 
 import json
 import time
 
 import pytest
 
-from providers import gemini_sub_accounts as accounts
-from providers.gemini_sub_accounts import (
+from providers import gemini_agy_accounts as accounts
+from providers.gemini_agy_accounts import (
     Account,
     AccountError,
     add_account,
