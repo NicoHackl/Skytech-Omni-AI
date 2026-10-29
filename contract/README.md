@@ -24,8 +24,11 @@ abweichende Beschreibung der gemeinsamen Felder zu führen.
 
 ## Regeln
 
+- **Ordnername:** `contract_<master-besitzer>_<gegenstelle>`. Wer den Master besitzt, steht vorn,
+  weil dort zuerst geändert wird (hier: Skytech-X-Backend → `contract_skytech_x_omniai`).
+
 - **Der Master liegt beim Backend** (HTTP-Schnittstelle, OpenAPI). Hier liegt eine Kopie, die
-  **inhaltlich unverändert** bleibt — geändert wird zuerst im Master, dann wird die Kopie im
+  **wortgleich** bleibt — geändert wird zuerst im Master, dann wird die Kopie im
   selben Arbeitspaket nachgezogen.
 - Änderungen innerhalb von `v1` bleiben additiv; ein Bruch bedeutet eine neue Hauptversion.
 - Der Status im Vertragsdokument unterscheidet implementierten Austausch, bekannte Grenzen und

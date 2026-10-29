@@ -198,7 +198,7 @@ dabei etwas unter `skytech_omniai/` neu ist. Ablauf im Workflow
 Hat sich unter `skytech_omniai/` nichts geändert (nur `docs/`, `tests/`, CI), gibt es kein
 Release. Solche Änderungen und ihre Trailer gehen mit dem nächsten Release nach `main`.
 
-Der Push nach `main` geht über einen Deploy-Key (Secret `RELEASE_DEPLOY_KEY`), den das Ruleset von
+Der Push nach `main` und der Tag gehen über einen Deploy-Key (Secret `RELEASE_DEPLOY_KEY`), den das Ruleset von
 `main` neben den Admins als einzige Ausnahme kennt. Fehlt das Secret, bricht der Job erst dann
 ab, wenn wirklich etwas zu veröffentlichen ist.
 
@@ -213,6 +213,7 @@ andere Änderung durch `dev/main` und den Pull Request nach `main`.
 - Kein zweiter Pull Request nach `main`, solange einer offen ist
 - Kein Pull Request ohne Zuweisung an den Repo-Besitzer
 - Kein `Co-Authored-By`-Trailer und keine KI-Namensnennung in Commits oder Pull Requests
+- Keine Tags von Hand — Tags und Releases setzt nur der Release-Workflow (User-Entscheidung 28.10.2026)
 - Keine Versionsnummer von Hand in `config.yaml` und kein von Hand gepflegter Changelog
 - Keine Secrets im Commit — vor dem Commit `git diff --staged` prüfen
 - Keine generierten Artefakte (`dist/`, `node_modules/`, `.venv/`, Caches) im Repo
