@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.1.0] — 29.10.2026
+
+### Hinzugefügt
+
+- Neuer Anbieter Google Gemini (Web) mit mehreren separaten Google-Konten, temporären Chats und Modellwahl. Von Google nicht unterstützt; Konten können gesperrt werden. Anmeldung in den Einstellungen.
+
 ## [1.0.0] — 29.10.2026
 
 ### Geändert
