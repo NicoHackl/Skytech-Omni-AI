@@ -13,7 +13,7 @@
   Add-on-Prozess lesbar (`0600`, Verzeichnis `0700`). Sie wird aus der Konfiguration nur dann neu
   geschrieben, wenn sich der eingetragene Wert geändert hat — sonst überschriebe ein Neustart die
   von der CLI erneuerten Tokens.
-- Die Anmeldungen bei Google (`gemini_sub`) liegen je Konto als Datei unter `/data` (Rechte `0600`,
+- Die Anmeldungen bei Google (`gemini_agy`) liegen je Konto als Datei unter `/data` (Rechte `0600`,
   das erste in `/data/.gemini/antigravity-cli/`, weitere unter `/data/omniai-gemini-accounts/konto-N/`),
   dazu eine Sicherung daneben. Die Kontenliste (`omniai-gemini-accounts.json`) enthält Namen,
   Reihenfolge und Wartezeiten, keine Anmeldedaten; ihre Pfade sind relativ und werden beim Lesen auf
@@ -34,9 +34,9 @@
 - Pfade unterhalb der Wurzel werden von `send_from_directory` aufgelöst; Ausbruchsversuche mit
   `..` weist es ab, und die Anfrage landet auf der Auffangroute.
 - `provider` und `model` werden gegen bekannte Werte geprüft, bevor irgendetwas damit geschieht.
-  `model` fließt bei Claude, ChatGPT und Gemini (Abo) als Argument in einen Unterprozess — der wird
+  `model` fließt bei Claude, ChatGPT und Gemini (AGY) als Argument in einen Unterprozess — der wird
   ohne Shell gestartet (Argumentliste), es gibt also keine Shell-Auswertung. Ein Prompt, der mit
-  `/` beginnt, wird bei Gemini (Abo) nicht als Befehl der CLI gedeutet (`--disable-slash-commands`).
+  `/` beginnt, wird bei Gemini (AGY) nicht als Befehl der CLI gedeutet (`--disable-slash-commands`).
   Der eingefügte Code der Google-Anmeldung wird gegen ein Muster geprüft (Zeichen eines Codes,
   höchstens 2048), bevor er in die Eingabe der CLI geschrieben wird.
 - Der Prompt selbst wird nicht geprüft: er ist der Inhalt der Anfrage und geht unverändert an das
@@ -85,7 +85,7 @@ neben Port 8000 wird:
 - **Nur für Administratoren.** `panel_admin` (Vorgabe `true`, deshalb nicht eigens in `config.yaml` gesetzt) blendet die Oberfläche für andere Nutzer aus
   der Seitenleiste aus.
 - **Anmeldung bei Google nur über den Ingress.** Starten, Code einreichen, Abbrechen und Abmelden
-  (`/auth/gemini…`, auch Konto hinzufügen und entfernen) gelten wie `PUT /settings`: nur von der Absenderadresse des Ingress-Proxys.
+  (`/auth/gemini-agy…`, auch Konto hinzufügen und entfernen) gelten wie `PUT /settings`: nur von der Absenderadresse des Ingress-Proxys.
   Sonst könnte jeder, der Port 8000 erreicht, die Anmeldung des Betreibers entfernen oder eine
   fremde Anmeldung anstoßen.
 - **Zugänge nur schreiben.** `GET /settings` liefert jedes Zugangsfeld leer und dazu nur
@@ -114,7 +114,7 @@ Sandbox-Stufe: `read-only` verhindert Schreibzugriffe und eigenständige Netzver
 Befehle im Container bleiben aber möglich**. In der Vorgabestufe kann ChatGPT damit prinzipiell
 Dateien unter `/data` lesen — Claude kann das dort nicht.
 
-**Gemini (Abo)** kennt weder die Liste noch die Sandbox. Die CLI ist ein Programmierassistent mit
+**Gemini (AGY)** kennt weder die Liste noch die Sandbox. Die CLI ist ein Programmierassistent mit
 Datei-, Befehls- und Webwerkzeugen. Das Add-on schränkt sie dreifach ein: (1) ein eigener, leerer
 Arbeitsbereich unter `/data` — außerhalb davon ist der Dateizugriff der CLI aus, die Optionen mit
 allen Zugängen sind also nicht lesbar; (2) Regeln in ihrer `settings.json`, die **Befehle, URL-Ausführung

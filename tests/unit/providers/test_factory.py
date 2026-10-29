@@ -5,8 +5,8 @@ import pytest
 from providers.claude_sub_provider import ClaudeSubProvider
 from providers.codex_sub_provider import CodexSubProvider
 from providers.factory import ProviderFactory
+from providers.gemini_agy_provider import GeminiAgyProvider
 from providers.gemini_provider import GeminiProvider
-from providers.gemini_sub_provider import GeminiSubProvider
 
 
 def test_defaults_to_the_subscription_provider():
@@ -26,8 +26,8 @@ def test_creates_the_chatgpt_provider():
 
 def test_creates_the_google_subscription_provider():
     """Der vierte Anbieter: Gemini über das Google-AI-Pro-Abo, getrennt vom Schlüssel-Weg."""
-    assert isinstance(ProviderFactory.create("gemini_sub"), GeminiSubProvider)
-    assert not isinstance(ProviderFactory.create("gemini"), GeminiSubProvider)
+    assert isinstance(ProviderFactory.create("gemini_agy"), GeminiAgyProvider)
+    assert not isinstance(ProviderFactory.create("gemini"), GeminiAgyProvider)
 
 
 def test_reads_the_configured_provider(monkeypatch):
@@ -46,7 +46,13 @@ def test_rejects_an_unknown_provider():
     assert "Claude (Abo)" in text
     assert "ChatGPT (Abo)" in text
     assert "Google Gemini" in text
-    assert "Google Gemini (Abo)" in text
+    assert "Google Gemini (AGY)" in text
     # Kein Klassenname und keine Python-Schreibweise im sichtbaren Text.
     assert "Provider" not in text
     assert "[" not in text
+
+
+def test_old_google_subscription_key_is_rejected():
+    """Die Umbenennung bietet ausdrücklich keinen Übergangs-Alias."""
+    with pytest.raises(ValueError, match="gemini_agy"):
+        ProviderFactory.create("gemini_sub")

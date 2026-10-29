@@ -33,7 +33,7 @@ npm install -g @anthropic-ai/claude-code
 claude setup-token
 ```
 
-Das Ergebnis unter **Einstellungen → Token des Claude-Abos** eintragen und speichern.
+Das Ergebnis unter **Einstellungen → Claude → Token des Claude-Abos** eintragen und speichern.
 
 > Alternative: Unter `anthropic_api_key` lässt sich ein Anthropic-Schlüssel hinterlegen. Der wird
 > nach Verbrauch abgerechnet und nutzt das Abo **nicht**.
@@ -49,7 +49,7 @@ codex login          # Anmeldung mit dem ChatGPT-Konto, nicht mit einem API-Schl
 cat ~/.codex/auth.json
 ```
 
-Den vollständigen Inhalt unter **Einstellungen → Anmeldung des ChatGPT-Abos** einfügen, als
+Den vollständigen Inhalt unter **Einstellungen → ChatGPT → Anmeldung des ChatGPT-Abos** einfügen, als
 Anbieter „ChatGPT (Abo)“ wählen und speichern. Das Add-on schreibt die Anmeldung nur dann neu,
 wenn sich der eingetragene Wert ändert — die Codex-Befehlszeile frischt ihre Tokens sonst selbst
 auf.
@@ -60,14 +60,14 @@ auf.
 ### Google Gemini mit Schlüssel
 
 Unter <https://aistudio.google.com/apikey> einen Schlüssel erzeugen, ihn unter
-**Einstellungen → Gemini-Schlüssel** eintragen, als Anbieter „Google Gemini“ wählen und speichern.
+**Einstellungen → Google Gemini → Gemini-Schlüssel** eintragen, als Anbieter „Google Gemini“ wählen und speichern.
 Das ist der von Google vorgesehene Weg; er wird nach Verbrauch abgerechnet.
 
 ### Google Gemini über das Google-AI-Pro-Abo
 
-Unter **Einstellungen → Google-Anmeldung (Abo)** auf „Mit Google anmelden“ klicken, die Google-Seite
+Unter **Einstellungen → Google Gemini (AGY)** auf „Mit Google anmelden“ klicken, die Google-Seite
 öffnen, mit dem Konto anmelden, das Google AI Pro hat, den angezeigten Code kopieren und einfügen
-(Google lässt dafür etwa eine Minute Zeit). Danach als Anbieter „Google Gemini (Abo)“ wählen und
+(Google lässt dafür etwa eine Minute Zeit). Danach als Anbieter „Google Gemini (AGY)“ wählen und
 speichern. Die Anmeldung entsteht im Add-on selbst und bleibt gespeichert. Mit „Weiteres Konto
 anmelden“ lassen sich mehrere Google-Konten anmelden; ist das Kontingent eines Kontos aufgebraucht,
 nimmt das Add-on das nächste. Die Modelle (z. B.
@@ -79,7 +79,7 @@ nimmt das Add-on das nächste. Die Modelle (z. B.
 > Wechseln zwischen Konten nennt Google ausdrücklich nicht unterstützt; mit jedem Konto steigt das
 > Risiko, und eine Maßnahme kann alle treffen. Die Nutzung
 > geschieht auf eigenes Risiko — am besten mit einem Konto, dessen Verlust nicht schmerzt. Hintergrund:
-> [D-022](docs/adr/D-022-gemini-abo-antigravity.md).
+> [D-022](docs/adr/D-022-gemini-agy-antigravity.md).
 
 ## Nutzung
 

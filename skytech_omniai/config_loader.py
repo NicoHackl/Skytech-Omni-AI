@@ -85,7 +85,7 @@ def read_addon_version() -> str | None:
 # - openai_api_key: Alternative zum Abo, nach Verbrauch abgerechnet.
 # - gemini_api_key: Google-AI-Studio-Schlüssel, unter
 #   https://aistudio.google.com/apikey erzeugt und nach Verbrauch abgerechnet.
-# - gemini_sub_model: Standardmodell für „Google Gemini (Abo)“. Das Auswahlfeld
+# - gemini_agy_model: Standardmodell für „Google Gemini (AGY)“. Das Auswahlfeld
 #   „model“ kann es nicht tragen: die Bezeichnungen kennt die Google-Befehlszeile
 #   erst nach der Anmeldung, die feste Liste in config.yaml also nicht.
 # - api_token: Token, das Skytech X bei jedem Aufruf der Schnittstelle v1
@@ -99,7 +99,7 @@ OPTION_ENV_MAP = {
     "codex_auth_json": "CODEX_AUTH_JSON",
     "openai_api_key": "OPENAI_API_KEY",
     "gemini_api_key": "GEMINI_API_KEY",
-    "gemini_sub_model": "GEMINI_SUB_MODEL",
+    "gemini_agy_model": "GEMINI_AGY_MODEL",
     "api_token": "OMNIAI_API_TOKEN",
 }
 

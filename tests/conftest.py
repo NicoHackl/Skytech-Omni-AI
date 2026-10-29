@@ -17,7 +17,7 @@ ENV_KEYS = [
     "OPENAI_API_KEY",
     "CODEX_HOME",
     "GEMINI_API_KEY",
-    "GEMINI_SUB_MODEL",
+    "GEMINI_AGY_MODEL",
     "GOOGLE_API_KEY",
     "OMNIAI_API_TOKEN",
     "SUPERVISOR_TOKEN",
@@ -31,4 +31,4 @@ def clean_env(monkeypatch, tmp_path):
         monkeypatch.delenv(key, raising=False)
     # Die Google-CLI legt Anmeldung und Zustand unter einem Heimatverzeichnis ab
     # (im Container /data). Kein Test darf an das echte heran.
-    monkeypatch.setenv("OMNIAI_GEMINI_HOME", str(tmp_path / "gemini-home"))
+    monkeypatch.setenv("OMNIAI_GEMINI_AGY_HOME", str(tmp_path / "gemini-home"))

@@ -2,7 +2,7 @@
    wider — weicht der Server ab, wird hier nachgezogen, nicht mit `any` umgangen. */
 
 /** Technischer Name eines Anbieters, so wie er in der Konfiguration steht. */
-export type ProviderName = 'claude_sub' | 'codex_sub' | 'gemini' | 'gemini_sub'
+export type ProviderName = 'claude_sub' | 'codex_sub' | 'gemini' | 'gemini_agy'
 
 /** Was ein Anbieter an Modellen anbietet. `default` = null heißt: er entscheidet selbst. */
 export interface ProviderModels {
@@ -47,8 +47,8 @@ export interface SettingsOptions {
   codex_auth_json: string
   openai_api_key: string
   gemini_api_key: string
-  /** Standardmodell von „Google Gemini (Abo)“; leer heißt: Google wählt. */
-  gemini_sub_model: string
+  /** Standardmodell von „Google Gemini (AGY)“; leer heißt: Google wählt. */
+  gemini_agy_model: string
   api_token: string
 }
 
@@ -99,7 +99,7 @@ export interface GeminiAccount {
   retry_at: string | null
 }
 
-/** Antwort von `GET /auth/gemini` und der Aktionen darunter: Stand der Anmeldung bei Google. */
+/** Antwort von `GET /auth/gemini-agy` und der Aktionen darunter: Stand der Anmeldung bei Google. */
 export interface GeminiLoginStatus {
   /** Ob die Google-Befehlszeile im Add-on vorhanden ist. */
   available: boolean

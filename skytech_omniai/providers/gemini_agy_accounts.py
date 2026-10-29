@@ -1,4 +1,4 @@
-"""Die Google-Konten hinter ``gemini_sub``: Liste, Orte und Zustand (D-024).
+"""Die Google-Konten hinter ``gemini_agy``: Liste, Orte und Zustand (D-024).
 
 Jedes Konto hat ein **eigenes Heimatverzeichnis** und damit seine eigene
 Anmeldung, seinen eigenen Zustand der Antigravity-CLI und seinen eigenen
@@ -30,13 +30,13 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
-log = logging.getLogger("omniai.gemini_sub.accounts")
+log = logging.getLogger("omniai.gemini_agy.accounts")
 
 # Die CLI legt Anmeldung und Zustand unter $HOME/.gemini ab. HOME zeigt auf das
 # dauerhafte /data-Verzeichnis des Add-ons, sonst wäre die Anmeldung nach jedem
 # Neustart weg. Außerhalb des Containers (Tests, lokale Entwicklung) darf ein
 # anderer Ort vorgegeben werden.
-HOME_ENV = "OMNIAI_GEMINI_HOME"
+HOME_ENV = "OMNIAI_GEMINI_AGY_HOME"
 DEFAULT_HOME = "/data"
 
 # Eigenes, leeres Arbeitsverzeichnis je Konto. Die CLI darf darin ohne Rückfrage

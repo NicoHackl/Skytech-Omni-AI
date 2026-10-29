@@ -25,13 +25,13 @@ from providers.base_provider import resolve_tool_access
 from providers.claude_sub_provider import CLAUDE_MODELS
 from providers.codex_sub_provider import CODEX_MODELS
 from providers.factory import DEFAULT_PROVIDER, ProviderFactory
+from providers.gemini_agy_login import LoginError
+from providers.gemini_agy_login import login as gemini_login
+from providers.gemini_agy_provider import available_models as gemini_agy_models
+from providers.gemini_agy_provider import is_signed_in as gemini_agy_signed_in
+from providers.gemini_agy_provider import refresh_models as gemini_agy_refresh_models
 from providers.gemini_provider import DEFAULT_MODEL as GEMINI_DEFAULT_MODEL
 from providers.gemini_provider import GEMINI_MODELS
-from providers.gemini_sub_login import LoginError
-from providers.gemini_sub_login import login as gemini_login
-from providers.gemini_sub_provider import available_models as gemini_sub_models
-from providers.gemini_sub_provider import is_signed_in as gemini_sub_signed_in
-from providers.gemini_sub_provider import refresh_models as gemini_sub_refresh_models
 from settings import merge_update, public_view, revision
 from supervisor_client import SupervisorClient, SupervisorRejected, SupervisorUnavailable
 
@@ -145,10 +145,10 @@ def models():
                     "default": GEMINI_DEFAULT_MODEL,
                 },
                 # Die Liste kommt von der Google-Befehlszeile (nach der Anmeldung), nicht
-                # aus dem Code; ``default`` ist die Option „gemini_sub_model“.
-                "gemini_sub": {
-                    "models": gemini_sub_models(),
-                    "default": os.environ.get("GEMINI_SUB_MODEL", "").strip() or None,
+                # aus dem Code; ``default`` ist die Option „gemini_agy_model“.
+                "gemini_agy": {
+                    "models": gemini_agy_models(),
+                    "default": os.environ.get("GEMINI_AGY_MODEL", "").strip() or None,
                 },
             },
         }
@@ -156,10 +156,10 @@ def models():
 
 
 def _default_model() -> str | None:
-    """Standardmodell des aktiven Anbieters. Google Gemini (Abo) hat eine eigene
+    """Standardmodell des aktiven Anbieters. Google Gemini (AGY) hat eine eigene
     Option, weil sein Auswahlfeld keine feste Liste haben kann."""
-    if os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER) == "gemini_sub":
-        return os.environ.get("GEMINI_SUB_MODEL", "").strip() or None
+    if os.environ.get("AI_PROVIDER", DEFAULT_PROVIDER) == "gemini_agy":
+        return os.environ.get("GEMINI_AGY_MODEL", "").strip() or None
     return os.environ.get("OMNIAI_MODEL") or None
 
 
@@ -195,7 +195,7 @@ def status():
                 ),
                 # Die Anmeldung entsteht im Add-on selbst (Seite „Einstellungen“)
                 # und liegt als Datei unter /data, nicht in der Umgebung.
-                "gemini_sub": gemini_sub_signed_in(),
+                "gemini_agy": gemini_agy_signed_in(),
             },
         }
     )
@@ -290,7 +290,7 @@ def settings_save():
     return jsonify({**public_view(merged), "can_save": True, "read_only_reason": None})
 
 
-# --- Anmeldung bei Google (gemini_sub) -------------------------------------
+# --- Anmeldung bei Google (gemini_agy) -------------------------------------
 
 
 def _login_refused():
@@ -315,7 +315,7 @@ def _login_failed(fehler: LoginError):
     return jsonify({"error": str(fehler)}), 409 if fehler.busy else 400
 
 
-@app.route("/auth/gemini", methods=["GET"])
+@app.route("/auth/gemini-agy", methods=["GET"])
 def gemini_login_status():
     """Zustand der Anmeldung für die Seite „Einstellungen“.
 
@@ -325,7 +325,7 @@ def gemini_login_status():
     return jsonify(gemini_login.status(include_url=_from_ingress()))
 
 
-@app.route("/auth/gemini/start", methods=["POST"])
+@app.route("/auth/gemini-agy/start", methods=["POST"])
 def gemini_login_start():
     """Startet die Anmeldung eines **neuen Kontos** und liefert die Adresse bei Google.
 
@@ -345,7 +345,7 @@ def gemini_login_start():
         return jsonify({"error": FEHLER_UNBEKANNT}), 500
 
 
-@app.route("/auth/gemini/code", methods=["POST"])
+@app.route("/auth/gemini-agy/code", methods=["POST"])
 def gemini_login_code():
     """Nimmt den Code entgegen, den Google nach der Anmeldung anzeigt."""
     refused = _login_refused()
@@ -366,7 +366,7 @@ def gemini_login_code():
         return jsonify({"error": FEHLER_UNBEKANNT}), 500
 
 
-@app.route("/auth/gemini/cancel", methods=["POST"])
+@app.route("/auth/gemini-agy/cancel", methods=["POST"])
 def gemini_login_cancel():
     """Bricht eine laufende Anmeldung ab."""
     refused = _login_refused()
@@ -375,7 +375,7 @@ def gemini_login_cancel():
     return jsonify(gemini_login.cancel())
 
 
-@app.route("/auth/gemini/models", methods=["POST"])
+@app.route("/auth/gemini-agy/models", methods=["POST"])
 def gemini_login_models():
     """Holt die Modelle der Google-Befehlszeile neu, etwa nach einem Wechsel des Tarifs.
 
@@ -385,10 +385,10 @@ def gemini_login_models():
     refused = _login_refused()
     if refused:
         return refused
-    return jsonify({"models": [model.label for model in gemini_sub_refresh_models(force=True)]})
+    return jsonify({"models": [model.label for model in gemini_agy_refresh_models(force=True)]})
 
 
-@app.route("/auth/gemini/<account_id>", methods=["DELETE"])
+@app.route("/auth/gemini-agy/<account_id>", methods=["DELETE"])
 def gemini_login_remove(account_id: str):
     """Entfernt ein Konto samt Anmeldung. Widerrufen lässt sie sich nur im Google-Konto."""
     refused = _login_refused()

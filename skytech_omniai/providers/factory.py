@@ -9,8 +9,8 @@ import os
 from providers.base_provider import BaseProvider
 from providers.claude_sub_provider import ClaudeSubProvider
 from providers.codex_sub_provider import CodexSubProvider
+from providers.gemini_agy_provider import GeminiAgyProvider
 from providers.gemini_provider import GeminiProvider
-from providers.gemini_sub_provider import GeminiSubProvider
 
 log = logging.getLogger("omniai.factory")
 
@@ -20,7 +20,7 @@ _PROVIDERS = {
     "claude_sub": ClaudeSubProvider,
     "codex_sub": CodexSubProvider,
     "gemini": GeminiProvider,
-    "gemini_sub": GeminiSubProvider,
+    "gemini_agy": GeminiAgyProvider,
 }
 
 # Klarnamen für Meldungen. Das Publikum ist der Betreiber: er trägt den
@@ -29,7 +29,7 @@ _ANZEIGENAMEN = {
     "claude_sub": "Claude (Abo)",
     "codex_sub": "ChatGPT (Abo)",
     "gemini": "Google Gemini",
-    "gemini_sub": "Google Gemini (Abo)",
+    "gemini_agy": "Google Gemini (AGY)",
 }
 
 

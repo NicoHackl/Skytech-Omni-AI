@@ -12,7 +12,7 @@ verbergen.
 
 Anders als die beiden anderen Befehlszeilen hat ``agy`` kein langlebiges Token
 zum Einfügen. Die Anmeldung entsteht deshalb im Add-on selbst
-(``gemini_sub_login``) und liegt danach als Datei unter ``/data``, die die CLI
+(``gemini_agy_login``) und liegt danach als Datei unter ``/data``, die die CLI
 bei jedem Lauf liest und erneuert.
 """
 
@@ -39,8 +39,7 @@ from providers.base_provider import (
 )
 from providers.claude_sub_provider import CLAUDE_MODELS
 from providers.codex_sub_provider import CODEX_MODELS
-from providers.gemini_provider import GEMINI_MODELS
-from providers.gemini_sub_accounts import (
+from providers.gemini_agy_accounts import (
     DEFAULT_HOME,  # noqa: F401  (hier wieder ausgegeben, siehe Tests)
     HOME_ENV,  # noqa: F401
     TOKEN_BACKUP_SUFFIX,  # noqa: F401
@@ -60,13 +59,14 @@ from providers.gemini_sub_accounts import (
     token_path,
     workspace_dir,
 )
+from providers.gemini_provider import GEMINI_MODELS
 
-log = logging.getLogger("omniai.gemini_sub")
+log = logging.getLogger("omniai.gemini_agy")
 
 # Die CLI kennt ihre Modelle nur mit Anmeldung (``agy models``); eine feste
 # Liste wäre geraten. Das Auswahlfeld in config.yaml kann deshalb nur „auto“
 # enthalten, ein Modell lässt sich pro Anfrage über das Feld „model“ setzen.
-GEMINI_SUB_MODELS: list[str] = []
+GEMINI_AGY_MODELS: list[str] = []
 
 # Sentinel-Wert aus der Add-on-Konfiguration. Er steht für „kein Modell
 # erzwingen“ und wird wie ein leeres Feld behandelt.
@@ -75,7 +75,7 @@ AUTO_MODEL = "auto"
 AGY_BINARY = "agy"
 
 # Orte und Konten (Anmeldung, Zustand, Arbeitsbereich je Konto) stehen in
-# ``gemini_sub_accounts``.
+# ``gemini_agy_accounts``.
 SETTINGS_FILE_NAME = "settings.json"
 
 # Zeitlimit eines CLI-Laufs. Gleicher Wert wie bei den anderen Providern, damit
@@ -160,7 +160,7 @@ SYSTEM_PROMPT_OFFLINE = (
 SYSTEM_PROMPT_END = "Always answer by returning exactly one valid JSON object and nothing else."
 
 FEHLER_NICHT_ANGEMELDET = (
-    "Google Gemini (Abo) ist nicht angemeldet. Bitte in den Einstellungen unter "
+    "Google Gemini (AGY) ist nicht angemeldet. Bitte in den Einstellungen unter "
     "„Google-Anmeldung“ mit dem Google-Konto anmelden."
 )
 
@@ -180,27 +180,27 @@ FEHLER_KONTO = (
 )
 
 FEHLER_CLI_FEHLT = (
-    "Google Gemini (Abo) ist in diesem Add-on nicht verfügbar. Das Add-on wurde "
+    "Google Gemini (AGY) ist in diesem Add-on nicht verfügbar. Das Add-on wurde "
     "vermutlich unvollständig gebaut — bitte neu installieren."
 )
 
 FEHLER_CLI_ABGEBROCHEN = (
-    "Google Gemini (Abo) hat die Anfrage nicht beantwortet. Bitte die Anfrage erneut stellen."
+    "Google Gemini (AGY) hat die Anfrage nicht beantwortet. Bitte die Anfrage erneut stellen."
 )
 
 FEHLER_ZEITUEBERSCHREITUNG = (
-    "Google Gemini (Abo) hat zu lange gebraucht und wurde abgebrochen. Bitte die "
+    "Google Gemini (AGY) hat zu lange gebraucht und wurde abgebrochen. Bitte die "
     "Anfrage kürzer fassen oder es später erneut versuchen."
 )
 
 FEHLER_BESETZT = (
-    "Google Gemini (Abo) bearbeitet gerade eine andere Anfrage. Bitte gleich erneut versuchen."
+    "Google Gemini (AGY) bearbeitet gerade eine andere Anfrage. Bitte gleich erneut versuchen."
 )
 
-FEHLER_ZU_LANG = "Die Anfrage ist für Google Gemini (Abo) zu lang. Bitte den Text kürzen."
+FEHLER_ZU_LANG = "Die Anfrage ist für Google Gemini (AGY) zu lang. Bitte den Text kürzen."
 
 FEHLER_ARBEITSBEREICH = (
-    "Google Gemini (Abo) konnte seinen Arbeitsbereich nicht vorbereiten. Bitte "
+    "Google Gemini (AGY) konnte seinen Arbeitsbereich nicht vorbereiten. Bitte "
     "prüfen, ob das Add-on Schreibrechte auf sein Datenverzeichnis hat, und es "
     "neu starten."
 )
@@ -854,7 +854,7 @@ def _unknown_model_message(query: str, models: list[ModelInfo], matches: list[Mo
     labels = [m.label for m in models][:MAX_LISTED_MODELS]
     more = " …" if len(models) > MAX_LISTED_MODELS else ""
     return (
-        f"„{query}“ kennt Google Gemini (Abo) nicht. Zur Auswahl stehen: {', '.join(labels)}{more}."
+        f"„{query}“ kennt Google Gemini (AGY) nicht. Zur Auswahl stehen: {', '.join(labels)}{more}."
     )
 
 
@@ -922,7 +922,7 @@ def format_retry_time(timestamp: float) -> str:
     return f"{time.strftime('%d.%m.', moment)}, {clock}"
 
 
-class GeminiSubProvider(BaseProvider):
+class GeminiAgyProvider(BaseProvider):
     """Führt Prompts über die Antigravity-CLI aus und nutzt dabei das Google-AI-Pro-Abo."""
 
     @staticmethod
@@ -935,7 +935,7 @@ class GeminiSubProvider(BaseProvider):
         chosen = (model or "").strip()
         if chosen and chosen != AUTO_MODEL:
             return chosen
-        for name in ("GEMINI_SUB_MODEL", "OMNIAI_MODEL"):
+        for name in ("GEMINI_AGY_MODEL", "OMNIAI_MODEL"):
             default = os.environ.get(name, "").strip()
             if not default or default == AUTO_MODEL:
                 continue
@@ -978,7 +978,7 @@ class GeminiSubProvider(BaseProvider):
             if models:
                 return UnknownModel(_unknown_model_message(chosen_model, models, []))
             return UnknownModel(
-                f"„{chosen_model}“ kennt Google Gemini (Abo) nicht. Ohne Angabe wählt es selbst."
+                f"„{chosen_model}“ kennt Google Gemini (AGY) nicht. Ohne Angabe wählt es selbst."
             )
         if kind == "quota":
             return AccountQuotaExhausted(FEHLER_KONTINGENT)
@@ -1149,7 +1149,7 @@ class GeminiSubProvider(BaseProvider):
             command += ["--model", chosen_model]
 
         log.info(
-            "Anfrage an Google Gemini (Abo), Konto: %s, Modell: %s, Werkzeuge: %s",
+            "Anfrage an Google Gemini (AGY), Konto: %s, Modell: %s, Werkzeuge: %s",
             account.label,
             chosen_model or "Vorgabe der CLI",
             level,

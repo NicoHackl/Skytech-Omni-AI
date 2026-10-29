@@ -1,4 +1,4 @@
-"""Tests für den Provider „Google Gemini (Abo)“. Die CLI selbst wird nie aufgerufen.
+"""Tests für den Provider „Google Gemini (AGY)“. Die CLI selbst wird nie aufgerufen.
 
 Für den Prozessteil (``run_agy``) steht ein kleines Python-Skript an der Stelle
 der CLI — es braucht weder Netz noch Anmeldung.
@@ -13,13 +13,13 @@ import time
 
 import pytest
 
-from providers import gemini_sub_accounts as accounts
-from providers import gemini_sub_provider as modul
+from providers import gemini_agy_accounts as accounts
+from providers import gemini_agy_provider as modul
 from providers.base_provider import NotJson, ProviderTimeout, UnknownModel
-from providers.gemini_sub_provider import (
-    GEMINI_SUB_MODELS,
+from providers.gemini_agy_provider import (
+    GEMINI_AGY_MODELS,
     AgyResult,
-    GeminiSubProvider,
+    GeminiAgyProvider,
     ModelInfo,
     agy_env,
     available_models,
@@ -107,11 +107,11 @@ def fake(monkeypatch):
 
 @pytest.fixture
 def provider():
-    return GeminiSubProvider()
+    return GeminiAgyProvider()
 
 
 def _assert_no_tech(text):
-    klein = text.lower()
+    klein = text.lower().replace("google gemini (agy)", "google gemini")
     for wort in TECHNIK:
         assert wort not in klein, f"{wort!r} in {text!r}"
 
@@ -557,7 +557,7 @@ def test_the_known_list_resolves_the_requested_model(signed_in, fake, provider):
 
 def test_the_configured_default_model_is_resolved_too(signed_in, fake, provider, monkeypatch):
     _known_models()
-    monkeypatch.setenv("GEMINI_SUB_MODEL", "Gemini 4 Argon (High)")
+    monkeypatch.setenv("GEMINI_AGY_MODEL", "Gemini 4 Argon (High)")
 
     provider.execute("Test")
 
@@ -566,7 +566,7 @@ def test_the_configured_default_model_is_resolved_too(signed_in, fake, provider,
 
 def test_the_request_beats_the_configured_default(signed_in, fake, provider, monkeypatch):
     _known_models()
-    monkeypatch.setenv("GEMINI_SUB_MODEL", "Gemini 4 Argon (High)")
+    monkeypatch.setenv("GEMINI_AGY_MODEL", "Gemini 4 Argon (High)")
 
     provider.execute("Test", model="flash-3.8")
 
@@ -575,7 +575,7 @@ def test_the_request_beats_the_configured_default(signed_in, fake, provider, mon
 
 def test_the_default_option_beats_the_old_global_model(signed_in, fake, provider, monkeypatch):
     _known_models()
-    monkeypatch.setenv("GEMINI_SUB_MODEL", "argon-4")
+    monkeypatch.setenv("GEMINI_AGY_MODEL", "argon-4")
     monkeypatch.setenv("OMNIAI_MODEL", "flash-3.8")
 
     assert provider.effective_model() == "Gemini 4 Argon (Medium)"
@@ -719,7 +719,7 @@ def test_a_failing_fetch_keeps_the_old_list(signed_in, monkeypatch):
 
 def test_the_provider_has_no_fixed_model_list():
     """Die Modelle kennt die CLI erst nach der Anmeldung — eine feste Liste wäre geraten."""
-    assert GEMINI_SUB_MODELS == []
+    assert GEMINI_AGY_MODELS == []
 
 
 # --- Fehler --------------------------------------------------------------------
@@ -974,7 +974,7 @@ def test_only_the_newest_logs_stay(signed_in):
 
 
 def test_cleanup_never_fails_on_a_missing_state(tmp_path, monkeypatch):
-    monkeypatch.setenv("OMNIAI_GEMINI_HOME", str(tmp_path / "gibt-es-nicht"))
+    monkeypatch.setenv("OMNIAI_GEMINI_AGY_HOME", str(tmp_path / "gibt-es-nicht"))
 
     cleanup_state(snapshot_state(), "irgendwas")
 

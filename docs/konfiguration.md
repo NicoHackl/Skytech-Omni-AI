@@ -14,6 +14,12 @@ kein einziger Zugangsdatenwert.
 - **Gilt sofort.** Nach dem Speichern setzt das Add-on die Umgebung neu; die Provider lesen ihre
   Werte bei jeder Anfrage. Ein Neustart ist nicht nötig. Eine Änderung im Reiter „Konfiguration“
   braucht dagegen weiterhin einen Neustart, weil dort niemand dem laufenden Prozess Bescheid sagt.
+- **Ein Bereich je Anbieter.** Die Seite ist in Bereiche geteilt, die in der Seitenleiste unter
+  „Einstellungen“ stehen: **Allgemein** (Anbieter, Standardmodell, Werkzeuge), **Claude**,
+  **ChatGPT**, **Google Gemini** (Schlüssel), **Google Gemini (AGY)** (Anmeldung der Google-Konten)
+  und **Skytech X** (Token der Schnittstelle). Jeder Bereich zeigt nur seine eigenen Felder. Der
+  Entwurf gilt für alle Bereiche gemeinsam: ein Wechsel verliert nichts, **Speichern** speichert
+  alles. Meldet der Server ein Feld als ungültig, öffnet die Seite den Bereich, in dem es steht.
 - **Zugänge** werden nie angezeigt, nur „Hinterlegt“ oder „Kein Zugang“. Ein leeres Feld behält
   den gespeicherten Wert, „Entfernen“ löscht ihn.
 - **Standardmodell** bietet nur Modelle des gewählten Anbieters an.
@@ -29,7 +35,7 @@ Endpunkte: `GET /settings`, `PUT /settings` in [api-referenz.md](api-referenz.md
 
 | Option | Pflicht | Vorgabe | Bedeutung |
 |---|---|---|---|
-| `provider` | ja | `claude_sub` | Aktiver Anbieter: `claude_sub`, `codex_sub`, `gemini` (Schlüssel) oder `gemini_sub` (Google-AI-Pro-Abo) |
+| `provider` | ja | `claude_sub` | Aktiver Anbieter: `claude_sub`, `codex_sub`, `gemini` (Schlüssel) oder `gemini_agy` (Google-AI-Pro-Abo) |
 | `model` | ja | `auto` | Add-on-weites Standardmodell. `auto` heißt: der Anbieter entscheidet |
 | `tool_access` | ja | `web` | Welche Werkzeuge die Befehlszeilen benutzen dürfen: `off`, `web` oder `full` |
 | `claude_oauth_token` | nein | leer | Langlebiges Token des Claude-Pro/Max-Abos, erzeugt mit `claude setup-token` |
@@ -37,12 +43,12 @@ Endpunkte: `GET /settings`, `PUT /settings` in [api-referenz.md](api-referenz.md
 | `codex_auth_json` | nein | leer | Anmeldung des ChatGPT-Abos: vollständiger Inhalt der Datei `auth.json`, die `codex login` anlegt |
 | `openai_api_key` | nein | leer | Alternative zum Abo: nach Verbrauch abgerechneter OpenAI-Schlüssel |
 | `gemini_api_key` | nein | leer | Schlüssel aus Google AI Studio |
-| `gemini_sub_model` | nein | leer | Standardmodell für `gemini_sub`: eine Bezeichnung wie `Gemini 4 Argon (High)` oder eine Kurzform wie `flash-3.8`. Leer = Google wählt. Siehe „Modelle bei Google Gemini (Abo)“ |
+| `gemini_agy_model` | nein | leer | Standardmodell für `gemini_agy`: eine Bezeichnung wie `Gemini 4 Argon (High)` oder eine Kurzform wie `flash-3.8`. Leer = Google wählt. Siehe „Modelle bei Google Gemini (AGY)“ |
 | `api_token` | nein | leer | Token der Schnittstelle v1 für Skytech X, mindestens 32 Zeichen (z. B. `openssl rand -base64 32`). Leer = `/v1` lehnt jede Anfrage ab. Dasselbe Token in Skytech X unter „Anbindungen“ eintragen |
 
-`gemini_sub` hat **keinen Zugang unter den Optionen**: seine Anmeldung entsteht auf der Seite
+`gemini_agy` hat **keinen Zugang unter den Optionen**: seine Anmeldung entsteht auf der Seite
 „Einstellungen“ (siehe unten) und liegt als Datei unter `/data`. Das gemeinsame Feld `model` bleibt
-bei diesem Anbieter `auto`; sein Standardmodell steht in `gemini_sub_model`.
+bei diesem Anbieter `auto`; sein Standardmodell steht in `gemini_agy_model`.
 
 Für den aktiven Anbieter muss **einer** der passenden Zugänge gesetzt sein — sonst antwortet
 `/ask` mit einer Meldung, die sagt, welches Feld fehlt. Die Übersicht der Oberfläche zeigt
@@ -63,12 +69,12 @@ Aus den Optionen abgeleitet. Beim Betrieb außerhalb von Home Assistant werden s
 | `CODEX_AUTH_JSON` | nein | — | Anmeldung des ChatGPT-Abos, wird vom Provider ins Datenverzeichnis geschrieben |
 | `OPENAI_API_KEY` | nein | — | OpenAI-Schlüssel als Alternative zum Abo |
 | `GEMINI_API_KEY` | nein | — | Schlüssel für Google Gemini |
-| `GEMINI_SUB_MODEL` | nein | — | Standardmodell für Google Gemini (Abo), aus der Option `gemini_sub_model` |
+| `GEMINI_AGY_MODEL` | nein | — | Standardmodell für Google Gemini (AGY), aus der Option `gemini_agy_model` |
 | `GOOGLE_API_KEY` | nein | — | Wird als zweiter gängiger Name ebenfalls akzeptiert |
 | `OMNIAI_API_TOKEN` | nein | — | Token der Schnittstelle v1 (aus der Option `api_token`) |
 | `HOME` | nein | `/data` | Die Claude-CLI legt ihren Zustand unter `$HOME/.claude` ab; über `/data` übersteht er einen Neustart |
 | `CODEX_HOME` | nein | `/data/.codex` | Dasselbe für die Codex-CLI. Sie erneuert ihre Tokens dort selbst |
-| `OMNIAI_GEMINI_HOME` | nein | `/data` | Heimatverzeichnis der Antigravity-CLI (`gemini_sub`): Anmeldung und Zustand liegen darunter in `.gemini/`. Nur für Entwicklung und Tests zu ändern |
+| `OMNIAI_GEMINI_AGY_HOME` | nein | `/data` | Heimatverzeichnis der Antigravity-CLI (`gemini_agy`): Anmeldung und Zustand liegen darunter in `.gemini/`. Nur für Entwicklung und Tests zu ändern |
 | `PORT` | nein | `8000` | Port der Schnittstelle |
 | `LOG_LEVEL` | nein | `INFO` | `DEBUG`, `INFO`, `WARNING` oder `ERROR` |
 | `TZ` | nein | `Europe/Berlin` | Zeitzone der Log-Zeitstempel; im Bild fest gesetzt |
@@ -88,7 +94,7 @@ Deshalb wird diese Datei einmalig eingefügt.
    Anmeldung erfolgt mit dem ChatGPT-Konto, nicht mit einem API-Schlüssel — nur so zählen die
    Anfragen später auf das Abo.
 2. Den vollständigen Inhalt der dabei entstandenen Datei `~/.codex/auth.json` kopieren.
-3. Auf der Seite „Einstellungen“ in das Feld „Anmeldung des ChatGPT-Abos“ einfügen, als Anbieter
+3. Auf der Seite „Einstellungen“ im Bereich „ChatGPT“ in das Feld „Anmeldung des ChatGPT-Abos“ einfügen, als Anbieter
    „ChatGPT (Abo)“ wählen und speichern. (Im Reiter „Konfiguration“: Feld `codex_auth_json`,
    `provider` auf `codex_sub`, danach neu starten.)
 
@@ -106,7 +112,8 @@ wenn `codex_auth_json` leer ist.
 ## So kommt der Google-Zugang ins Add-on (Abo)
 
 Die Antigravity-CLI kennt weder ein Token (wie Claude) noch eine Datei zum Einfügen (wie Codex).
-Die Anmeldung geschieht deshalb **im Add-on selbst**, auf der Seite „Einstellungen“:
+Die Anmeldung geschieht deshalb **im Add-on selbst**, auf der Seite „Einstellungen“ im Bereich
+„Google Gemini (AGY)“:
 
 1. In der Karte „Google-Anmeldung (Abo)“ auf „Mit Google anmelden“ klicken.
 2. „Google-Seite öffnen“ und dort mit dem Konto anmelden, das Google AI Pro hat. Am besten ist der
@@ -115,7 +122,7 @@ Die Anmeldung geschieht deshalb **im Add-on selbst**, auf der Seite „Einstellu
    lässt dafür etwa eine Minute Zeit (der Rest der Zeit steht neben dem Feld). Wer stattdessen die
    ganze Adresse der Zielseite kopiert, kommt ebenfalls zum Ziel.
 4. Das Add-on prüft die Anmeldung mit einem kurzen Probeauftrag und danach in einem neuen Prozess.
-   Erst dann steht das Konto in der Liste mit „Bereit“, und der Anbieter „Google Gemini (Abo)“ ist
+   Erst dann steht das Konto in der Liste mit „Bereit“, und der Anbieter „Google Gemini (AGY)“ ist
    nutzbar.
 
 Die Anmeldung liegt je Konto unter `/data` (Rechte `0600`), samt einer Sicherung. Die CLI erneuert sie
@@ -153,20 +160,20 @@ So wechselt das Add-on (D-024):
 Software, im Protokoll sichtbar — und tarnt nichts. Trotzdem steigt das Risiko mit jedem Konto, und eine
 Maßnahme von Google kann alle treffen.
 
-### Modelle bei Google Gemini (Abo)
+### Modelle bei Google Gemini (AGY)
 
 Die Bezeichnungen kennt nur die Google-Befehlszeile, und erst nach der Anmeldung. Das Add-on holt
 die Liste deshalb selbst (`agy models`), merkt sie sich unter `/data/.gemini/…` und zeigt sie
 
-- in der Auswahl „Standardmodell“ auf der Seite „Einstellungen“, sobald „Google Gemini (Abo)“
-  gewählt ist (gespeichert in `gemini_sub_model`),
+- in der Auswahl „Standardmodell“ im Bereich „Allgemein“ der Seite „Einstellungen“, sobald „Google Gemini (AGY)“
+  gewählt ist (gespeichert in `gemini_agy_model`),
 - auf der Seite „Modelle“ und in `GET /models` sowie `GET /v1/capabilities`.
 
 Die Liste wird nach der Anmeldung gelesen, bei Bedarf nach sechs Stunden erneuert und lässt sich in der
 Karte „Google-Anmeldung“ mit „Modelle neu laden“ neu abrufen (etwa nach einem Tarifwechsel).
 
 Ein Modell kann auf drei Arten genannt werden — im Feld `model` einer Anfrage ebenso wie in
-`gemini_sub_model`:
+`gemini_agy_model`:
 
 | Eingabe | Ergebnis |
 |---|---|
@@ -201,7 +208,7 @@ Liste einzeln freigegebener Werkzeuge (`--allowedTools`), bei Codex eine Sandbox
 (`--sandbox`) plus Schalter für die Websuche (`--search`). Was das für die Reichweite bedeutet,
 steht in [sicherheit-datenschutz.md](sicherheit-datenschutz.md).
 
-Bei Google Gemini (Abo) sind es Regeln in der `settings.json` der CLI, die das Add-on bei jedem Lauf
+Bei Google Gemini (AGY) sind es Regeln in der `settings.json` der CLI, die das Add-on bei jedem Lauf
 prüft: `web` erlaubt das Lesen von Webseiten, `off` nicht. **Befehle gibt das Add-on nie frei**, auch
 bei `full` nicht — dort wirkt `full` wie `web`. Eine eingebaute Websuche der CLI lässt sich nicht
 über diese Regeln abschalten; bei `off` bittet das Add-on das Modell nur, keine Werkzeuge zu nutzen.
@@ -209,7 +216,7 @@ bei `full` nicht — dort wirkt `full` wie `web`. Eine eingebaute Websuche der C
 Warum `web` und nicht `full` die Vorgabe ist: D-012 in
 [design-entscheidungen.md](design-entscheidungen.md).
 
-Die Option betrifft `claude_sub`, `codex_sub` und `gemini_sub`. Der Gemini-Provider mit Schlüssel
+Die Option betrifft `claude_sub`, `codex_sub` und `gemini_agy`. Der Gemini-Provider mit Schlüssel
 (`gemini`) ruft die Schnittstelle direkt auf und hat keine Werkzeuge; er antwortet aus seinem
 Trainingswissen.
 

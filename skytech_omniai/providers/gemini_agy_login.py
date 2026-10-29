@@ -1,4 +1,4 @@
-"""Anmeldung des Google-Kontos für ``gemini_sub`` — im Add-on selbst.
+"""Anmeldung des Google-Kontos für ``gemini_agy`` — im Add-on selbst.
 
 Die Antigravity-CLI kennt keinen Befehl zum Anmelden: wer ohne gültige Anmeldung
 einen Auftrag erteilt, bekommt eine Google-Adresse gedruckt und 60 Sekunden Zeit,
@@ -31,12 +31,12 @@ import time
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlparse
 
-from providers import gemini_sub_accounts as accounts
-from providers import gemini_sub_provider as cli
-from providers.gemini_sub_accounts import Account, AccountError
-from providers.gemini_sub_provider import RUN_LOCK, AgyResult
+from providers import gemini_agy_accounts as accounts
+from providers import gemini_agy_provider as cli
+from providers.gemini_agy_accounts import Account, AccountError
+from providers.gemini_agy_provider import RUN_LOCK, AgyResult
 
-log = logging.getLogger("omniai.gemini_sub.login")
+log = logging.getLogger("omniai.gemini_agy.login")
 
 # Die CLI druckt die Adresse in eine eigene Zeile; erst mit dem Zeilenende ist
 # sie vollständig.
@@ -62,7 +62,7 @@ PING_PROMPT = 'Reply with the JSON object {"ok": true} and nothing else.'
 
 FEHLER_CLI_FEHLT = cli.FEHLER_CLI_FEHLT
 FEHLER_BESETZT = (
-    "Gerade läuft eine Anfrage an Google Gemini (Abo). Bitte in einem Moment erneut versuchen."
+    "Gerade läuft eine Anfrage an Google Gemini (AGY). Bitte in einem Moment erneut versuchen."
 )
 FEHLER_KONTO_UNBEKANNT = "Dieses Konto gibt es nicht (mehr)."
 FEHLER_KEIN_START = "Die Adresse von Google ließ sich nicht abrufen. Bitte erneut versuchen."
@@ -79,7 +79,7 @@ FEHLER_ZEIT = (
 FEHLER_PRUEFUNG_ZEIT = "Google hat zu lange gebraucht. Bitte die Anmeldung erneut versuchen."
 FEHLER_NICHT_GESPEICHERT = (
     "Google hat die Anmeldung angenommen, sie ließ sich aber nicht dauerhaft speichern. "
-    "Google Gemini (Abo) ist damit derzeit nicht nutzbar. Ursache steht im Protokoll des Add-ons."
+    "Google Gemini (AGY) ist damit derzeit nicht nutzbar. Ursache steht im Protokoll des Add-ons."
 )
 FEHLER_ALLGEMEIN = "Die Anmeldung hat nicht geklappt. Bitte erneut versuchen."
 

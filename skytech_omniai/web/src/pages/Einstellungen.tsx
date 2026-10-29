@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Outlet, useMatch, useNavigate } from 'react-router-dom'
 import { ApiError, api, fieldErrorsOf } from '../api'
-import { GoogleLogin } from '../components/GoogleLogin'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/Layout'
 import { useToast } from '../components/Toast'
-import {
-  MODEL_AUTO,
-  SUBSCRIPTION_PROVIDER,
-  TOOL_ACCESS_FULL,
-  providerLabel,
-  toolAccessLabel,
-} from '../provider'
+import { MODEL_AUTO, SUBSCRIPTION_PROVIDER } from '../provider'
+import { DEFAULT_SECTION, SETTINGS_SECTIONS, sectionsWithErrors } from '../settingsSections'
 import type {
   ModelsResponse,
   SecretKey,
@@ -18,70 +13,18 @@ import type {
   SettingsOptions,
   SettingsResponse,
 } from '../types'
+import type { SettingsForm } from './einstellungen/form'
 
 /* Alles, was früher nur im Reiter „Konfiguration“ von Home Assistant ging.
    Der Server schreibt dieselben Optionen über den Supervisor; beide Wege
    zeigen also immer denselben Stand. Gespeichertes gilt ab der nächsten
    Anfrage, ein Neustart ist nicht nötig.
 
-   Zugänge kommen vom Server nie zurück, nur ob einer hinterlegt ist. Ein
-   leeres Feld heißt deshalb „unverändert“; entfernt wird ausdrücklich über
-   den Knopf daneben. */
-
-const TOOL_ACCESS_LEVELS = ['off', 'web', 'full']
-
-const TOOL_ACCESS_HINTS: Record<string, string> = {
-  off: 'Die KI antwortet allein aus ihrem Wissen und schlägt nichts nach.',
-  web: 'Die KI darf im Web suchen und Seiten lesen — für Wetter, Nachrichten oder Preise.',
-  full: 'Die KI darf zusätzlich Befehle ausführen und Dateien im Add-on lesen.',
-}
-
-/** Ein Zugangsfeld: Beschriftung, Erklärung und ob es mehrzeilig ist. */
-interface SecretField {
-  key: SecretKey
-  label: string
-  hint: string
-  multiline?: boolean
-}
-
-const SECRET_FIELDS: SecretField[] = [
-  {
-    key: 'claude_oauth_token',
-    label: 'Token des Claude-Abos',
-    hint: 'Einmal auf einem Rechner mit Browser mit „claude setup-token“ erzeugen.',
-  },
-  {
-    key: 'anthropic_api_key',
-    label: 'Anthropic-Schlüssel',
-    hint: 'Alternative zum Claude-Abo, wird nach Verbrauch abgerechnet.',
-  },
-  {
-    key: 'codex_auth_json',
-    label: 'Anmeldung des ChatGPT-Abos',
-    hint: 'Den vollständigen Inhalt der Datei „auth.json“ einfügen, die „codex login“ anlegt.',
-    multiline: true,
-  },
-  {
-    key: 'openai_api_key',
-    label: 'OpenAI-Schlüssel',
-    hint: 'Alternative zum ChatGPT-Abo, wird nach Verbrauch abgerechnet.',
-  },
-  {
-    key: 'gemini_api_key',
-    label: 'Gemini-Schlüssel',
-    hint: 'Aus Google AI Studio, wird nach Verbrauch abgerechnet.',
-  },
-  {
-    key: 'api_token',
-    label: 'Token für Skytech X',
-    hint: 'Mindestens 32 zufällige Zeichen. Dasselbe Token in Skytech X unter „Anbindungen“ eintragen.',
-  },
-]
-
-const SAVED_PLACEHOLDER = '•••••••• (gespeichert)'
-
-const MODEL_MISMATCH =
-  'Dieses Modell gehört nicht zum gewählten Anbieter. Bitte ein passendes wählen.'
+   Die Seite ist in Bereiche geteilt (settingsSections.ts), je einer für die
+   Standardwerte und für jeden Anbieter. Diese Elternroute hält den Entwurf und
+   speichert ihn; die Bereiche darunter (pages/einstellungen/) zeigen nur ihre
+   Felder. Ein Wechsel zwischen den Bereichen verliert deshalb nichts, und ein
+   Speichern gilt für alle. */
 
 export function Einstellungen() {
   const [loaded, setLoaded] = useState<SettingsResponse | null>(null)
@@ -93,6 +36,8 @@ export function Einstellungen() {
   const [conflict, setConflict] = useState(false)
   const [saving, setSaving] = useState(false)
   const { toast } = useToast()
+  const navigate = useNavigate()
+  const current = useMatch('/einstellungen/:section')?.params.section
 
   const adopt = useCallback((value: SettingsResponse) => {
     setLoaded(value)
@@ -128,34 +73,25 @@ export function Einstellungen() {
     void loadCatalog()
   }, [load, loadCatalog])
 
-  function patch(partial: Partial<SettingsOptions>) {
-    setDraft((current) => (current ? { ...current, ...partial } : current))
+  const patch = useCallback((partial: Partial<SettingsOptions>) => {
+    setDraft((previous) => (previous ? { ...previous, ...partial } : previous))
     // Ein geändertes Feld ist nicht mehr das, das der Server bemängelt hat.
-    setFieldErrors((current) => {
-      const next = { ...current }
+    setFieldErrors((previous) => {
+      const next = { ...previous }
       for (const key of Object.keys(partial)) delete next[key]
       return next
     })
-  }
+  }, [])
 
-  function changeModel(value: string) {
-    // Google Gemini (Abo) hat sein eigenes Feld; das gemeinsame bleibt dort „auto“.
-    if (draft?.provider === SUBSCRIPTION_PROVIDER) patch({ gemini_sub_model: value, model: MODEL_AUTO })
-    else patch({ model: value })
-  }
-
-  function changeProvider(next: string) {
-    // Das Modell gehört zum Anbieter: eine stehengebliebene Auswahl passte
-    // nicht mehr und würde beim Speichern zu Recht abgelehnt.
-    patch({ provider: next, model: MODEL_AUTO })
-  }
-
-  function toggleRemoved(key: SecretKey) {
-    setRemoved((current) =>
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
-    )
-    patch({ [key]: '' })
-  }
+  const toggleRemoved = useCallback(
+    (key: SecretKey) => {
+      setRemoved((previous) =>
+        previous.includes(key) ? previous.filter((item) => item !== key) : [...previous, key],
+      )
+      patch({ [key]: '' })
+    },
+    [patch],
+  )
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -171,60 +107,49 @@ export function Einstellungen() {
       adopt(saved)
       toast('Gespeichert. Gilt ab der nächsten Anfrage.')
     } catch (cause) {
-      setFieldErrors(fieldErrorsOf(cause))
+      const errors = fieldErrorsOf(cause)
+      setFieldErrors(errors)
       setConflict(cause instanceof ApiError && cause.status === 409)
       setError((cause as Error).message)
       toast('Die Einstellungen wurden nicht gespeichert.', 'err')
+      // Der bemängelte Wert steht vielleicht in einem anderen Bereich als dem
+      // offenen; dorthin wechseln, damit die Markierung zu sehen ist.
+      const failing = sectionsWithErrors(errors)
+      if (failing.length > 0 && !failing.some((section) => section.path === current)) {
+        navigate(`/einstellungen/${failing[0].path}`)
+      }
     } finally {
       setSaving(false)
     }
   }
 
   const readOnly = loaded !== null && !loaded.can_save
-  const locked = readOnly || saving
   const dirty =
     loaded !== null &&
     draft !== null &&
     (removed.length > 0 ||
       (Object.keys(draft) as (keyof SettingsOptions)[]).some((key) => draft[key] !== loaded.options[key]))
+  const section = SETTINGS_SECTIONS.find((item) => item.path === current) ?? DEFAULT_SECTION
 
-  const providers = Object.keys(catalog?.providers ?? {})
-  const providerModels = draft ? (catalog?.providers[draft.provider]?.models ?? []) : []
-  // Bei Google Gemini (Abo) gilt eine eigene Option; leer heißt „Google wählt“.
-  const subscription = draft !== null && draft.provider === SUBSCRIPTION_PROVIDER
-  const modelKey = subscription ? 'gemini_sub_model' : 'model'
-  const autoValue = subscription ? '' : MODEL_AUTO
-  const modelValue = draft ? draft[modelKey] : autoValue
-  // Ein gesetztes Modell, das nicht in der Liste steht (im Reiter „Konfiguration“
-  // gesetzt, oder die Liste ist gerade nicht abrufbar), bleibt sichtbar — sonst
-  // zeigte das Auswahlfeld einen falschen Stand.
-  const models =
-    modelValue !== autoValue && !providerModels.includes(modelValue)
-      ? [...providerModels, modelValue]
-      : providerModels
-
-  // Ein unpassendes Modell (gesetzt im Reiter „Konfiguration“, dessen
-  // Auswahlfeld alle Anbieter mischt) wird gleich beim Laden markiert und
-  // nicht erst, wenn das Speichern scheitert.
-  const modelMismatch =
-    !subscription &&
-    draft !== null &&
-    catalog !== null &&
-    draft.model !== MODEL_AUTO &&
-    !providerModels.includes(draft.model)
-  const errors: Record<string, string> = modelMismatch
-    ? { model: MODEL_MISMATCH, ...fieldErrors }
-    : fieldErrors
-
-  const fieldClass = (key: string, wide = false) =>
-    `field${wide ? ' wide' : ''}${errors[key] ? ' invalid' : ''}`
-
-  const fieldError = (key: string) =>
-    errors[key] ? <small className="field-error">{errors[key]}</small> : null
+  const form: SettingsForm | null =
+    loaded !== null && draft !== null
+      ? {
+          loaded,
+          draft,
+          catalog,
+          removed,
+          readOnly,
+          locked: readOnly || saving,
+          errors: fieldErrors,
+          patch,
+          toggleRemoved,
+          reloadCatalog: () => void loadCatalog(),
+        }
+      : null
 
   return (
     <>
-      <PageHeader title="Einstellungen" subtitle="Anbieter, Modell und Zugänge" />
+      <PageHeader title="Einstellungen" subtitle={section.subtitle} />
       <div className="content form-content">
         {error ? <div className="alert">{error}</div> : null}
 
@@ -243,163 +168,18 @@ export function Einstellungen() {
           </div>
         ) : null}
 
-        {draft === null || loaded === null ? (
+        {form === null ? (
           error ? null : <div className="center"><div className="spinner" /></div>
         ) : (
           <form onSubmit={(event) => void submit(event)}>
-            <section className="card">
-              <div className="card-head">
-                <h2>Anbieter</h2>
-                <div className="sub">Gilt für jede Anfrage, die selbst nichts anderes nennt</div>
-              </div>
-              <div className="card-body">
-                <div className="form-grid">
-                  <label className={fieldClass('provider')}>
-                    <span>Anbieter</span>
-                    <select
-                      value={draft.provider}
-                      onChange={(event) => changeProvider(event.target.value)}
-                      disabled={locked || catalog === null}
-                    >
-                      {(providers.includes(draft.provider) ? providers : [draft.provider, ...providers]).map(
-                        (key) => (
-                          <option value={key} key={key}>{providerLabel(key)}</option>
-                        ),
-                      )}
-                    </select>
-                    {fieldError('provider')}
-                  </label>
-
-                  <label className={fieldClass(modelKey)}>
-                    <span>Standardmodell</span>
-                    <select
-                      value={modelValue}
-                      onChange={(event) => changeModel(event.target.value)}
-                      disabled={locked || catalog === null}
-                    >
-                      <option value={autoValue}>Vorgabe des Anbieters</option>
-                      {models.map((name) => (
-                        <option value={name} key={name}>{name}</option>
-                      ))}
-                    </select>
-                    {subscription ? (
-                      <small>
-                        {models.length === 0
-                          ? 'Die Modelle stehen nach der Anmeldung bei Google hier zur Auswahl.'
-                          : 'Die Liste kommt von Google. Pro Anfrage genügt auch eine Kurzform wie „flash-3.8“ oder „argon-4“.'}
-                      </small>
-                    ) : null}
-                    {fieldError(modelKey)}
-                  </label>
-
-                  <label className={fieldClass('tool_access', true)}>
-                    <span>Werkzeuge</span>
-                    <select
-                      value={draft.tool_access}
-                      onChange={(event) => patch({ tool_access: event.target.value })}
-                      disabled={locked}
-                    >
-                      {TOOL_ACCESS_LEVELS.map((level) => (
-                        <option value={level} key={level}>{toolAccessLabel(level)}</option>
-                      ))}
-                    </select>
-                    <small>
-                      {TOOL_ACCESS_HINTS[draft.tool_access] ?? ''} Gilt für Claude, ChatGPT und
-                      Google Gemini (Abo), dort ohne Befehle: „Alle Werkzeuge“ wirkt wie
-                      „Web-Recherche“. Google Gemini mit Schlüssel antwortet immer aus seinem
-                      Wissen.
-                    </small>
-                    {fieldError('tool_access')}
-                  </label>
-                </div>
-
-                {draft.tool_access === TOOL_ACCESS_FULL ? (
-                  <div className="hint-box">
-                    Mit „Alle Werkzeuge“ kommt die KI auch an die hier hinterlegten Zugänge. Für
-                    Anfragen, die etwas nachschlagen sollen, genügt „Web-Recherche“.
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            <section className="card section-card">
-              <div className="card-head">
-                <h2>Zugänge</h2>
-                <div className="sub">Für den aktiven Anbieter genügt einer der passenden</div>
-              </div>
-              <div className="card-body">
-                <div className="form-grid">
-                  {SECRET_FIELDS.map((field) => {
-                    const stored = loaded.secrets_set[field.key]
-                    const removing = removed.includes(field.key)
-                    const placeholder = stored && !removing ? SAVED_PLACEHOLDER : ''
-                    return (
-                      <div className={fieldClass(field.key, field.multiline)} key={field.key}>
-                        <span>
-                          <label htmlFor={`secret-${field.key}`}>{field.label}</label>{' '}
-                          {removing ? (
-                            <span className="pill warn">Wird beim Speichern entfernt</span>
-                          ) : stored ? (
-                            <span className="pill ok">Hinterlegt</span>
-                          ) : (
-                            <span className="pill muted">Kein Zugang</span>
-                          )}
-                        </span>
-                        {field.multiline ? (
-                          <textarea
-                            id={`secret-${field.key}`}
-                            className="mono"
-                            value={draft[field.key]}
-                            onChange={(event) => patch({ [field.key]: event.target.value })}
-                            placeholder={placeholder}
-                            disabled={locked || removing}
-                            autoComplete="off"
-                            spellCheck={false}
-                          />
-                        ) : (
-                          <input
-                            id={`secret-${field.key}`}
-                            type="password"
-                            value={draft[field.key]}
-                            onChange={(event) => patch({ [field.key]: event.target.value })}
-                            placeholder={placeholder}
-                            disabled={locked || removing}
-                            autoComplete="new-password"
-                          />
-                        )}
-                        <small>
-                          {field.hint}
-                          {stored && !removing ? ' Leer lassen, um ihn zu behalten.' : ''}
-                        </small>
-                        {fieldError(field.key)}
-                        {stored ? (
-                          <div className="inline-actions">
-                            <button
-                              type="button"
-                              className={`btn btn-sm ${removing ? 'btn-ghost' : 'btn-danger'}`}
-                              onClick={() => toggleRemoved(field.key)}
-                              disabled={locked}
-                            >
-                              <Icon name={removing ? 'refresh' : 'trash'} size={14} />
-                              {removing ? 'Doch behalten' : 'Entfernen'}
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </section>
-
-            <GoogleLogin locked={readOnly} onModelsChange={() => void loadCatalog()} />
+            <Outlet context={form} />
 
             {readOnly ? null : (
               <div className="form-footer">
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => adopt(loaded)}
+                  onClick={() => loaded && adopt(loaded)}
                   disabled={!dirty || saving}
                 >
                   Änderungen verwerfen

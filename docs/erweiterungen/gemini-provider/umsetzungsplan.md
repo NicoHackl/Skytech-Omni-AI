@@ -1,7 +1,7 @@
 # Umsetzungsplan
 
 Dieser Plan gilt nur noch für **Spur 1, den Ausbau des Schlüssel-Wegs** (`gemini`). Der Abo-Weg
-(Spur 2) ist umgesetzt: D-022, [../../adr/D-022-gemini-abo-antigravity.md](../../adr/D-022-gemini-abo-antigravity.md).
+(Spur 2) ist umgesetzt: D-022, [../../adr/D-022-gemini-agy-antigravity.md](../../adr/D-022-gemini-agy-antigravity.md).
 
 ## Rahmen für jedes Arbeitspaket
 

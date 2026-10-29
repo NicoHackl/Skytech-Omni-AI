@@ -27,9 +27,9 @@ def test_models_lists_every_provider(client):
     """Normalfall: Automatisierungen können die gültigen Werte abfragen."""
     daten = client.get("/models").get_json()
 
-    assert set(daten["providers"]) == {"claude_sub", "codex_sub", "gemini", "gemini_sub"}
+    assert set(daten["providers"]) == {"claude_sub", "codex_sub", "gemini", "gemini_agy"}
     # Die Modelle kennt die Google-Befehlszeile erst nach der Anmeldung.
-    assert daten["providers"]["gemini_sub"] == {"models": [], "default": None}
+    assert daten["providers"]["gemini_agy"] == {"models": [], "default": None}
     assert daten["providers"]["gemini"]["default"] == "gemini-flash-latest"
     assert daten["providers"]["claude_sub"]["default"] is None
     # Ohne Angabe entscheidet die Codex-CLI selbst.
@@ -47,7 +47,7 @@ def test_status_reports_credentials_as_yes_or_no(client, monkeypatch):
         "claude_sub": False,
         "codex_sub": False,
         "gemini": True,
-        "gemini_sub": False,
+        "gemini_agy": False,
     }
     # Der Wert selbst taucht nirgends in der Antwort auf.
     assert "geheim" not in json.dumps(daten, ensure_ascii=False)
@@ -61,7 +61,7 @@ def test_status_without_credentials(client):
         "claude_sub": False,
         "codex_sub": False,
         "gemini": False,
-        "gemini_sub": False,
+        "gemini_agy": False,
     }
     assert daten["default_model"] is None
 
@@ -409,7 +409,7 @@ def test_addon_rejects_an_invalid_slug(client, info_supervisor):
     assert client.get("/addon").get_json()["config_path"] is None
 
 
-# --- Anmeldung bei Google (gemini_sub) ---------------------------------------
+# --- Anmeldung bei Google (gemini_agy) ---------------------------------------
 
 
 class FakeLogin:
@@ -450,17 +450,21 @@ def login(monkeypatch):
 
 
 def test_the_login_status_hides_the_address_from_the_open_port(client, login):
-    assert client.get("/auth/gemini").get_json()["url"] is None
-    assert client.get("/auth/gemini", environ_base=INGRESS).get_json()["url"].startswith("https://")
+    assert client.get("/auth/gemini-agy").get_json()["url"] is None
+    assert (
+        client.get("/auth/gemini-agy", environ_base=INGRESS)
+        .get_json()["url"]
+        .startswith("https://")
+    )
 
 
 @pytest.mark.parametrize(
     ("methode", "pfad"),
     [
-        ("post", "/auth/gemini/start"),
-        ("post", "/auth/gemini/code"),
-        ("post", "/auth/gemini/cancel"),
-        ("delete", "/auth/gemini/konto-1"),
+        ("post", "/auth/gemini-agy/start"),
+        ("post", "/auth/gemini-agy/code"),
+        ("post", "/auth/gemini-agy/cancel"),
+        ("delete", "/auth/gemini-agy/konto-1"),
     ],
 )
 def test_the_login_cannot_be_changed_from_the_open_port(client, login, methode, pfad):
@@ -473,16 +477,18 @@ def test_the_login_cannot_be_changed_from_the_open_port(client, login, methode, 
 
 
 def test_the_login_can_be_started_and_ended_through_the_ingress(client, login):
-    assert client.post("/auth/gemini/start", environ_base=INGRESS).get_json()["state"] == "waiting"
-    assert client.post("/auth/gemini/cancel", environ_base=INGRESS).status_code == 200
-    assert client.delete("/auth/gemini/konto-1", environ_base=INGRESS).status_code == 200
+    assert (
+        client.post("/auth/gemini-agy/start", environ_base=INGRESS).get_json()["state"] == "waiting"
+    )
+    assert client.post("/auth/gemini-agy/cancel", environ_base=INGRESS).status_code == 200
+    assert client.delete("/auth/gemini-agy/konto-1", environ_base=INGRESS).status_code == 200
     assert [aufruf[0] for aufruf in login.calls] == ["start", "cancel", "logout"]
     assert ("logout", "konto-1") in login.calls
 
 
 def test_the_code_is_handed_over(client, login):
     antwort = client.post(
-        "/auth/gemini/code", json={"code": "4/0Acode-12345"}, environ_base=INGRESS
+        "/auth/gemini-agy/code", json={"code": "4/0Acode-12345"}, environ_base=INGRESS
     )
 
     assert antwort.status_code == 200
@@ -491,7 +497,7 @@ def test_the_code_is_handed_over(client, login):
 
 @pytest.mark.parametrize("rumpf", [{}, {"code": ""}, {"code": "   "}, {"code": 5}, None])
 def test_a_missing_code_is_marked_at_the_field(client, login, rumpf):
-    antwort = client.post("/auth/gemini/code", json=rumpf, environ_base=INGRESS)
+    antwort = client.post("/auth/gemini-agy/code", json=rumpf, environ_base=INGRESS)
 
     assert antwort.status_code == 422
     assert "code" in antwort.get_json()["field_errors"]
@@ -499,22 +505,22 @@ def test_a_missing_code_is_marked_at_the_field(client, login, rumpf):
 
 
 def test_an_unusable_code_is_marked_at_the_field(client, login):
-    from providers.gemini_sub_login import LoginError
+    from providers.gemini_agy_login import LoginError
 
     login.error = LoginError("Das sieht nicht nach dem Code aus.", invalid=True)
 
-    antwort = client.post("/auth/gemini/code", json={"code": "kurz"}, environ_base=INGRESS)
+    antwort = client.post("/auth/gemini-agy/code", json={"code": "kurz"}, environ_base=INGRESS)
 
     assert antwort.status_code == 422
     assert antwort.get_json()["field_errors"]["code"] == "Das sieht nicht nach dem Code aus."
 
 
 def test_a_busy_cli_answers_with_a_conflict(client, login):
-    from providers.gemini_sub_login import LoginError
+    from providers.gemini_agy_login import LoginError
 
     login.error = LoginError("Gerade läuft eine Anfrage.", busy=True)
 
-    antwort = client.post("/auth/gemini/start", environ_base=INGRESS)
+    antwort = client.post("/auth/gemini-agy/start", environ_base=INGRESS)
 
     assert antwort.status_code == 409
     assert antwort.get_json() == {"error": "Gerade läuft eine Anfrage."}
@@ -523,7 +529,7 @@ def test_a_busy_cli_answers_with_a_conflict(client, login):
 def test_an_unexpected_failure_of_the_login_gets_a_generic_sentence(client, login):
     login.error = RuntimeError("/data/.gemini/x kaputt, Traceback")
 
-    antwort = client.post("/auth/gemini/start", environ_base=INGRESS)
+    antwort = client.post("/auth/gemini-agy/start", environ_base=INGRESS)
 
     assert antwort.status_code == 500
     text = antwort.get_json()["error"]
@@ -531,11 +537,11 @@ def test_an_unexpected_failure_of_the_login_gets_a_generic_sentence(client, logi
     assert "Traceback" not in text
 
 
-# --- Modelle von Google Gemini (Abo) -------------------------------------------
+# --- Modelle von Google Gemini (AGY) -------------------------------------------
 
 
 def _sign_in_and_store_models(*labels):
-    from providers import gemini_sub_provider as cli
+    from providers import gemini_agy_provider as cli
 
     cli.token_path().parent.mkdir(parents=True, exist_ok=True)
     cli.token_path().write_text('{"token": {"refresh_token": "x"}}')
@@ -544,49 +550,49 @@ def _sign_in_and_store_models(*labels):
 
 def test_models_lists_the_models_of_the_google_cli_after_the_login(client, monkeypatch):
     _sign_in_and_store_models("Gemini 4 Argon (High)", "Gemini 3.8 Flash (Medium)")
-    monkeypatch.setenv("GEMINI_SUB_MODEL", "Gemini 4 Argon (High)")
+    monkeypatch.setenv("GEMINI_AGY_MODEL", "Gemini 4 Argon (High)")
 
-    eintrag = client.get("/models").get_json()["providers"]["gemini_sub"]
+    eintrag = client.get("/models").get_json()["providers"]["gemini_agy"]
 
     assert eintrag["models"] == ["Gemini 4 Argon (High)", "Gemini 3.8 Flash (Medium)"]
     assert eintrag["default"] == "Gemini 4 Argon (High)"
 
 
 def test_models_of_the_google_cli_are_empty_before_the_login(client):
-    eintrag = client.get("/models").get_json()["providers"]["gemini_sub"]
+    eintrag = client.get("/models").get_json()["providers"]["gemini_agy"]
 
     assert eintrag == {"models": [], "default": None}
 
 
 def test_the_model_refresh_needs_the_ingress(client, login):
-    antwort = client.post("/auth/gemini/models")
+    antwort = client.post("/auth/gemini-agy/models")
 
     assert antwort.status_code == 403
 
 
 def test_the_model_refresh_returns_the_new_list(client, monkeypatch):
-    from providers import gemini_sub_provider as cli
+    from providers import gemini_agy_provider as cli
 
     _sign_in_and_store_models("Alt (High)")
     monkeypatch.setattr(
         cli, "run_agy", lambda *a, **k: cli.AgyResult(0, "Gemini 4 Argon (High)\n", "")
     )
 
-    antwort = client.post("/auth/gemini/models", environ_base=INGRESS)
+    antwort = client.post("/auth/gemini-agy/models", environ_base=INGRESS)
 
     assert antwort.status_code == 200
     assert antwort.get_json() == {"models": ["Gemini 4 Argon (High)"]}
 
 
 def test_status_shows_the_default_model_of_the_active_provider(client, monkeypatch):
-    """Google Gemini (Abo) hat eine eigene Option; das gemeinsame Feld gehört den anderen."""
+    """Google Gemini (AGY) hat eine eigene Option; das gemeinsame Feld gehört den anderen."""
     monkeypatch.setenv("OMNIAI_MODEL", "sonnet")
-    monkeypatch.setenv("GEMINI_SUB_MODEL", "Gemini 4 Argon (High)")
+    monkeypatch.setenv("GEMINI_AGY_MODEL", "Gemini 4 Argon (High)")
 
     assert client.get("/status").get_json()["default_model"] == "sonnet"
 
-    monkeypatch.setenv("AI_PROVIDER", "gemini_sub")
+    monkeypatch.setenv("AI_PROVIDER", "gemini_agy")
     assert client.get("/status").get_json()["default_model"] == "Gemini 4 Argon (High)"
 
-    monkeypatch.delenv("GEMINI_SUB_MODEL")
+    monkeypatch.delenv("GEMINI_AGY_MODEL")
     assert client.get("/status").get_json()["default_model"] is None

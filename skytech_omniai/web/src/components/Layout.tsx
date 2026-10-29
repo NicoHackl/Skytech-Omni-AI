@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useMatch } from 'react-router-dom'
+import { SETTINGS_SECTIONS } from '../settingsSections'
 import { AddonFoot } from './AddonFoot'
 import { Icon } from './Icon'
 import { ThemeSwitch } from './Theme'
@@ -8,10 +9,12 @@ import { ThemeSwitch } from './Theme'
    damit Navigation und Kopfzeile beim Seitenwechsel nicht neu montiert werden. */
 
 const navClass = ({ isActive }: { isActive: boolean }) => `nav-item${isActive ? ' active' : ''}`
+const subNavClass = ({ isActive }: { isActive: boolean }) => `nav-item sub${isActive ? ' active' : ''}`
 
 export function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const closeMobile = () => setMobileOpen(false)
+  const inSettings = useMatch('/einstellungen/*') !== null
 
   return (
     <div className="shell">
@@ -33,7 +36,19 @@ export function Layout() {
           <NavLink to="/modelle" className={navClass}><Icon name="list" /><span>Modelle</span></NavLink>
 
           <div className="nav-label">Verwaltung</div>
-          <NavLink to="/einstellungen" className={navClass}><Icon name="settings" /><span>Einstellungen</span></NavLink>
+          {/* Obertab: führt zum ersten Bereich; die Bereiche stehen darunter, solange man in den Einstellungen ist. */}
+          <Link to="/einstellungen" className={`nav-item${inSettings ? ' open' : ''}`} aria-expanded={inSettings}>
+            <Icon name="settings" /><span>Einstellungen</span>
+          </Link>
+          {inSettings ? (
+            <div className="nav-sub">
+              {SETTINGS_SECTIONS.map((section) => (
+                <NavLink key={section.path} to={`/einstellungen/${section.path}`} className={subNavClass}>
+                  <span>{section.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          ) : null}
         </nav>
 
         <AddonFoot />

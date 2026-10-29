@@ -57,7 +57,7 @@ Für alles, was ein Mensch am Ende liest, zusätzlich:
    Ursachen kommen von zwei fremden Diensten, und ihr Wortlaut ändert sich ohne Vorwarnung.
 
 Die Anmeldung bei Google und ihr Ablauf von den Endpunkten bis zur Antwort werden mit einem Skript
-an Stelle der CLI getestet (`test_gemini_sub_login.py`, `test_gemini_sub_flow.py`): es spielt
+an Stelle der CLI getestet (`test_gemini_agy_login.py`, `test_gemini_agy_flow.py`): es spielt
 Adresse, Eingabe über eine Pty, Anmeldedatei und Fehlerfälle nach — echte Prozesse, aber ohne Netz
 und ohne Konto. Das schließt ein Verhalten der echten CLI nicht ein; dafür gibt es die Handprüfung
 in D-022.

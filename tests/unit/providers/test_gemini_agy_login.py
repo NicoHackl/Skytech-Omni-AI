@@ -14,10 +14,10 @@ import time
 
 import pytest
 
-from providers import gemini_sub_accounts as accounts
-from providers import gemini_sub_login as login_modul
-from providers import gemini_sub_provider as cli
-from providers.gemini_sub_login import GeminiLogin, LoginError, extract_code
+from providers import gemini_agy_accounts as accounts
+from providers import gemini_agy_login as login_modul
+from providers import gemini_agy_provider as cli
+from providers.gemini_agy_login import GeminiLogin, LoginError, extract_code
 
 GOOD_CODE = "4/0AGOODCODE-12345"
 SECRET_STATE = "ZUFALLSWERT-DER-SITZUNG"

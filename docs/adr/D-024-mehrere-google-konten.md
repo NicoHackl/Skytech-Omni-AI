@@ -1,5 +1,7 @@
 # D-024: Mehrere Google-Konten für Gemini (Abo), Wechsel bei aufgebrauchtem Kontingent
 
+> Seit [D-031](D-031-umbenennung-gemini-agy.md) heißt dieser Anbieter `gemini_agy` und „Google Gemini (AGY)“.
+
 - **Datum:** 28.10.2026
 - **Status:** Aktiv (Handprüfung mit zwei echten Konten noch nicht von Hand geprüft — siehe „Handprüfung“)
 - **Betrifft:** `providers/gemini_sub_accounts.py`, `providers/gemini_sub_provider.py`, `providers/gemini_sub_login.py`, `app.py` (`/auth/gemini…`), `web/src/components/GoogleLogin.tsx`

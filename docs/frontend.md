@@ -44,8 +44,10 @@ skytech_omniai/web/
     ├── types.ts            # Datenverträge zum Add-on
     ├── format.ts           # Rohwert → Anzeigetext (einziger Ort dafür)
     ├── provider.ts         # Klarnamen der Anbieter, Sentinel des Modellfelds
+    ├── settingsSections.ts # Bereiche der Einstellungen: Seitenleiste, Kopfzeile, Feldzuordnung
     ├── components/         # wiederverwendbar: Layout, Theme, Toast, Icon
-    └── pages/              # eine Datei je Route: Dashboard, Anfrage, Modelle
+    └── pages/              # eine Datei je Route: Dashboard, Anfrage, Modelle, Einstellungen
+        └── einstellungen/  # Bereiche der Einstellungen, je Anbieter einer (siehe „Routing“)
 ```
 
 Regel: `pages/` kennt `components/`, nie umgekehrt. Wächst eine Seite über ~150 Zeilen, wandert
@@ -113,11 +115,34 @@ Seitenwechsel nicht neu montiert werden.
     <Route path="/" element={<Dashboard />} />
     <Route path="/anfrage" element={<Anfrage />} />
     <Route path="/modelle" element={<Modelle />} />
-    <Route path="/einstellungen" element={<Einstellungen />} />
+    <Route path="/einstellungen" element={<Einstellungen />}>   {/* Elternroute mit Entwurf */}
+      <Route index element={<Navigate to="/einstellungen/allgemein" replace />} />
+      <Route path="allgemein" element={<Allgemein />} />
+      <Route path="claude" element={<Claude />} />   {/* … je Anbieter ein Bereich */}
+    </Route>
     <Route path="*" element={<div className="content"><div className="empty">Diese Seite gibt es nicht.</div></div>} />
   </Route>
 </Routes>
 ```
+
+### Einstellungen: Bereiche unter einer Elternroute
+
+Die Seite „Einstellungen“ ist in Bereiche geteilt, damit nicht alle Anbieter in einem langen
+Formular stehen: **Allgemein**, **Claude**, **ChatGPT**, **Google Gemini**,
+**Google Gemini (AGY)** und **Skytech X**. Aufbau:
+
+- `settingsSections.ts` ist die **eine** Tabelle der Bereiche (Adresse, Name, Zeile unter dem
+  Titel, zugehörige Optionen). Seitenleiste, Kopfzeile und die Zuordnung eines Feldfehlers zu
+  seinem Bereich lesen sie; ein neuer Anbieter bekommt dort eine Zeile und in `App.tsx` eine Route.
+- `pages/Einstellungen.tsx` ist Elternroute: sie lädt, hält den **gemeinsamen Entwurf**, speichert
+  und zeigt Kopfzeile, Hinweise und Fußzeile. Der Entwurf geht per `<Outlet context>` an die
+  Bereiche; sie lesen ihn mit `useSettingsForm()` (`pages/einstellungen/form.tsx`).
+- Ein Bereich (`pages/einstellungen/<Name>.tsx`) rendert nur seine Karte(n). Ein Zugangsfeld ist
+  immer `SecretField`, damit „Hinterlegt“, „Entfernen“ und „Leer = unverändert“ überall gleich
+  wirken.
+- Ein Wechsel zwischen Bereichen verliert keine Eingabe, **Speichern** gilt für alle. Lehnt der
+  Server ein Feld ab, das nicht im offenen Bereich steht, wechselt die Seite dorthin.
+- Unbekannte Adressen unter `/einstellungen` führen auf „Allgemein“.
 
 Dieses Projekt verwaltet keine Datensätze, deshalb gibt es weder Anmeldung noch das Muster
 **Liste / Anlegen / Bearbeiten**. Kommt es hinzu, gilt: Liste (`/x`), Anlegen (`/x/new`),
@@ -287,7 +312,8 @@ ungeprüft in einen Toast schiebt, reicht technische Texte an den Nutzer durch.
 
 1. `Layout` — Sidebar (Marke, Navigationsgruppen mit Zählern, Fuß `AddonFoot` mit Link zur
    Add-on-Konfiguration in HA, D-018) plus `<main>` mit
-   `<Outlet />`. Unter 820px als Off-Canvas-Panel mit Hintergrund-Backdrop.
+   `<Outlet />`. „Einstellungen“ ist ein Obertab: solange man dort ist, stehen die Bereiche aus
+   `settingsSections.ts` als Unterpunkte darunter. Unter 820px als Off-Canvas-Panel mit Hintergrund-Backdrop.
 2. `PageHeader` — die klebrige Kopfzeile jeder Seite: `title`, optional `subtitle`, den
    `ThemeSwitch` und optional `actions` (die Primäraktion der Seite).
 

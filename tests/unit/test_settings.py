@@ -113,41 +113,41 @@ def test_short_api_token_is_rejected():
 
 def test_the_google_subscription_accepts_only_the_automatic_model():
     """Seine Modelle kennt die Google-Befehlszeile erst nach der Anmeldung — es gibt keine Liste."""
-    merged, errors = merge_update(STORED, {"provider": "gemini_sub", "model": "auto"})
+    merged, errors = merge_update(STORED, {"provider": "gemini_agy", "model": "auto"})
     assert errors == {}
-    assert merged["provider"] == "gemini_sub"
+    assert merged["provider"] == "gemini_agy"
 
-    _, errors = merge_update(STORED, {"provider": "gemini_sub", "model": "gemini-flash-latest"})
+    _, errors = merge_update(STORED, {"provider": "gemini_agy", "model": "gemini-flash-latest"})
     assert set(errors) == {"model"}
 
 
 def test_the_google_subscription_default_model_is_saved_as_typed():
     """Die Bezeichnungen kennt nur die Google-Befehlszeile; geprüft wird die Form."""
     merged, errors = merge_update(
-        STORED, {"provider": "gemini_sub", "gemini_sub_model": " Gemini 4 Argon (High) "}
+        STORED, {"provider": "gemini_agy", "gemini_agy_model": " Gemini 4 Argon (High) "}
     )
 
     assert errors == {}
-    assert merged["gemini_sub_model"] == "Gemini 4 Argon (High)"
+    assert merged["gemini_agy_model"] == "Gemini 4 Argon (High)"
     assert merged["model"] == "auto"
 
 
 @pytest.mark.parametrize("wert", ["flash-3.8", "argon-4", "", "Gemini 3.8 Flash (Medium)"])
 def test_the_google_subscription_default_model_accepts_names_and_short_forms(wert):
-    _, errors = merge_update(STORED, {"gemini_sub_model": wert})
+    _, errors = merge_update(STORED, {"gemini_agy_model": wert})
 
     assert errors == {}
 
 
 @pytest.mark.parametrize("wert", ["a" * 200, "x; rm -rf /", "<script>", "Zeile\nzwei"])
 def test_the_google_subscription_default_model_rejects_what_is_no_name(wert):
-    _, errors = merge_update(STORED, {"gemini_sub_model": wert})
+    _, errors = merge_update(STORED, {"gemini_agy_model": wert})
 
-    assert set(errors) == {"gemini_sub_model"}
+    assert set(errors) == {"gemini_agy_model"}
 
 
 def test_the_google_subscription_default_model_is_shown_back():
-    view = public_view({**STORED, "gemini_sub_model": "flash-3.8"})
+    view = public_view({**STORED, "gemini_agy_model": "flash-3.8"})
 
-    assert view["options"]["gemini_sub_model"] == "flash-3.8"
-    assert "gemini_sub_model" not in view["secrets_set"]
+    assert view["options"]["gemini_agy_model"] == "flash-3.8"
+    assert "gemini_agy_model" not in view["secrets_set"]
