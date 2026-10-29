@@ -195,6 +195,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     concurrency:
       group: dev-main
       cancel-in-progress: false
@@ -209,3 +210,33 @@ jobs:
         run: |
           git push origin "${GITHUB_SHA}:refs/heads/dev/main"
           echo "### dev/main steht auf ${GITHUB_SHA::7}" >> "$GITHUB_STEP_SUMMARY"
+
+      # Öffnet den Pull Request nach main, falls es neue Commits gibt und noch keiner offen ist, und
+      # weist ihn dem Repo-Besitzer zu. Es gibt immer höchstens einen offenen. Ein Pull Request, den
+      # der Workflow-Token anlegt, startet keine weiteren Workflows (die Prüfungen gelten über den
+      # gleichen Commit schon). Voraussetzung: Settings → Actions → General → "Allow GitHub Actions
+      # to create and approve pull requests".
+      - name: Pull Request nach main öffnen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          neu="$(git rev-list --count "origin/main..${GITHUB_SHA}")"
+          offen="$(gh pr list --repo "$REPO" --head dev/main --base main --state open --json number --jq length)"
+          if [ "$neu" -eq 0 ] || [ "$offen" -gt 0 ]; then
+            echo "Kein neuer Pull Request nötig (neue Commits: ${neu}, offene Pull Requests: ${offen})."
+            exit 0
+          fi
+          {
+            echo "Automatisch geöffnet, nachdem alle Prüfungen auf dev/dev grün waren."
+            echo
+            echo "Neue Commits seit main:"
+            git log --format='- %s' "origin/main..${GITHUB_SHA}"
+            echo
+            echo "**Bitte als Merge-Commit mergen** (nicht Squash, nicht Rebase)."
+          } > "$RUNNER_TEMP/pr-body.md"
+          if ! gh pr create --repo "$REPO" --base main --head dev/main --assignee "$OWNER" \
+              --title "Freigabe: dev/main → main" --body-file "$RUNNER_TEMP/pr-body.md"; then
+            echo "::warning::Pull Request konnte nicht angelegt werden. Einstellung prüfen: Settings → Actions → General → Allow GitHub Actions to create and approve pull requests. Sonst von Hand: gh pr create --base main --head dev/main --assignee ${OWNER}"
+          fi

@@ -42,10 +42,14 @@ Ein Vorhaben kann aus mehreren Arbeitspaketen bestehen — jedes Paket erzeugt e
 `dev/dev` und damit eine automatische Übernahme nach `dev/main`. Nach `main` geht trotzdem nur
 **ein** Pull Request:
 
-1. Vorhaben abgeschlossen, `dev/main` ist grün, dann gleich dem Repo-Besitzer zugewiesen:
+1. Nach der Übernahme **öffnet die CI selbsttätig** den Pull Request (Job „Nach dev/main übernehmen“
+   in [`ci.yaml`](../.github/workflows/ci.yaml)) und weist ihn dem Repo-Besitzer zu — nur wenn es neue
+   Commits gibt und noch keiner offen ist. Weitere Pushes aktualisieren den offenen Pull Request.
+   Voraussetzung: *Settings → Actions → General → Allow GitHub Actions to create and approve pull
+   requests*. Fehlt sie, warnt der Lauf; dann von Hand:
    `gh pr create --base main --head dev/main --assignee "$(gh repo view --json owner --jq .owner.login)"`.
    Der Workflow [`pr-zuweisen.yaml`](../.github/workflows/pr-zuweisen.yaml) weist zusätzlich jeden
-   neu eröffneten Pull Request (auch von Dependabot) selbsttätig dem Besitzer zu.
+   anderen neu eröffneten Pull Request (z. B. von Dependabot) dem Besitzer zu.
 2. **Der User gibt den Pull Request frei.** Ein Agent merged ihn nie.
 3. Gemergt wird mit **Merge-Commit** (nicht Squash, nicht Rebase) — der Release-Job erkennt am
    zweiten Elternteil, welche Commits neu sind, und liest daraus die Changelog-Trailer.
