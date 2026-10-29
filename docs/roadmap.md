@@ -33,6 +33,8 @@ geprüft, nicht gegen die Absicht. Was hier „fertig" heißt, muss laufen.
 | Google Gemini über das Google-AI-Pro-Abo (Antigravity-CLI, Anmeldung im Add-on) | umgesetzt, Handprüfung mit echtem Konto offen | D-022 |
 | Mehrere Google-Konten für Gemini (Abo) mit Wechsel bei aufgebrauchtem Kontingent | umgesetzt, Handprüfung mit echten Konten offen | D-024 |
 | Gemini mit Schlüssel auf den Stand von Google bringen (neue Modelle, `url_context`) | offen | [erweiterungen/gemini-provider/api-weg.md](erweiterungen/gemini-provider/api-weg.md) |
+| Anbieter „Gemini Web“ (inoffiziell, Limit der Web-App, mehrere Google-Konten, Anhänge) | geplant | [erweiterungen/gemini-web/](erweiterungen/gemini-web/README.md) |
+| Anbieter `gemini_sub` heißt „Google Gemini (AGY)“ (Schlüssel `gemini_agy`, ohne Übergang) | geplant | [erweiterungen/gemini-web/umbenennung-agy.md](erweiterungen/gemini-web/umbenennung-agy.md) |
 | Lokale Modelle über Ollama | offen | |
 
 ### M3 — Bedienbar ohne Kommandozeile

@@ -35,7 +35,7 @@ nicht stillschweigend schöngeschrieben.
 | [sicherheit-datenschutz.md](sicherheit-datenschutz.md) | Secrets, personenbezogene Daten, externe Dienste, Audit |
 | [bekannte-luecken.md](bekannte-luecken.md) | Abweichungen Spec ↔ Code, Stolpersteine, offene Bugs |
 | [roadmap.md](roadmap.md) | Meilensteine und realistischer Umsetzungsstand |
-| [erweiterungen/](erweiterungen/) | Recherchen und Pläne zu geplanten Erweiterungen — **kein Ist-Stand**. Derzeit: [Gemini-Provider](erweiterungen/gemini-provider/README.md) — Recherche zum Abo-Weg (umgesetzt, D-022) und Plan für den Ausbau des Schlüssel-Wegs |
+| [erweiterungen/](erweiterungen/) | Recherchen und Pläne zu geplanten Erweiterungen — **kein Ist-Stand**. Derzeit: [Gemini-Provider](erweiterungen/gemini-provider/README.md) — Recherche zum Abo-Weg (umgesetzt, D-022) und Plan für den Ausbau des Schlüssel-Wegs; [Gemini Web](erweiterungen/gemini-web/README.md) — Plan für den inoffiziellen Anbieter über die Web-App und die Umbenennung von `gemini_sub` |
 
 ## Pflegeregeln dieser Doku
 
