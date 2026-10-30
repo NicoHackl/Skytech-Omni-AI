@@ -8,7 +8,7 @@
 | Branch | Zweck |
 |---|---|
 | `dev/dev` | Arbeitsbranch für KI-Agenten und laufende Entwicklung. Enthält nur Quellstand: `version: "dev"`, kein Changelog. **Nur Menschen und Agenten schreiben hier, nie die CI.** |
-| `dev/main` | Geprüfter Zwischenstand. **Wird ausschließlich von der CI befüllt**, per Fast-Forward aus `dev/dev` — nie von Hand, nie zurück. |
+| `dev/main` | Geprüfter Zwischenstand. Wird regulär von der CI befüllt; bei Actions-Ausfall über den lokalen Fallback, jeweils per Fast-Forward aus `dev/dev`. |
 | `main` | Release-Branch — den installiert Home Assistant. **Schreibt ausschließlich die CI**, nach dem Merge des freigegebenen Pull Requests. |
 | `feature/<kurzname>` | Optional für größere, klar abgegrenzte Vorhaben |
 
@@ -71,6 +71,43 @@ haben — typisch in `skytech_omniai/config.yaml` (Release-Job ändert `version:
 
 Dadurch liegt `skytech_omniai/CHANGELOG.md` als Kopie von `main` auch auf `dev/dev`. Sie wird dort
 nicht gepflegt und nicht gelöscht (sonst entsteht beim nächsten Release ein Konflikt).
+
+## Lokaler CI-Fallback
+
+Bei aufgebrauchtem Actions-Kontingent oder einer bestätigten Actions-Störung darf nach dem
+Commit und Push auf den Arbeitsbranch der lokale Fallback verwendet werden:
+
+```bash
+scripts/ci-fallback.sh --reason "Actions-Kontingent aufgebraucht"
+```
+
+Mit `--dry-run` läuft dieselbe lokale Prüfung, ohne den Zwischenbranch oder einen Pull Request
+zu verändern. Voraussetzung sind Git, eine angemeldete GitHub CLI (`gh`), ein sauberer Arbeitsbaum
+und alle Voraussetzungen des lokalen Prüfbefehls aus der Teststrategie.
+
+Der Fallback prüft den veröffentlichten Arbeitsstand vollständig über `scripts/check.sh`, liest
+anschließend die Remote-Stände erneut und übernimmt genau den geprüften Commit per Fast-Forward
+nach `dev/main`. Er erstellt keinen Merge-Commit und erzwingt keinen Push. Weicht die Historie ab,
+ändert sich der Arbeitsstand oder schlägt die Prüfung fehl, bricht er ab. Ein noch nicht angelegter
+Zwischenbranch wird angelegt. Nach einem Fehler beim Anlegen des PR kann derselbe Befehl erneut
+laufen; die bereits erfolgte Übernahme wird nicht zurückgesetzt.
+
+Anschließend öffnet er höchstens einen PR `dev/main` → `main` und weist ihn dem Repo-Besitzer zu.
+Ein bestehender PR behält seine Beschreibung und bekommt einen aktualisierten Prüfnachweis mit
+Grund, Zeitpunkt, Prüfbefehl und Commit. Der Nachweis gilt nur für diesen Commit und die tatsächlich
+lokal ausgeführten Prüfungen; zusätzliche CI-Jobs oder Plattformen werden damit nicht bestätigt.
+Ein späterer Push erfordert eine erneute Prüfung. Ein grüner GitHub-Status wird nicht vorgetäuscht.
+
+**Reguläre Testfehler sind kein Ausfallgrund.** Fehlende lokale Werkzeuge, fehlgeschlagene Tests
+oder zusätzliche verpflichtende Prüfungen werden behoben, nicht übergangen. Erforderliche
+Statusprüfungen auf GitHub können den Merge weiterhin sperren; der Fallback ändert keine
+Schutzregeln. Der Repo-Besitzer gibt den PR weiterhin selbst als Merge-Commit frei.
+
+**Release und Deployment:** Der Fallback endet beim PR. Nach dessen Merge können Release-,
+Image- und Deployment-Jobs wegen desselben Kontingents weiter ausstehen. Der Merge allein
+belegt keine Veröffentlichung; deren Ergebnis separat prüfen und ausgefallene Jobs nach
+Wiederherstellung von Actions erneut ausführen. Insbesondere bei OmniAI werden Version und
+Changelog weiterhin ausschließlich vom Release-Workflow auf `main` geschrieben.
 
 ## Commit-Format
 

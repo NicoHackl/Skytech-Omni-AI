@@ -68,3 +68,11 @@ neue Laufzeit-Abhängigkeit.
 | D-031 | 29.10.2026 | `gemini_sub` heißt ohne Alias `gemini_agy`, angezeigt als „Google Gemini (AGY)“; Kontodatenpfade bleiben erhalten | Aktiv | Vom User bestätigt; kein externer Aufrufer verwendet den alten Schlüssel. [ADR](adr/D-031-umbenennung-gemini-agy.md). |
 
 | D-030 | 29.10.2026 | Gemini Web über `gemini-webapi==2.1.1`, temporäre Chats, mehrere Cookie-Konten, private Cache-Pfade und AGPL-Hinweis | Aktiv, Handprüfung offen | User bestätigt; Kontotest nach Installation. [ADR](adr/D-030-gemini-web-inoffiziell.md). |
+
+## Lokaler Fallback bei Actions-Ausfall — 30.10.2026
+
+Bei Kontingentmangel oder bestätigter Actions-Störung wird der veröffentlichte Arbeitsstand
+lokal geprüft und ausschließlich per Fast-Forward nach `dev/main` übernommen. Der lokale
+Prüfnachweis steht im bestehenden oder neuen PR; die Freigabe nach `main` bleibt beim User.
+Dadurch entstehen weder zusätzliche Merge-Commits noch eine Abhängigkeit von einem weiteren
+Actions-Runner. Release und Deployment bleiben eigene Schritte.
