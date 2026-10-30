@@ -31,6 +31,11 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
    Hand, nie durch einen Agenten; auf `dev/dev` und `dev/main` steht `version: "dev"` (D-025).
    Der Merge eines Pull Requests mit Änderung unter `skytech_omniai/` ist damit ein Release an
    alle Nutzer. Details: [docs/git-workflow.md](docs/git-workflow.md).
+   **Ausnahme bei Actions-Ausfall:** Nach erfolgreicher vollständiger lokaler Prüfung darf
+   [scripts/ci-fallback.sh](scripts/ci-fallback.sh) den veröffentlichten Arbeitsstand per
+   Fast-Forward nach `dev/main` übernehmen und den PR öffnen oder aktualisieren. Nur bei
+   Kontingentmangel oder bestätigter Actions-Störung, nie zum Umgehen roter Tests. Nach `main`
+   merged weiterhin nur der User. Ablauf: [lokaler CI-Fallback](docs/git-workflow.md#lokaler-ci-fallback).
 2. **Sprache Code:** Variablen, Funktionen, Klassen, Dateinamen **englisch**.
 3. **Sprache Text:** Kommentare, Commit-Messages, Log-Meldungen, UI-Texte, Labels und
    User-Hinweise **deutsch**.
@@ -125,6 +130,7 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
 
 | Zweck | Befehl |
 |---|---|
+| Fallback bei Actions-Ausfall | `scripts/ci-fallback.sh --reason "Actions-Kontingent aufgebraucht"` |
 | Abhängigkeiten installieren | `pip install -r skytech_omniai/requirements.txt -r requirements-dev.txt && npm ci --prefix skytech_omniai/web` |
 | Hooks aktivieren (einmalig) | `git config core.hooksPath .githooks` |
 | **Alle Prüfungen (wie CI)** | `scripts/check.sh` — mit `--docker` zusätzlich Image und Smoke-Test |
@@ -174,3 +180,6 @@ passende Datei lesen, statt zu raten:
 6. Neue Grundsatzentscheidung? → Eintrag in
    [docs/design-entscheidungen.md](docs/design-entscheidungen.md), ausführlich als ADR unter
    [docs/adr/](docs/adr/).
+
+Bei einem Actions-Ausfall den [lokalen CI-Fallback](docs/git-workflow.md#lokaler-ci-fallback)
+verwenden; ein blockierter Runner gilt nicht als bestandene Prüfung.

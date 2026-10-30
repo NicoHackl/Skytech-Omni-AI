@@ -1,3 +1,4 @@
+# Bei Actions-Ausfall: scripts/ci-fallback.sh, siehe docs/git-workflow.md.
 # Prüfungen für Skytech OmniAI.
 #
 # Jeder Push auf dev/dev durchläuft alle Prüfungen. Sind sie grün, übernimmt der

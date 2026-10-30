@@ -133,3 +133,9 @@ der Job „Nach dev/main übernehmen" den Stand weiterreicht
 Daneben laufen, ohne das Release zu blockieren: CodeQL für Python und TypeScript
 ([`codeql.yaml`](../.github/workflows/codeql.yaml), auch wöchentlich) und Dependabot für pip,
 npm und die Actions ([`dependabot.yml`](../.github/dependabot.yml)).
+
+## Prüfung bei Actions-Ausfall
+
+Der [lokale CI-Fallback](git-workflow.md#lokaler-ci-fallback) führt den gemeinsamen lokalen
+Prüfbefehl erneut aus und dokumentiert dessen tatsächlichen Umfang im PR. Ein Ausfall der
+GitHub-Prüfung ersetzt keine lokale Prüfung; zusätzliche CI-Jobs bleiben separat nachzuweisen.
