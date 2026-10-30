@@ -1,18 +1,19 @@
 # =====================================================================
 # Skytech X ↔ Skytech OmniAI — contract v1
 #
-# MASTER COPY: Skytech-X-Backend/openapi/omniai-api-v1.yaml
-# Mirrored unchanged to Skytech-Omni-AI/docs/contracts/omniai-api-v1.yaml.
+# MASTER COPY: Skytech-X-Backend/contract/contract_skytech_x_omniai/omniai-api-v1.yaml
+# Mirrored unchanged to Skytech-Omni-AI/contract/contract_skytech_x_omniai/omniai-api-v1.yaml.
 # Change it here first, then copy it over in the same work package.
 # =====================================================================
 openapi: 3.0.3
 info:
   title: Skytech OmniAI — Agent Runtime API
-  version: 1.2.0
+  version: 1.2.1
   description: >-
     Contract between the Skytech X backend (client) and Skytech OmniAI, the
     Home Assistant add-on that runs LLM work with several providers
-    (Claude and Codex via their CLIs, Gemini via API, open set). The backend
+    (Claude and Codex via their CLIs, Gemini via API key or Google sign-in,
+    open set). The backend
     is the only caller of these endpoints: it owns automations, triggers,
     approvals, budgets, credentials of all connected services and the run
     history. OmniAI executes the work and streams events back.
@@ -53,6 +54,10 @@ info:
     Changes: 1.2.0 (27.10.2026) — `POST /v1/embeddings` (Gemini
     `gemini-embedding-001`, for semantic search in the backend's knowledge) and
     `Capabilities.embeddings`.
+
+
+    Changes: 1.2.1 (30.10.2026) — documentation only: file paths of master and
+    copy, known provider ids (`gemini_agy`, `gemini_web`).
 
 
     Compatibility: additive changes only within v1; both sides ignore unknown
@@ -335,7 +340,7 @@ components:
         id:
           type: string
           pattern: '^[a-z0-9_-]{1,32}$'
-          description: claude_sub | codex_sub | gemini | ... (open set)
+          description: claude_sub | codex_sub | gemini | gemini_agy | gemini_web | ... (open set)
           example: claude_sub
         name: { type: string, example: Claude (Abo) }
         available:
