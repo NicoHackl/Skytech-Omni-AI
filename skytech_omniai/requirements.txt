@@ -13,7 +13,7 @@ attrs==26.1.0
 # Inoffizieller Zugang zur Gemini-Web-App (AGPL-3.0, D-030). Die übersetzten
 # Abhängigkeiten wurden auf beiden Alpine-Architekturen ohne Compiler geprüft.
 gemini-webapi==2.1.1
-curl-cffi==0.16.3
+curl-cffi==0.17.0
 loguru==0.7.3
 orjson==3.11.9
 pydantic==2.12.5
