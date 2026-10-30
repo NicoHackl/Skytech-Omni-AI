@@ -20,7 +20,7 @@ abweichende Beschreibung der gemeinsamen Felder zu führen.
 
 | Gegenstelle | Vertrag | Master | Stand |
 |---|---|---|---|
-| Skytech X (Backend, Weboberfläche, iOS-App) | [contract_skytech_x_omniai/](contract_skytech_x_omniai/contract_skytech_x_omniai.md) | `Skytech-X-Backend/openapi/omniai-api-v1.yaml` | Version 1.2.0, in beiden Projekten implementiert |
+| Skytech X (Backend, Weboberfläche, iOS-App) | [contract_skytech_x_omniai/](contract_skytech_x_omniai/contract_skytech_x_omniai.md) | `Skytech-X-Backend/contract/contract_skytech_x_omniai/omniai-api-v1.yaml` | Version 1.2.1, in beiden Projekten implementiert (1.2.1 nur Doku) |
 
 ## Regeln
 
