@@ -20,6 +20,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
 import embeddings
+import limits
 from config_loader import read_addon_version
 from providers.base_provider import NotJson, ProviderTimeout, UnknownModel
 from providers.claude_sub_provider import CLAUDE_MODELS
@@ -299,6 +300,16 @@ def completions():
     # Nutzungsdaten liefern die Anbieter hier noch nicht; das Feld fehlt dann
     # ganz, statt mit einem Leerwert zu erscheinen.
     return jsonify({"output": output, "provider": provider_name, "model": model_name})
+
+
+@api_v1.route("/limits", methods=["GET"])
+def subscription_limits():
+    """Abo-Limits je Anbieter und Konto (D-032); unbekannt bleibt ``null``, nie 0."""
+    try:
+        return jsonify(limits.report(credentials_present()))
+    except Exception:
+        log.exception("Unerwarteter Fehler in /v1/limits")
+        return _error(500, "INTERNAL", FEHLER_UNBEKANNT)
 
 
 # --- Embeddings ---------------------------------------------------------------

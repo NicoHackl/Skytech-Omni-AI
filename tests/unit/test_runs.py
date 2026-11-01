@@ -545,3 +545,24 @@ def test_events_stream_resumes_after_last_event_id(client):
 
 def test_runs_need_the_api_token(client):
     assert client.post("/v1/runs", json=claude_request()).status_code == 401
+
+
+def test_claude_rate_limit_event_is_stored_for_the_limits(tmp_path, fake_cli):
+    import limits
+
+    event = {
+        "type": "rate_limit_event",
+        "rate_limit_info": {
+            "status": "allowed",
+            "unifiedWindows": {"five_hour": {"utilization": 0.25, "resetsAt": 1893456000}},
+        },
+    }
+    fake_cli.play([RECORDED[0], event, *RECORDED[1:]])
+    manager = RunManager(str(tmp_path / "runs"))
+    run, _ = manager.start("run-1", claude_request())
+    wait_until_done(run)
+
+    assert run.status == "SUCCEEDED"
+    entry = limits.claude_entry(True)
+    assert entry["state"] == "ok"
+    assert entry["windows"][0]["usedPercent"] == 25.0

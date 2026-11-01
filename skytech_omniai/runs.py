@@ -37,6 +37,7 @@ from datetime import UTC, datetime, timedelta
 
 from jsonschema import Draft202012Validator
 
+import limits
 from providers.base_provider import NotJson, ProviderTimeout, UnknownModel
 
 log = logging.getLogger("omniai.runs")
@@ -625,6 +626,8 @@ class ClaudeRunner:
                         manager.emit(
                             run, "log", {"level": "warn", "message": FEHLER_WERKZEUG_SERVER}
                         )
+            elif kind == "rate_limit_event":
+                limits.record_claude(message.get("rate_limit_info"))
             elif kind == "assistant":
                 for block in message.get("message", {}).get("content", []):
                     if block.get("type") == "text" and block.get("text", "").strip():
