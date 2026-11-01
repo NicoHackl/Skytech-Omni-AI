@@ -19,7 +19,7 @@ Unbekannt heißt ``usedPercent: null``, nie 0.
 import json
 import logging
 import os
-import select
+import queue
 import subprocess
 import threading
 import time
@@ -185,12 +185,22 @@ def _codex_rpc(env: dict, timeout: float) -> dict:
                 "params": {"clientInfo": {"name": "skytech-omniai", "version": "1"}},
             }
         )
+        # Eigener Lesethread: select() auf der gepufferten Pipe übersieht Zeilen, die schon
+        # im Puffer liegen, und hängt dann trotz fertiger Antwort.
+        lines: queue.Queue = queue.Queue()
+
+        def pump() -> None:
+            for item in process.stdout:
+                lines.put(item)
+            lines.put("")  # Ende der Ausgabe
+
+        threading.Thread(target=pump, daemon=True).start()
         deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            ready, _, _ = select.select([process.stdout], [], [], 0.5)
-            if not ready:
-                continue
-            line = process.stdout.readline()
+        while (remaining := deadline - time.monotonic()) > 0:
+            try:
+                line = lines.get(timeout=remaining)
+            except queue.Empty:
+                break
             if not line:
                 break
             try:

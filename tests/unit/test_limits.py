@@ -4,6 +4,8 @@ Geprüft wird die Umsetzung der Rohdaten in den Vertrag. Die Quellen selbst
 (Claude-Ereignis, Codex-App-Server) sind durch aufgezeichnete Antworten ersetzt.
 """
 
+import json
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -259,3 +261,52 @@ def test_limits_endpoint_hides_errors(client, monkeypatch):
     response = client.get("/v1/limits", headers={"Authorization": f"Bearer {TOKEN}"})
     assert response.status_code == 500
     assert "geheim" not in response.get_data(as_text=True)
+
+
+# --- echter Prozess mit nachgebautem App-Server ------------------------------
+
+FAKE_APP_SERVER = """#!{python}
+import json, sys
+mode = {mode!r}
+for line in sys.stdin:
+    message = json.loads(line)
+    if message.get("id") == 1:
+        if mode == "init-error":
+            print(json.dumps({{"id": 1, "error": {{"message": "not logged in"}}}}), flush=True)
+            continue
+        # Mehrere Zeilen auf einmal: dürfen im Lesepuffer nicht verloren gehen.
+        sys.stdout.write("kein json\\n" + json.dumps({{"method": "status"}}) + "\\n")
+        print(json.dumps({{"id": 1, "result": {{}}}}), flush=True)
+    elif message.get("id") == 2:
+        if mode == "silent":
+            continue
+        print(json.dumps({{"id": 2, "result": json.loads({result!r})}}), flush=True)
+"""
+
+
+def fake_cli(tmp_path, monkeypatch, mode):
+    bin_dir = tmp_path / f"bin-{mode}"
+    bin_dir.mkdir()
+    script = bin_dir / "codex"
+    script.write_text(
+        FAKE_APP_SERVER.format(python=sys.executable, mode=mode, result=json.dumps(CODEX_RESULT))
+    )
+    script.chmod(0o755)
+    monkeypatch.setenv("PATH", str(bin_dir))
+
+
+def test_rpc_reads_buffered_lines_of_app_server(tmp_path, monkeypatch):
+    fake_cli(tmp_path, monkeypatch, "ok")
+    answer = limits._codex_rpc({"PATH": str(tmp_path / "bin-ok")}, 5)
+    assert answer["result"] == CODEX_RESULT
+
+
+def test_rpc_initialize_error_is_returned(tmp_path, monkeypatch):
+    fake_cli(tmp_path, monkeypatch, "init-error")
+    assert "error" in limits._codex_rpc({"PATH": str(tmp_path / "bin-init-error")}, 5)
+
+
+def test_rpc_times_out(tmp_path, monkeypatch):
+    fake_cli(tmp_path, monkeypatch, "silent")
+    with pytest.raises(TimeoutError):
+        limits._codex_rpc({"PATH": str(tmp_path / "bin-silent")}, 1)
