@@ -3,10 +3,10 @@
 Jeder Wert nennt seine Herkunft, damit Skytech X gemessene Prozentwerte,
 beobachtete Erschöpfung und geschätzte Wartezeiten auseinanderhalten kann:
 
-* **Claude** — die CLI meldet bei jeder Anfrage (Lauf, Einmal-Antwort,
-  ``/ask``) ein ``rate_limit_event`` für das engste Fenster mit Rücksetzzeit;
-  einen Prozentwert nur ab ihrer Warnschwelle (D-034, D-035). Der Stand wird
-  gespeichert (``source: observed``). Ohne Anfrage gibt es keinen neuen Wert.
+* **Claude** — direkte Verbrauchsabfrage ohne Modellaufruf (D-037,
+  ``source: measured``), fünf Minuten zwischengespeichert, Fehler mit wachsender
+  Pause. Zusätzlich CLI-Ereignisse (``source: observed``, D-034/D-035);
+  je Fenster gilt die neueste Quelle. Bei Ausfall bleibt der letzte Stand.
 * **Codex** — der App-Server der CLI beantwortet ``account/rateLimits/read``
   ohne Modellaufruf (``source: measured``). Ergebnis kurz zwischengespeichert.
 * **Gemini (Web, AGY)** — nur der Zustand der Konten (erschöpft, eingeschränkt,
@@ -27,7 +27,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from providers import gemini_agy_accounts, gemini_web_accounts
+from providers import claude_usage, gemini_agy_accounts, gemini_web_accounts
 from providers.google_accounts import write_json
 
 log = logging.getLogger("omniai.limits")
@@ -175,6 +175,14 @@ def claude_entry(available: bool, now: float | None = None) -> dict:
     if not available:
         return _account("claude_sub", "unavailable")
     record = _read_claude_record()
+    measured = claude_usage.query_usage(
+        os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "").strip(),
+        limits_dir(),
+        CLAUDE_WINDOW_MINUTES,
+        now,
+    )
+    if measured:
+        return _claude_measured_entry(measured, record, now)
     if record is None:
         return _account("claude_sub", "unknown")
     resets_at = _number(record.get("resetsAt"))
@@ -194,6 +202,53 @@ def claude_entry(available: bool, now: float | None = None) -> dict:
         retry_at=retry_at,
         retry_source="provider",
         observed_at=_number(record.get("observedAt")),
+    )
+
+
+def _claude_measured_entry(measured: dict, record: dict | None, now: float) -> dict:
+    """Führt Messung und neuere CLI-Beobachtung ohne erfundene Aktualität zusammen."""
+    measured_at = _number(measured.get("at")) or 0
+    windows = {}
+    for item in measured.get("windows", []):
+        name = item["id"]
+        reset = _number(item.get("resetsAtEpoch"))
+        windows[name] = _current_window(
+            {
+                "id": name,
+                "usedPercent": item["usedPercent"],
+                "resetsAtEpoch": reset,
+                "limitId": None,
+                "durationMinutes": CLAUDE_WINDOW_MINUTES.get(name),
+                "resetsAt": iso(reset),
+                "source": "measured",
+                "observedAt": iso(measured_at),
+            },
+            now,
+        )
+    observed_at = _number((record or {}).get("observedAt")) or 0
+    if record:
+        for item in record.get("windows", []):
+            if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+                continue
+            # Ein Fenster aus einem älteren Ereignis darf nicht durch ein
+            # anderes, neueres Ereignis künstlich aktuell werden.
+            timestamp = item.get("observedAt")
+            is_newer = isinstance(timestamp, str) and timestamp > (iso(measured_at) or "")
+            if item["id"] not in windows or is_newer:
+                windows[item["id"]] = _current_window(item, now)
+    exhausted_until = []
+    is_exhausted = any((w.get("usedPercent") or 0) >= 100 for w in windows.values())
+    for window in windows.values():
+        if (window.get("usedPercent") or 0) >= 100 and window.get("resetsAt"):
+            exhausted_until.append(datetime.fromisoformat(window["resetsAt"]).timestamp())
+    retry_at = max(exhausted_until, default=None)
+    return _account(
+        "claude_sub",
+        "exhausted" if is_exhausted else "ok",
+        windows=list(windows.values()),
+        retry_at=retry_at,
+        retry_source="provider",
+        observed_at=max(measured_at, observed_at),
     )
 
 

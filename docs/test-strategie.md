@@ -139,3 +139,11 @@ npm und die Actions ([`dependabot.yml`](../.github/dependabot.yml)).
 Der [lokale CI-Fallback](git-workflow.md#lokaler-ci-fallback) führt den gemeinsamen lokalen
 Prüfbefehl erneut aus und dokumentiert dessen tatsächlichen Umfang im PR. Ein Ausfall der
 GitHub-Prüfung ersetzt keine lokale Prüfung; zusätzliche CI-Jobs bleiben separat nachzuweisen.
+
+## Direkte Claude-Verbrauchsabfrage
+
+`tests/unit/test_claude_usage.py` ersetzt sämtliche Netzaufrufe. Es prüft niedrige
+Prozentwerte, Cache und Fehlerpausen über Neustarts, Gleichzeitigkeit, Quellenreihenfolge,
+ungültige Daten und Geheimhaltung. Die Tests belegen keine Annahme des vorhandenen
+Abo-Tokens durch Anthropic. Die erforderliche Kontoprüfung steht unter
+[D-037, H1–H7](adr/D-037-claude-verbrauchsabfrage.md#nachweise-und-offene-handprüfung).

@@ -258,3 +258,12 @@ Gemeinsame Ablage und Wartezeiten mit AGY: `providers/google_accounts.py`.
 Die Modellliste wird nach Anmeldung und erfolgreichen Anfragen aus dem Konto gelesen.
 `/models` und `/v1/capabilities` lesen nur die gemerkte Liste; sie lösen keine Anfrage
 an Google aus. Die Werkzeugstufe wirkt auf diesen Zugang nicht. [D-030](adr/D-030-gemini-web-inoffiziell.md).
+
+## Abo-Kontingente
+
+`limits.py` führt die vorhandenen Quellen im bestehenden Vertragsmodell zusammen.
+`providers/claude_usage.py` liest zusätzlich den Claude-Verbrauch ohne Modellaufruf;
+Cache und wachsende Fehlerpausen werden dauerhaft unter dem Limitverzeichnis abgelegt.
+Neuere Claude-CLI-Ereignisse ergänzen oder ersetzen einzelne Fenster. Der Zeitpunkt
+eines Seitenabrufs ersetzt keinen Messzeitpunkt. Interne Datenquelle, Rechte,
+Rückfallverhalten und offene Handprüfung: [D-037](adr/D-037-claude-verbrauchsabfrage.md).

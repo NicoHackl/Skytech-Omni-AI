@@ -398,3 +398,9 @@ Die Übersicht zeigt unter den Kacheln die Karte „Kontingente“ (`components/
 D-033): je Anbieter und Konto Zustand, Verbrauch je Zeitfenster als Balken und die Zeit, ab der
 wieder Kontingent frei ist. Geladen wird beim Öffnen und über „Aktualisieren“, nicht im Takt.
 Konten ohne Prozentwert bekommen statt eines Balkens einen Satz, was der Nutzer tun kann.
+
+Für Claude ergänzt D-037 einen direkten Abruf ohne Modellanfrage. „Aktualisieren“
+beachtet den gemeinsamen Cache und längere Fehlerpausen. „Abgerufen“ im Kartenkopf
+bezeichnet den Seitenabruf; „Zuletzt gemeldet“ je Konto den tatsächlichen Datenzeitpunkt.
+Der Hinweis bei Claude erklärt, wann erneutes Aktualisieren sinnvoll ist. Details und
+Rückfallverhalten: [D-037](adr/D-037-claude-verbrauchsabfrage.md).

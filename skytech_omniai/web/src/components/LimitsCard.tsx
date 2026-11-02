@@ -29,7 +29,7 @@ function emptyNote(account: LimitAccount): string {
       return 'Bitte in den Einstellungen neu anmelden.'
     case 'unknown':
       if (account.provider === 'claude_sub') {
-        return 'Noch kein Stand. Claude meldet das Kontingent mit der nächsten Anfrage.'
+        return 'Noch kein Stand verfügbar. Bitte später aktualisieren; auch eine Anfrage an Claude kann einen Stand liefern.'
       }
       return 'Das Kontingent ließ sich gerade nicht abfragen. Bitte später aktualisieren.'
     case 'ok':
@@ -91,7 +91,6 @@ function AccountRow({ account }: { account: LimitAccount }) {
     ? `${providerLabel(account.provider)} · ${account.label}`
     : providerLabel(account.provider)
   const firstBucket = account.windows[0]?.limitId ?? null
-  const observed = account.windows.some((window) => window.source === 'observed')
   return (
     <div className="limit-account">
       <div className="limit-account-head">
@@ -115,8 +114,14 @@ function AccountRow({ account }: { account: LimitAccount }) {
           />
         ))
       )}
-      {observed && account.observedAt ? (
+      {account.observedAt ? (
         <div className="limit-note">Zuletzt gemeldet: {formatWhen(account.observedAt)}</div>
+      ) : null}
+      {account.provider === 'claude_sub' && account.state !== 'unavailable' ? (
+        <div className="limit-note">
+          Neue Werte frühestens alle fünf Minuten. Bei Abfrageproblemen bleibt der letzte Stand erhalten;
+          bitte später erneut aktualisieren.
+        </div>
       ) : null}
     </div>
   )
@@ -147,7 +152,7 @@ export function LimitsCard() {
     <div className="card section-card">
       <div className="card-head">
         <h2>Kontingente</h2>
-        {data ? <div className="sub">Stand {formatWhen(data.measuredAt)}</div> : null}
+        {data ? <div className="sub">Abgerufen: {formatWhen(data.measuredAt)}</div> : null}
         <div className="spacer" />
         <button className="btn btn-ghost btn-sm" onClick={() => void load()} disabled={loading}>
           <Icon name="refresh" size={14} />
