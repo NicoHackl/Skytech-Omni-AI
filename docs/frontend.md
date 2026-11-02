@@ -45,7 +45,7 @@ skytech_omniai/web/
     ├── format.ts           # Rohwert → Anzeigetext (einziger Ort dafür)
     ├── provider.ts         # Klarnamen der Anbieter, Sentinel des Modellfelds
     ├── settingsSections.ts # Bereiche der Einstellungen: Seitenleiste, Kopfzeile, Feldzuordnung
-    ├── components/         # wiederverwendbar: Layout, Theme, Toast, Icon
+    ├── components/         # wiederverwendbar: Layout, Theme, Toast, Icon, LimitsCard
     └── pages/              # eine Datei je Route: Dashboard, Anfrage, Modelle, Einstellungen
         └── einstellungen/  # Bereiche der Einstellungen, je Anbieter einer (siehe „Routing“)
 ```
@@ -336,6 +336,7 @@ export default defineConfig({
       '/ask': { target: 'http://127.0.0.1:8000', changeOrigin: true },
       '/models': { target: 'http://127.0.0.1:8000', changeOrigin: true },
       '/status': { target: 'http://127.0.0.1:8000', changeOrigin: true },
+      '/limits': { target: 'http://127.0.0.1:8000', changeOrigin: true },
       '/health': { target: 'http://127.0.0.1:8000', changeOrigin: true },
     },
   },
@@ -392,3 +393,8 @@ Daraus folgt für die Arbeit an der Oberfläche:
 Der Bereich „Google Gemini (Web)“ (`gemini-web`) verwaltet Cookie-Konten unabhängig
 vom Speichern des Formulars. Anmeldewerte werden beim Absenden aus den Eingabefeldern
 gelöscht; Hilfestellung und Lizenzquelle stehen aufklappbar.
+
+Die Übersicht zeigt unter den Kacheln die Karte „Kontingente“ (`components/LimitsCard.tsx`,
+D-033): je Anbieter und Konto Zustand, Verbrauch je Zeitfenster als Balken und die Zeit, ab der
+wieder Kontingent frei ist. Geladen wird beim Öffnen und über „Aktualisieren“, nicht im Takt.
+Konten ohne Prozentwert bekommen statt eines Balkens einen Satz, was der Nutzer tun kann.

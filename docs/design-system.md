@@ -212,6 +212,9 @@ erfindet keine Synonyme (`.button`, `.panel`, `.chip` gibt es nicht).
 | `.empty` | Leerzustand: Icon, Satz, Primäraktion |
 | `.center` + `.spinner` | Ladezustand |
 | `.alert` | Blockierende Fehlermeldung im Seitenkopf |
+| `.limit-list` / `.limit-account` / `.limit-account-head` / `.limit-window` / `.limit-window-head` / `.limit-note` | Karte „Kontingente“ (D-033): je Konto ein umrandeter Kasten mit Name und Zustands-Pill, darunter je Zeitfenster Name, Prozentwert, Balken und Rücksetzzeit; `.limit-note` für Hinweise in `--text-3` |
+| `.meter` / `.meter-fill` + `.warn` / `.err` | Verbrauchsbalken: Spur in `--surface-2`, Füllung `--ok`, ab 80 % `--warn`, ab 100 % `--danger`. Breite als berechneter Inline-Wert, `role="progressbar"` mit `aria-value*`. Nur bei bekanntem Wert — unbekannt ist kein leerer Balken |
+| `.card-head .spacer` | Schiebt eine Aktion in der Kartenkopfzeile nach rechts; unter 620px bricht der Kopf um |
 | `.info-strip` | Einzeiliger Erklärhinweis über einer Liste |
 | `.modal-backdrop` / `.modal` / `.modal-head` / `.modal-body` / `.modal-foot` | Dialog |
 

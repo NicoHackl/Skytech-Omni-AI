@@ -41,3 +41,47 @@ export const TOOL_ACCESS_FULL = 'full'
 export function toolAccessLabel(level: string): string {
   return TOOL_ACCESS_LABELS[level] ?? level
 }
+
+/* Kontingente (GET /limits): Zustand eines Kontos und Name eines Zeitfensters.
+   Der Nutzer liest „Aufgebraucht“ und „5 Stunden“, nie `exhausted` oder
+   `five_hour` (eiserne Regel 12). */
+
+const LIMIT_STATE_LABELS: Record<string, { text: string; tone: 'ok' | 'warn' | 'err' | 'muted' }> = {
+  ok: { text: 'Bereit', tone: 'ok' },
+  exhausted: { text: 'Aufgebraucht', tone: 'err' },
+  restricted: { text: 'Eingeschränkt', tone: 'err' },
+  login_required: { text: 'Anmeldung nötig', tone: 'warn' },
+  unavailable: { text: 'Kein Zugang', tone: 'muted' },
+  unknown: { text: 'Unbekannt', tone: 'muted' },
+}
+
+/** Beschriftung und Farbton der Pill zum Zustand; Unbekanntes gilt als „Unbekannt“. */
+export function limitStateLabel(state: string): { text: string; tone: 'ok' | 'warn' | 'err' | 'muted' } {
+  return LIMIT_STATE_LABELS[state] ?? LIMIT_STATE_LABELS.unknown
+}
+
+const WINDOW_LABELS: Record<string, string> = {
+  five_hour: '5 Stunden',
+  seven_day: 'Woche',
+  seven_day_opus: 'Woche (Opus)',
+  seven_day_sonnet: 'Woche (Sonnet)',
+}
+
+const MINUTES_PER_DAY = 24 * 60
+
+/** Name eines Zeitfensters: bekannter Name, sonst aus der Länge, sonst neutral. */
+export function limitWindowLabel(id: string, durationMinutes: number | null): string {
+  const known = WINDOW_LABELS[id]
+  if (known) return known
+  if (durationMinutes === null || durationMinutes <= 0) return 'Zeitfenster'
+  if (durationMinutes === 7 * MINUTES_PER_DAY) return 'Woche'
+  if (durationMinutes % MINUTES_PER_DAY === 0) {
+    const days = durationMinutes / MINUTES_PER_DAY
+    return days === 1 ? '1 Tag' : `${days} Tage`
+  }
+  if (durationMinutes % 60 === 0) {
+    const hours = durationMinutes / 60
+    return hours === 1 ? '1 Stunde' : `${hours} Stunden`
+  }
+  return `${durationMinutes} Minuten`
+}

@@ -23,6 +23,36 @@ def test_health_answers(client):
     assert antwort.get_json() == {"status": "ok"}
 
 
+def test_limits_answer_without_token(client, monkeypatch):
+    """Die Oberfläche sieht die Kontingente ohne das Token von Skytech X."""
+    monkeypatch.setenv("OMNIAI_API_TOKEN", "x" * 32)
+    monkeypatch.setenv("GEMINI_API_KEY", "geheim")
+
+    antwort = client.get("/limits")
+
+    assert antwort.status_code == 200
+    daten = antwort.get_json()
+    zustand = {konto["provider"]: konto["state"] for konto in daten["accounts"]}
+    # Ohne Zugang kein Wert, mit Schlüssel bereit, Claude ohne Lauf unbekannt.
+    assert zustand == {"claude_sub": "unavailable", "codex_sub": "unavailable", "gemini": "ok"}
+    assert daten["measuredAt"].endswith("Z")
+    assert "geheim" not in json.dumps(daten, ensure_ascii=False)
+
+
+def test_limits_failure_is_a_sentence(client, monkeypatch):
+    """Geht die Zusammenstellung schief, kommt ein Satz statt eines Stacktraces."""
+
+    def kaputt(_present):
+        raise RuntimeError("intern")
+
+    monkeypatch.setattr(app_module.limits, "report", kaputt)
+
+    antwort = client.get("/limits")
+
+    assert antwort.status_code == 500
+    assert antwort.get_json() == {"error": app_module.FEHLER_LIMITS}
+
+
 def test_models_lists_every_provider(client):
     """Normalfall: Automatisierungen können die gültigen Werte abfragen."""
     daten = client.get("/models").get_json()
