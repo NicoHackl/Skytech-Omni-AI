@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: Skytech OmniAI — Agent Runtime API
-  version: 1.3.0
+  version: 1.4.0
   description: >-
     Contract between the Skytech X backend (client) and Skytech OmniAI, the
     Home Assistant add-on that runs LLM work with several providers
@@ -62,6 +62,14 @@ info:
 
     Changes: 1.3.0 (01.11.2026) — `GET /v1/limits` with
     `SubscriptionLimits` (same model as agent-host-api-v1 1.2.0).
+
+
+    Changes: 1.4.0 (02.11.2026) — model catalog per provider
+    (`Provider.modelCatalog`, `ModelEntry`), thinking effort (`Effort`) in
+    `CompletionRequest` and `StartRun`, the model actually used in
+    `CompletionResponse.effort`, `RunState.model`/`effort` and
+    `StatusData.model`; error code `UNSUPPORTED_EFFORT`. "-latest" model
+    names are resolved per run (same model as agent-host-api-v1 1.3.0).
 
 
     Compatibility: additive changes only within v1; both sides ignore unknown
@@ -413,7 +421,41 @@ components:
           type: string
           enum: [UNAUTHORIZED, VALIDATION_ERROR, NOT_FOUND, BUSY, RUN_ID_REUSED,
                  UNKNOWN_PROVIDER, UNKNOWN_MODEL, TOOLS_NOT_SUPPORTED,
-                 SCHEMA_MISMATCH, PROVIDER_UNAVAILABLE, TIMEOUT, INTERNAL]
+                 SCHEMA_MISMATCH, PROVIDER_UNAVAILABLE, TIMEOUT, INTERNAL,
+                 UNSUPPORTED_EFFORT]
+          description: UNSUPPORTED_EFFORT since 1.4.0 (level not offered for this model).
+
+    Effort:
+      type: string
+      enum: [minimal, low, medium, high, xhigh, max, ultra]
+      description: >-
+        Thinking effort, one scale for all providers (since 1.4.0). Only the
+        levels listed for the chosen model in its catalog entry are accepted;
+        without the field the model default applies.
+
+    ModelEntry:
+      type: object
+      required: [id, latest, efforts]
+      description: >-
+        One choosable model of a provider (since 1.4.0). `id` is passed as
+        `model` unchanged. A "-latest" entry is resolved by the runtime at the
+        start of each run; `resolvesTo` shows the current target only for
+        information.
+      properties:
+        id: { type: string, example: opus-latest }
+        label: { type: string, nullable: true, example: Opus (neuestes) }
+        family: { type: string, nullable: true, example: opus }
+        latest: { type: boolean, description: True for a name that always means the newest model of its family. }
+        resolvesTo: { type: string, nullable: true, example: claude-opus-5-5 }
+        recommended: { type: boolean, description: The provider recommends this model as default. }
+        efforts:
+          type: array
+          description: 'Accepted effort levels, ascending; empty = effort cannot be set for this model.'
+          items: { $ref: '#/components/schemas/Effort' }
+        defaultEffort:
+          allOf: [{ $ref: '#/components/schemas/Effort' }]
+          nullable: true
+          description: 'Level used without `effort`; null = unknown.'
 
     Health:
       type: object
@@ -472,6 +514,14 @@ components:
           items: { type: string }
           example: [sonnet, opus, haiku]
         defaultModel: { type: string, nullable: true, example: sonnet }
+        modelCatalog:
+          type: array
+          description: >-
+            Models with effort levels and "-latest" names (since 1.4.0). Read
+            from the provider where it offers a list (e.g. the Codex app
+            server), otherwise maintained in OmniAI. Missing on older add-ons;
+            then only `models` is known.
+          items: { $ref: '#/components/schemas/ModelEntry' }
         features:
           type: object
           properties:
@@ -484,7 +534,11 @@ components:
       required: [input]
       properties:
         provider: { type: string, description: Default is the add-on setting. }
-        model: { type: string, description: Default is the provider default. }
+        model: { type: string, description: 'Default is the provider default; a "-latest" name is resolved now.' }
+        effort:
+          allOf: [{ $ref: '#/components/schemas/Effort' }]
+          nullable: true
+          description: Since 1.4.0; null = model default.
         instructions:
           type: string
           maxLength: 20000
@@ -508,7 +562,11 @@ components:
         output:
           description: Parsed JSON answer (object or array).
         provider: { type: string, example: gemini }
-        model: { type: string, example: gemini-flash-latest }
+        model: { type: string, example: gemini-3.6-flash, description: 'Model actually used (a "-latest" name resolved since 1.4.0).' }
+        effort:
+          allOf: [{ $ref: '#/components/schemas/Effort' }]
+          nullable: true
+          description: Effort actually used (since 1.4.0); null = model default.
         usage: { $ref: '#/components/schemas/Usage' }
 
     EmbeddingRequest:
@@ -543,7 +601,11 @@ components:
       properties:
         runId: { type: string, pattern: '^[A-Za-z0-9-]{1,64}$' }
         provider: { type: string, pattern: '^[a-z0-9_-]{1,32}$' }
-        model: { type: string, nullable: true }
+        model: { type: string, nullable: true, description: 'Model id or "-latest" name from the catalog.' }
+        effort:
+          allOf: [{ $ref: '#/components/schemas/Effort' }]
+          nullable: true
+          description: Since 1.4.0; null = model default.
         instructions: { type: string, maxLength: 20000, nullable: true }
         context:
           type: string
@@ -645,6 +707,11 @@ components:
           nullable: true
           description: German sentence when FAILED.
         costUsd: { type: number, nullable: true }
+        model: { type: string, nullable: true, description: 'Model actually used, "-latest" resolved (since 1.4.0).' }
+        effort:
+          allOf: [{ $ref: '#/components/schemas/Effort' }]
+          nullable: true
+          description: Effort actually used (since 1.4.0).
         startedAt: { type: string, format: date-time, nullable: true }
         finishedAt: { type: string, format: date-time, nullable: true }
 
@@ -718,6 +785,10 @@ components:
         status: { $ref: '#/components/schemas/RunStatus' }
         summary: { type: string, nullable: true }
         error: { type: string, nullable: true }
+        model:
+          type: string
+          nullable: true
+          description: Model actually used; sent with RUNNING once known (since 1.4.0).
 
     ToolCallData:
       type: object
