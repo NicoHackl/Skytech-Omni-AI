@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.4.0] — 02.11.2026
+
+### Hinzugefügt
+
+- Skytech X kann je Anfrage den Denkaufwand wählen und „-latest“-Modelle nutzen, die immer auf das neueste Modell zeigen.
+- Claude-Kontingente zusätzlich ohne Anfrage abfragen, sofern der hinterlegte Zugang dies erlaubt.
+
+### Geändert
+
+- Kontingente zeigen ihren letzten Datenzeitpunkt; Claude-Abfragen werden zwischengespeichert und bei Problemen mit längeren Pausen wiederholt.
+
+### Behoben
+
+- Codex und Gemini mit Schlüssel funktionieren ohne Modellangabe auch dann, wenn als Standardmodell eines von Claude eingetragen ist.
+
 ## [1.3.2] — 02.11.2026
 
 ### Behoben
