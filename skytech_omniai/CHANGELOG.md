@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.3.1] — 02.11.2026
+
+### Behoben
+
+- Das Kontingent von Claude erscheint jetzt auch nach Anfragen aus der Oberfläche oder über /ask, nicht nur nach Aufträgen von Skytech X.
+
 ## [1.3.0] — 02.11.2026
 
 ### Hinzugefügt
