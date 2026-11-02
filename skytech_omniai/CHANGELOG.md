@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.3.2] — 02.11.2026
+
+### Behoben
+
+- Bei Claude erscheinen nach einer Anfrage wieder die Zeitfenster mit Rücksetzzeit; der Verbrauch in Prozent steht dort, sobald Claude ihn meldet, sonst „Unter der Warnschwelle“.
+
 ## [1.3.1] — 02.11.2026
 
 ### Behoben
