@@ -4,6 +4,7 @@ Der Umweg über die CLI ist der Kern des Add-ons: er nutzt das rollierende
 Limit des Web-Abos statt eines metered abgerechneten API-Schlüssels.
 """
 
+import json
 import logging
 import os
 import subprocess
@@ -173,7 +174,19 @@ class ClaudeSubProvider(BaseProvider):
         env = self._build_env()
         full_prompt = prompt + JSON_INSTRUCTION
 
-        command = ["claude", "-p", full_prompt, "--append-system-prompt", SYSTEM_PROMPT]
+        # Ereignisstrom statt Textausgabe: nur darin meldet die CLI das
+        # rate_limit_event mit dem Stand des Abos (D-032, D-034). Die Antwort
+        # steht im abschließenden result-Ereignis.
+        command = [
+            "claude",
+            "-p",
+            full_prompt,
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--append-system-prompt",
+            SYSTEM_PROMPT,
+        ]
         chosen_model = self._resolve_model(model)
         if chosen_model:
             # Die CLI nimmt sowohl Kurzaliasse (sonnet/opus/haiku) als auch
@@ -206,6 +219,10 @@ class ClaudeSubProvider(BaseProvider):
             log.error("Claude-CLI nach %s s abgebrochen", timeout or TIMEOUT_SEKUNDEN)
             raise ProviderTimeout(FEHLER_ZEITUEBERSCHREITUNG) from fehler
 
+        # Vor der Prüfung des Rückgabecodes: auch eine wegen des Limits
+        # abgelehnte Anfrage meldet den Stand, und genau der ist dann gefragt.
+        answer, failed = self._read_stream(result.stdout)
+
         if result.returncode != 0:
             # Die Ausgabe der CLI kann Pfade und Stacktraces enthalten und geht
             # deshalb vollständig ins Log, nicht an den Aufrufer.
@@ -217,4 +234,42 @@ class ClaudeSubProvider(BaseProvider):
             )
             raise RuntimeError(self._cli_fehler(ausgabe))
 
-        return self.parse_json(result.stdout.strip())
+        if failed:
+            log.error("Claude-CLI meldet einen Fehler im Ergebnis: %s", answer)
+            raise RuntimeError(self._cli_fehler(answer))
+
+        return self.parse_json(answer)
+
+    @staticmethod
+    def _read_stream(stdout: str) -> tuple[str, bool]:
+        """Antworttext und Fehlerkennung aus dem Ereignisstrom der CLI.
+
+        Ein ``rate_limit_event`` wird nebenbei als Limitstand gespeichert.
+        Fehlt das ``result``-Ereignis (ältere CLI, reine Textausgabe), gilt die
+        Ausgabe als Ganzes wie bisher.
+        """
+        # Import hier: limits zieht die Google-Konten nach, die der Provider
+        # sonst nicht braucht.
+        import limits
+
+        final = None
+        for line in (stdout or "").splitlines():
+            line = line.strip()
+            if not line.startswith("{"):
+                continue
+            try:
+                message = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(message, dict):
+                continue
+            kind = message.get("type")
+            if kind == "rate_limit_event":
+                limits.record_claude(message.get("rate_limit_info"))
+            elif kind == "result":
+                final = message
+        if final is None:
+            return (stdout or "").strip(), False
+        text = final.get("result")
+        text = text.strip() if isinstance(text, str) else ""
+        return text, bool(final.get("is_error")) or final.get("subtype") not in (None, "success")
