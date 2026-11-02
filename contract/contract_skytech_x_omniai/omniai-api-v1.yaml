@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: Skytech OmniAI — Agent Runtime API
-  version: 1.2.1
+  version: 1.3.0
   description: >-
     Contract between the Skytech X backend (client) and Skytech OmniAI, the
     Home Assistant add-on that runs LLM work with several providers
@@ -58,6 +58,10 @@ info:
 
     Changes: 1.2.1 (30.10.2026) — documentation only: file paths of master and
     copy, known provider ids (`gemini_agy`, `gemini_web`).
+
+
+    Changes: 1.3.0 (01.11.2026) — `GET /v1/limits` with
+    `SubscriptionLimits` (same model as agent-host-api-v1 1.2.0).
 
 
     Compatibility: additive changes only within v1; both sides ignore unknown
@@ -124,6 +128,21 @@ paths:
         '422': { $ref: '#/components/responses/Unprocessable' }
         '503': { $ref: '#/components/responses/Unavailable' }
         '504': { $ref: '#/components/responses/Timeout' }
+
+  /v1/limits:
+    get:
+      summary: Subscription quota per provider account; since 1.3.0
+      description: >-
+        Cheap to call (no model call); the backend polls it every few minutes
+        and stores the values. Sources differ per provider and are named in
+        each value (`source`, `retryAtSource`).
+      responses:
+        '200':
+          description: Current quota report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionLimits' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /v1/embeddings:
     post:
@@ -280,6 +299,108 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
 
   schemas:
+    SubscriptionLimits:
+      type: object
+      description: >-
+        Subscription quota of every provider account this instance can use
+        (same model in omniai-api-v1 and agent-host-api-v1, since 01.11.2026).
+        Unknown usage is `null`, never 0. The backend decides staleness from
+        `observedAt` and maps accounts of both runtimes to one subscription
+        itself (Backend D-016); `accountRef` is only unique per instance.
+      required: [measuredAt, accounts]
+      properties:
+        measuredAt:
+          type: string
+          format: date-time
+          description: When this report was assembled.
+        accounts:
+          type: array
+          items: { $ref: '#/components/schemas/LimitAccount' }
+
+    LimitAccount:
+      type: object
+      required: [provider, accountRef, state, windows]
+      properties:
+        provider:
+          type: string
+          description: Provider id as in capabilities (open set).
+          example: claude_sub
+        accountRef:
+          type: string
+          maxLength: 64
+          description: >-
+            Stable, opaque id of the account on this instance; `default` for
+            single-account providers. Never a secret, token or e-mail address.
+          example: default
+        label:
+          type: string
+          nullable: true
+          description: Name the operator gave the account, if any.
+        state:
+          type: string
+          description: >-
+            `ok` usable; `exhausted` quota used up; `restricted` blocked by the
+            provider; `login_required` sign-in missing or expired;
+            `unavailable` no credentials or tool on this instance; `unknown`
+            no reliable observation. Clients treat unknown values as `unknown`.
+          enum: [ok, exhausted, restricted, login_required, unavailable, unknown]
+        retryAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Earliest time the account is expected to work again.
+        retryAtSource:
+          type: string
+          nullable: true
+          enum: [provider, estimated, null]
+          description: >-
+            `provider` reported by the provider; `estimated` a local back-off
+            of this instance, not a confirmed reset.
+        observedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When state and windows were last observed; `null` if never.
+        windows:
+          type: array
+          description: May be empty; missing windows are allowed.
+          items: { $ref: '#/components/schemas/LimitWindow' }
+
+    LimitWindow:
+      type: object
+      required: [id, usedPercent, source, observedAt]
+      properties:
+        id:
+          type: string
+          description: >-
+            Window name as given by the source (open set), e.g. `five_hour`,
+            `seven_day` (Claude) or `primary`, `secondary` (Codex).
+        limitId:
+          type: string
+          nullable: true
+          description: Metered bucket, e.g. `codex`; `null` if the source has none.
+        durationMinutes:
+          type: integer
+          nullable: true
+        usedPercent:
+          type: number
+          nullable: true
+          minimum: 0
+          description: 0–100 (may exceed 100 briefly); `null` = unknown.
+        resetsAt:
+          type: string
+          format: date-time
+          nullable: true
+        source:
+          type: string
+          enum: [measured, observed]
+          description: >-
+            `measured` queried on demand without a model call; `observed` taken
+            from the last run (no new value without a run).
+        observedAt:
+          type: string
+          format: date-time
+
     Error:
       type: object
       required: [error, code]

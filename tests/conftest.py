@@ -35,3 +35,4 @@ def clean_env(monkeypatch, tmp_path):
     monkeypatch.setenv("OMNIAI_GEMINI_AGY_HOME", str(tmp_path / "gemini-home"))
 
     monkeypatch.setenv("OMNIAI_GEMINI_WEB_HOME", str(tmp_path / "gemini-web-home"))
+    monkeypatch.setenv("OMNIAI_LIMITS_DIR", str(tmp_path / "limits"))
