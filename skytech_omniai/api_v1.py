@@ -21,6 +21,7 @@ from jsonschema.exceptions import SchemaError
 
 import embeddings
 import limits
+import model_catalog
 from config_loader import read_addon_version
 from providers.base_provider import NotJson, ProviderTimeout, UnknownModel
 from providers.claude_sub_provider import CLAUDE_MODELS
@@ -154,6 +155,7 @@ def capabilities():
             "available": present[key],
             "models": meta["models"]() if callable(meta["models"]) else meta["models"],
             "defaultModel": meta["default"],
+            "modelCatalog": model_catalog.catalog(key),
             "features": {
                 "tools": key in TOOL_PROVIDERS,
                 "structuredOutput": True,
@@ -191,6 +193,9 @@ def _validate_request(payload) -> tuple[dict | None, str | None]:
     timeout = payload.get("timeoutSeconds", DEFAULT_TIMEOUT_SECONDS)
     provider = payload.get("provider")
     model = payload.get("model")
+    effort = payload.get("effort")
+    if effort is not None and effort not in model_catalog.EFFORTS:
+        return None, "VALIDATION_ERROR"
     if not isinstance(text, str) or not text.strip() or len(text) > MAX_INPUT_LENGTH:
         return None, "VALIDATION_ERROR"
     if instructions is not None and (
@@ -215,6 +220,7 @@ def _validate_request(payload) -> tuple[dict | None, str | None]:
         "timeout": timeout,
         "provider": provider or None,
         "model": model or None,
+        "effort": effort,
     }, None
 
 
@@ -268,11 +274,21 @@ def completions():
 
     prompt = build_prompt(values["instructions"], values["input"], values["schema"])
     try:
-        model_name = provider.effective_model(values["model"])
+        # „-latest“ auflösen und Stufe prüfen (Vertrag 1.4.0, D-036).
+        resolution = model_catalog.resolve(provider_name, values["model"], values["effort"])
+    except model_catalog.UnsupportedEffort as fehler:
+        return _error(422, "UNSUPPORTED_EFFORT", str(fehler))
+    try:
+        model_name = provider.effective_model(resolution.model)
         output = None
         for attempt in (1, 2):
             try:
-                output = provider.execute(prompt, model=values["model"], timeout=values["timeout"])
+                output = provider.execute(
+                    prompt,
+                    model=resolution.model,
+                    timeout=values["timeout"],
+                    effort=resolution.effort,
+                )
             except NotJson:
                 problem = "the answer was not valid JSON"
             else:
@@ -296,10 +312,18 @@ def completions():
         log.exception("Unerwarteter Fehler in /v1/completions")
         return _error(500, "INTERNAL", FEHLER_UNBEKANNT)
 
-    log.info("Antwort für Skytech X geliefert, Anbieter %s, Modell %s", provider_name, model_name)
+    used = provider.last_model or model_name
+    log.info("Antwort für Skytech X geliefert, Anbieter %s, Modell %s", provider_name, used)
     # Nutzungsdaten liefern die Anbieter hier noch nicht; das Feld fehlt dann
     # ganz, statt mit einem Leerwert zu erscheinen.
-    return jsonify({"output": output, "provider": provider_name, "model": model_name})
+    return jsonify(
+        {
+            "output": output,
+            "provider": provider_name,
+            "model": used,
+            "effort": resolution.requested_effort,
+        }
+    )
 
 
 @api_v1.route("/limits", methods=["GET"])
@@ -376,6 +400,8 @@ def _validate_run(payload) -> dict | None:
         return None
     if payload.get("model") is not None and not isinstance(payload["model"], str):
         return None
+    if payload.get("effort") is not None and payload["effort"] not in model_catalog.EFFORTS:
+        return None
     schema = payload.get("outputSchema")
     if schema is not None:
         if not isinstance(schema, dict):
@@ -419,6 +445,7 @@ def _validate_run(payload) -> dict | None:
         "runId": payload["runId"],
         "provider": payload["provider"],
         "model": payload.get("model") or None,
+        "effort": payload.get("effort"),
         "instructions": payload.get("instructions"),
         "context": payload.get("context"),
         "prompt": payload["prompt"],
@@ -443,7 +470,15 @@ def start_run():
     if values["tools"]["mcpServers"] and values["provider"] not in TOOL_PROVIDERS:
         return _error(422, "TOOLS_NOT_SUPPORTED", FEHLER_KEINE_WERKZEUGE)
     try:
+        # „-latest“ wird hier für diesen Lauf aufgelöst; der Lauf meldet das Modell.
+        resolution = model_catalog.resolve(values["provider"], values["model"], values["effort"])
+        values["requestedModel"] = values["model"]
+        values["model"] = resolution.model
+        values["effort"] = resolution.effort
+        values["requestedEffort"] = resolution.requested_effort
         ProviderFactory.create(values["provider"]).effective_model(values["model"])
+    except model_catalog.UnsupportedEffort as fehler:
+        return _error(422, "UNSUPPORTED_EFFORT", str(fehler))
     except UnknownModel as fehler:
         return _error(422, "UNKNOWN_MODEL", str(fehler))
     except ValueError as fehler:

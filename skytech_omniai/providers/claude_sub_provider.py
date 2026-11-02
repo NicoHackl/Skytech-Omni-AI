@@ -169,6 +169,7 @@ class ClaudeSubProvider(BaseProvider):
         model: str | None = None,
         timeout: int | None = None,
         attachments: list[Attachment] | None = None,
+        effort: str | None = None,
     ) -> dict:
         self.reject_attachments(attachments)
         env = self._build_env()
@@ -192,11 +193,14 @@ class ClaudeSubProvider(BaseProvider):
             # Die CLI nimmt sowohl Kurzaliasse (sonnet/opus/haiku) als auch
             # vollständige Modell-IDs entgegen.
             command += ["--model", chosen_model]
+        if effort:
+            command += ["--effort", effort]
         command += self._tool_access_args()
 
         log.info(
-            "Anfrage an Claude, Modell: %s, Werkzeuge: %s",
+            "Anfrage an Claude, Modell: %s, Stufe: %s, Werkzeuge: %s",
             chosen_model or "Vorgabe der CLI",
+            effort or "Vorgabe",
             resolve_tool_access(),
         )
 
@@ -221,7 +225,8 @@ class ClaudeSubProvider(BaseProvider):
 
         # Vor der Prüfung des Rückgabecodes: auch eine wegen des Limits
         # abgelehnte Anfrage meldet den Stand, und genau der ist dann gefragt.
-        answer, failed = self._read_stream(result.stdout)
+        answer, failed, used_model = self._read_stream_with_model(result.stdout)
+        self.last_model = used_model or chosen_model or None
 
         if result.returncode != 0:
             # Die Ausgabe der CLI kann Pfade und Stacktraces enthalten und geht
@@ -239,6 +244,27 @@ class ClaudeSubProvider(BaseProvider):
             raise RuntimeError(self._cli_fehler(answer))
 
         return self.parse_json(answer)
+
+    @classmethod
+    def _read_stream_with_model(cls, stdout: str) -> tuple[str, bool, str | None]:
+        """Wie ``_read_stream``, dazu das Modell aus dem Init-Ereignis (Vertrag 1.4.0)."""
+        import model_catalog
+
+        used = None
+        for line in (stdout or "").splitlines():
+            line = line.strip()
+            if '"init"' not in line:
+                continue
+            try:
+                message = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(message, dict) and message.get("subtype") == "init":
+                used = message.get("model") if isinstance(message.get("model"), str) else None
+                model_catalog.remember_claude_model(used)
+                break
+        answer, failed = cls._read_stream(stdout)
+        return answer, failed, used
 
     @staticmethod
     def _read_stream(stdout: str) -> tuple[str, bool]:

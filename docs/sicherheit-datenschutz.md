@@ -6,6 +6,11 @@
   [`AGENTS.md`](../AGENTS.md), Regel 6. Handhabung: [konfiguration.md](konfiguration.md).
 - Der Gemini-Schlüssel geht als Kopfzeile `x-goog-api-key` raus und **nicht** als Adressparameter:
   Adressen landen in Zugriffsprotokollen und bei Zwischenstationen, Kopfzeilen nicht.
+- Die zusätzliche Claude-Verbrauchsabfrage sendet das vorhandene Abo-Token ausschließlich
+  als Authorization-Kopf an die feste Anthropic-Adresse, ohne Prompt oder Modellauftrag.
+  Umleitungen werden abgelehnt. Cache und Abfragepausen enthalten normalisierte Werte und
+  einen Token-Fingerabdruck, keine Zugangsdaten oder Antwortrohtexte. Keine Token-Erneuerung
+  und kein Zugriff auf den Schlüsselbund; Details: [D-037](adr/D-037-claude-verbrauchsabfrage.md).
 - Das Claude-Token wird als Umgebungsvariable an den Unterprozess durchgereicht, nie als Argument
   auf der Befehlszeile — Argumente sind in der Prozessliste sichtbar. Aus demselben Grund geht der
   Prompt an die Codex-CLI über die Standardeingabe.
@@ -197,7 +202,7 @@ Aufgabe nötig ist.
 
 | Dienst | Welche Daten gehen dorthin | Warum nötig |
 |---|---|---|
-| Anthropic | Prompt, gewähltes Modell, Abo-Token bzw. Schlüssel | Der Prompt wird dort beantwortet |
+| Anthropic | Prompt, gewähltes Modell, Abo-Token bzw. Schlüssel; bei separater Verbrauchsabfrage nur Abo-Token und Verbindungsmetadaten | Modellantwort beziehungsweise Kontingentanzeige ohne Modellauftrag (D-037) |
 | OpenAI | Prompt, gewähltes Modell, Anmeldung des ChatGPT-Abos bzw. Schlüssel | Dasselbe für ChatGPT. Kein Verlauf: jeder Lauf ist eigenständig (`--ephemeral`) |
 | Google | Prompt, gewähltes Modell, Schlüssel | Dasselbe für Gemini. `store: false` unterbindet das Speichern des Verlaufs |
 | Google (Abo) | Prompt, gewähltes Modell, Anmeldung des Google-Kontos, abgerufene Webseiten | Dasselbe für Gemini über Google AI Pro. **Anders als beim Schlüssel** gelten die Bedingungen für private Konten: nach den Zusatzbedingungen der Antigravity-Dienste werden Eingaben erfasst und können zur Verbesserung genutzt werden, Löschung nur auf Antrag ([Recherche](erweiterungen/gemini-provider/recherche.md)). Smart-Home-Daten im Prompt verlassen das Haus unter diesen Bedingungen |

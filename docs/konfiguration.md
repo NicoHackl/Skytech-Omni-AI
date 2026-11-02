@@ -292,3 +292,15 @@ Die Handprüfung im echten Konto erfolgt nach Installation. Es gibt keine Zusage
 wie lange eine Anmeldung auf der Serveradresse gültig bleibt. Google kann das Konto
 sperren. Die Werkzeugstufe wirkt hier nicht; Verbindungen zu anderen Google-Diensten
 im separaten Konto deaktivieren. Siehe [D-030](adr/D-030-gemini-web-inoffiziell.md).
+
+## Claude-Kontingente ohne Modellanfrage
+
+Die Karte „Kontingente“ und Skytech X verwenden zusätzlich die direkte Verbrauchsabfrage
+mit dem vorhandenen `CLAUDE_CODE_OAUTH_TOKEN`. Es gibt keine neue Option und keinen
+zusätzlichen Zugang. Ein für Modellanfragen gültiges `setup-token` garantiert die nötigen
+Leserechte nicht. Bei Ablehnung arbeitet der Claude-Anbieter weiter wie bisher; für die
+Anzeige bleiben gespeicherte Messungen und Meldungen aus Anfragen verfügbar.
+
+Abrufabstände, Ablage, Fehlersuche und die nach Installation auszuführende Handprüfung:
+[D-037](adr/D-037-claude-verbrauchsabfrage.md). Häufiges Neuladen und Neustarts verkürzen
+die Abfragepause nicht. Zugangsdaten für eine Diagnose niemals weitergeben.

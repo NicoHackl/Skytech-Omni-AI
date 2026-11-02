@@ -31,11 +31,11 @@ Umsetzungsstand (Einzelheiten im Vertrag):
 | Endpunkt | Stand |
 |---|---|
 | Token-Pflicht (`api_token`, Fehler `401 UNAUTHORIZED`) | umgesetzt |
-| `GET /v1/health`, `GET /v1/capabilities` | umgesetzt; `tools` und `usage` nur bei `claude_sub` |
-| `POST /v1/completions` | umgesetzt: Schema-Prüfung mit einem zweiten Versuch, Zeitlimit je Anfrage, Fehlercodes; Nutzungsdaten fehlen noch |
+| `GET /v1/health`, `GET /v1/capabilities` | umgesetzt; `tools` und `usage` nur bei `claude_sub`; `modelCatalog` je Anbieter mit Denkstufen und „-latest“-Namen (1.4.0, D-036) |
+| `POST /v1/completions` | umgesetzt: Schema-Prüfung mit einem zweiten Versuch, Zeitlimit je Anfrage, Fehlercodes; `effort` und „-latest“ (1.4.0, D-036), Antwort nennt tatsächliches Modell und Stufe; Nutzungsdaten fehlen noch |
 | `POST /v1/runs`, `GET /v1/runs/{id}`, `…/events` (SSE), `…/cancel` | umgesetzt (D-021): `claude_sub` mit MCP-Werkzeugen des Backends; andere Anbieter nur ohne Werkzeuge als einzelne Anfrage. Höchstens 2 Läufe gleichzeitig, höchstens 120 Minuten, Übergabe am Ende jedes Laufs |
 
-| `GET /v1/limits` | umgesetzt (D-032): Kontingente je Anbieter und Konto mit Herkunft der Werte; Claude nach jeder Anfrage an `claude_sub` (`/ask`, `/v1/completions`, `/v1/runs`; D-034), Codex auf Abruf, Gemini Web/AGY nur Zustand und geschätzte Wartezeit, Gemini mit Schlüssel ohne Werte |
+| `GET /v1/limits` | umgesetzt (D-032): Kontingente je Anbieter und Konto mit Herkunft der Werte; Claude direkt auf Abruf mit Cache und Rückfall auf Anfragebeobachtungen ([D-037](adr/D-037-claude-verbrauchsabfrage.md)), Codex auf Abruf, Gemini Web/AGY nur Zustand und geschätzte Wartezeit, Gemini mit Schlüssel ohne Werte |
 | `POST /v1/embeddings` | umgesetzt (D-023): Vektoren für die Suche nach Bedeutung im Wissen von Skytech X, ausschließlich `gemini-embedding-001` mit dem Gemini-Schlüssel, Vorgabe 768 Dimensionen, höchstens 100 Texte je Anfrage |
 
 Läufe liegen als Dateien unter `/data/runs` (Zustand und Ereignisse, ohne Lauf-Token) und werden
@@ -181,6 +181,14 @@ Zugangsdaten und keine E-Mail-Adressen, nur die Namen, die der Betreiber den Kon
 }
 ```
 
+- Claude wird zusätzlich ohne Modellaufruf abgefragt: höchstens alle fünf Minuten,
+  bei Fehlern mit längerer Pause. Die Pause und der letzte Messstand überstehen Neustarts.
+  Bei Ablehnung bleiben gespeicherte Messwerte beziehungsweise CLI-Beobachtungen erhalten;
+  fehlende Leserechte der Verbrauchsabfrage ändern nicht den Modellzugang.
+  `observedAt` bleibt der ursprüngliche Datenzeitpunkt, `measuredAt` der Zeitpunkt der
+  Berichtserstellung. `source: measured` beziehungsweise `observed` unterscheidet die Quellen
+  je Fenster. Cache-Pausen sind keine Kontingenterschöpfung und erscheinen nicht in `retryAt`.
+  Vollständiger Ablauf und Grenzen: [D-037](adr/D-037-claude-verbrauchsabfrage.md).
 - Jeder Abruf kann bei ChatGPT kurz `codex app-server` starten (höchstens einmal je Minute,
   danach zwischengespeichert). Die Oberfläche lädt deshalb nur beim Öffnen und auf Knopfdruck.
 - Fehler: `500` mit `{"error": "Die Kontingente sind gerade nicht abrufbar. …"}`, Ursache im Log.

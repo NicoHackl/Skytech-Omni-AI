@@ -262,6 +262,14 @@ class CodexSubProvider(BaseProvider):
         chosen = (model or "").strip()
         if not chosen or chosen == AUTO_MODEL:
             chosen = os.environ.get("OMNIAI_MODEL", "").strip()
+            # Ein add-on-weites Standardmodell eines anderen Anbieters (etwa
+            # „haiku“) gilt hier nicht — sonst scheitert jeder Codex-Aufruf ohne
+            # Modell (B0 in Skytech X, D-036).
+            if chosen and chosen not in CODEX_MODELS and not chosen.startswith("gpt-"):
+                log.warning(
+                    "Das Standardmodell gehört zu einem anderen Anbieter und wird übergangen"
+                )
+                chosen = ""
         if not chosen or chosen == AUTO_MODEL:
             return ""
 
@@ -298,6 +306,7 @@ class CodexSubProvider(BaseProvider):
         model: str | None = None,
         timeout: int | None = None,
         attachments: list[Attachment] | None = None,
+        effort: str | None = None,
     ) -> dict:
         self.reject_attachments(attachments)
         chosen_model = self._resolve_model(model)
@@ -325,13 +334,16 @@ class CodexSubProvider(BaseProvider):
         ]
         if chosen_model:
             command += ["--model", chosen_model]
+        if effort:
+            command += ["-c", f"model_reasoning_effort={effort}"]
         # „-“ heißt: der Prompt kommt über die Standardeingabe. Als Argument
         # stünde er in der Prozessliste.
         command.append("-")
 
         log.info(
-            "Anfrage an ChatGPT, Modell: %s, Werkzeuge: %s",
+            "Anfrage an ChatGPT, Modell: %s, Stufe: %s, Werkzeuge: %s",
             chosen_model or "Vorgabe der CLI",
+            effort or "Vorgabe",
             resolve_tool_access(),
         )
 
@@ -362,4 +374,5 @@ class CodexSubProvider(BaseProvider):
             )
             raise RuntimeError(self._cli_fehler(ausgabe))
 
+        self.last_model = chosen_model or None
         return self.parse_json(result.stdout.strip())

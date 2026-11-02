@@ -348,8 +348,9 @@ def test_task_without_context_is_the_prompt():
 class FakeProvider:
     answers: ClassVar[list] = []
     prompts: ClassVar[list] = []
+    last_model = None
 
-    def execute(self, prompt, model=None, timeout=None):
+    def execute(self, prompt, model=None, timeout=None, effort=None):
         FakeProvider.prompts.append(prompt)
         answer = FakeProvider.answers.pop(0)
         if isinstance(answer, Exception):
@@ -568,3 +569,24 @@ def test_claude_rate_limit_event_is_stored_for_the_limits(tmp_path, fake_cli):
     entry = limits.claude_entry(True)
     assert entry["state"] == "ok"
     assert entry["windows"][0]["usedPercent"] == 25.0
+
+
+# --- Modell und Denkaufwand (1.4.0) -------------------------------------------
+
+
+def test_claude_command_passes_effort():
+    command = ClaudeRunner(claude_request(effort="max")).command(None)
+    assert command[command.index("--effort") + 1] == "max"
+    assert "--effort" not in ClaudeRunner(claude_request()).command(None)
+
+
+def test_run_state_reports_model_and_effort(tmp_path):
+    manager = RunManager(str(tmp_path / "runs"), runner_factory=lambda req: None)
+    from runs import Run
+
+    run = Run("run-9", {"model": "opus", "effort": "high", "requestedEffort": "high"}, "x")
+    assert run.state()["model"] == "opus"
+    assert run.state()["effort"] == "high"
+    manager.report_model(run, "claude-opus-5-5")
+    assert run.state()["model"] == "claude-opus-5-5"
+    assert run.events[-1]["data"] == {"status": "QUEUED", "model": "claude-opus-5-5"}
