@@ -108,6 +108,10 @@ class Attachment:
 class BaseProvider(ABC):
     """Schnittstelle, die jeder Provider (Claude, Gemini, …) erfüllen muss."""
 
+    # Modell, das beim letzten ``execute`` tatsächlich lief (soweit bekannt) —
+    # für Skytech X, wenn ein „-latest“-Name aufgelöst wurde (Vertrag 1.4.0).
+    last_model: str | None = None
+
     @abstractmethod
     def execute(
         self,
@@ -115,6 +119,7 @@ class BaseProvider(ABC):
         model: str | None = None,
         timeout: int | None = None,
         attachments: list[Attachment] | None = None,
+        effort: str | None = None,
     ) -> dict:
         """Führt den Prompt gegen den Provider aus und gibt geparstes JSON zurück.
 
@@ -122,7 +127,8 @@ class BaseProvider(ABC):
         Ohne Angabe greift der Standard des Providers oder das add-on-weite
         Standardmodell aus der Umgebungsvariablen ``OMNIAI_MODEL``.
         ``timeout`` begrenzt die Dauer in Sekunden; ohne Angabe gilt die
-        Vorgabe des Providers.
+        Vorgabe des Providers. ``effort`` ist die bereits geprüfte Denkstufe
+        (``model_catalog.resolve``); ohne Angabe gilt die Vorgabe des Modells.
 
         :raises ProviderTimeout: bei Zeitüberschreitung.
         :raises UnknownModel: wenn das Modell nicht zum Provider gehört.

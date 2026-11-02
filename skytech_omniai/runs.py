@@ -197,6 +197,9 @@ class Run:
         self.handover = None
         self.usage = None
         self.cost_usd = None
+        # Tatsächlich genutztes Modell (Vertrag 1.4.0); bis bekannt das aufgelöste.
+        self.model = request.get("model")
+        self.effort = request.get("requestedEffort") or request.get("effort")
         self.started_at = None
         self.finished_at = None
         self.events: list[dict] = []
@@ -213,6 +216,8 @@ class Run:
             "handover": self.handover,
             "usage": self.usage,
             "costUsd": self.cost_usd,
+            "model": self.model,
+            "effort": self.effort,
             "startedAt": _iso(self.started_at),
             "finishedAt": _iso(self.finished_at),
         }
@@ -305,6 +310,17 @@ class RunManager:
             run.status = "RUNNING"
             run.started_at = _now()
         self.emit(run, "status", {"status": "RUNNING"})
+
+    def report_model(self, run: Run, model: str | None) -> None:
+        """Meldet das tatsächlich genutzte Modell, sobald es bekannt ist (Vertrag 1.4.0)."""
+        if not model:
+            return
+        with self.lock:
+            if run.terminal or run.model == model:
+                return
+            run.model = model
+            status = run.status
+        self.emit(run, "status", {"status": status, "model": model})
 
     def finish(
         self, run: Run, status: str, summary=None, error=None, output=None, handover=None
@@ -523,6 +539,8 @@ class ClaudeRunner:
         model = (req.get("model") or os.environ.get("OMNIAI_MODEL", "")).strip()
         if model and model != "auto":
             command += ["--model", model]
+        if req.get("effort"):
+            command += ["--effort", req["effort"]]
         # Eingebaute Werkzeuge der CLI (Shell, Dateien) gibt es in Läufen nie:
         # unter /data liegt der Zugang des Abos. Websuche nur, wenn das Add-on
         # sie generell erlaubt.
@@ -618,6 +636,11 @@ class ClaudeRunner:
                 continue
             kind = message.get("type")
             if kind == "system" and message.get("subtype") == "init":
+                import model_catalog
+
+                used = message.get("model") if isinstance(message.get("model"), str) else None
+                model_catalog.remember_claude_model(used)
+                manager.report_model(run, used)
                 for server in message.get("mcp_servers") or []:
                     if server.get("status") != "connected":
                         log.warning(
@@ -763,7 +786,10 @@ class SingleShotRunner:
         )
         manager.set_running(run)
         try:
-            answer = provider.execute(prompt, model=req.get("model"), timeout=minutes * 60)
+            answer = provider.execute(
+                prompt, model=req.get("model"), timeout=minutes * 60, effort=req.get("effort")
+            )
+            manager.report_model(run, provider.last_model)
         except ProviderTimeout:
             return manager.finish(run, "FAILED", error=FEHLER_ZEIT)
         except (NotJson, UnknownModel):

@@ -1026,6 +1026,7 @@ class GeminiAgyProvider(BaseProvider):
         model: str | None = None,
         timeout: int | None = None,
         attachments: list[Attachment] | None = None,
+        effort: str | None = None,
     ) -> dict:
         self.reject_attachments(attachments)
         chosen_model = self._resolve_model(model)

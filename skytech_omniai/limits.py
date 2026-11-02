@@ -200,8 +200,13 @@ def claude_entry(available: bool, now: float | None = None) -> dict:
 # --- Codex --------------------------------------------------------------------
 
 
-def _codex_rpc(env: dict, timeout: float) -> dict:
-    """Fragt den App-Server der Codex-CLI einmal ab; liefert ``result`` oder ``error``."""
+def _codex_rpc(
+    env: dict, timeout: float, method: str = "account/rateLimits/read", params: dict | None = None
+) -> dict:
+    """Fragt den App-Server der Codex-CLI einmal ab; liefert ``result`` oder ``error``.
+
+    Standard ist die Limitabfrage; ``model/list`` liefert den Modellkatalog (D-036).
+    """
     process = subprocess.Popen(
         ["codex", "app-server"],
         stdin=subprocess.PIPE,
@@ -250,7 +255,7 @@ def _codex_rpc(env: dict, timeout: float) -> dict:
                 if "error" in message:
                     return {"error": message["error"]}
                 send({"method": "initialized"})
-                send({"id": 2, "method": "account/rateLimits/read"})
+                send({"id": 2, "method": method, "params": params or {}})
             elif message.get("id") == 2:
                 return message
         raise TimeoutError("App-Server hat nicht rechtzeitig geantwortet")

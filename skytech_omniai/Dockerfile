@@ -84,6 +84,7 @@ COPY api_v1.py ./api_v1.py
 COPY runs.py ./runs.py
 COPY embeddings.py ./embeddings.py
 COPY limits.py ./limits.py
+COPY model_catalog.py ./model_catalog.py
 COPY config_loader.py ./config_loader.py
 COPY settings.py ./settings.py
 COPY supervisor_client.py ./supervisor_client.py

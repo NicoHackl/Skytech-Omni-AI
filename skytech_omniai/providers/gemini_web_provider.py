@@ -198,6 +198,7 @@ class GeminiWebProvider(BaseProvider):
         model: str | None = None,
         timeout: int | None = None,
         attachments: list[Attachment] | None = None,
+        effort: str | None = None,
     ) -> dict:
         with _operation(float(timeout or TIMEOUT_SECONDS)) as remaining:
             result = _with_accounts(

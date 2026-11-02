@@ -335,3 +335,24 @@ def test_an_incomplete_access_is_reported_without_its_value(codex_home, monkeypa
     text = str(fehler.value)
     assert "codex_auth_json" in text
     assert "halbe Datei" not in text
+
+
+def test_default_model_of_another_provider_is_skipped(provider, monkeypatch):
+    """B0 in Skytech X: OMNIAI_MODEL=haiku darf Codex ohne Modell nicht lahmlegen."""
+    monkeypatch.setenv("OMNIAI_MODEL", "haiku")
+
+    assert provider._resolve_model(None) == ""
+
+
+def test_effort_goes_to_the_cli_as_config(provider, monkeypatch):
+    aufrufe = []
+
+    def fake_run(command, **kwargs):
+        aufrufe.append(command)
+        return _result(stdout="{}")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    provider.execute("Test", model="gpt-5.6-luna", effort="high")
+
+    assert aufrufe[0][aufrufe[0].index("-c") + 1] == "model_reasoning_effort=high"
+    assert provider.last_model == "gpt-5.6-luna"

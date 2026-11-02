@@ -126,6 +126,12 @@ class GeminiProvider(BaseProvider):
         chosen = (model or "").strip()
         if not chosen or chosen == AUTO_MODEL:
             chosen = os.environ.get("OMNIAI_MODEL", "").strip()
+            # Standardmodell eines anderen Anbieters gilt hier nicht (D-036).
+            if chosen and chosen not in GEMINI_MODELS and not chosen.startswith("gemini-"):
+                log.warning(
+                    "Das Standardmodell gehört zu einem anderen Anbieter und wird übergangen"
+                )
+                chosen = ""
         if not chosen or chosen == AUTO_MODEL:
             chosen = DEFAULT_MODEL
 
@@ -216,6 +222,7 @@ class GeminiProvider(BaseProvider):
         model: str | None = None,
         timeout: int | None = None,
         attachments: list[Attachment] | None = None,
+        effort: str | None = None,
     ) -> dict:
         self.reject_attachments(attachments)
         api_key = self._build_api_key()
@@ -234,6 +241,13 @@ class GeminiProvider(BaseProvider):
             # haben.
             "store": False,
         }
+        # Denkstufe (Vertrag 1.4.0): thinking_level, bei 2.5 ein Budget.
+        import model_catalog
+
+        thinking = model_catalog.gemini_thinking(chosen_model, effort)
+        if thinking:
+            body["generation_config"] = thinking
+        self.last_model = chosen_model
 
         request = urllib.request.Request(
             API_URL,
