@@ -29,7 +29,7 @@ function emptyNote(account: LimitAccount): string {
       return 'Bitte in den Einstellungen neu anmelden.'
     case 'unknown':
       if (account.provider === 'claude_sub') {
-        return 'Noch kein Stand. Claude meldet das Kontingent erst bei einem Auftrag von Skytech X.'
+        return 'Noch kein Stand. Claude meldet das Kontingent mit der nächsten Anfrage.'
       }
       return 'Das Kontingent ließ sich gerade nicht abfragen. Bitte später aktualisieren.'
     case 'ok':

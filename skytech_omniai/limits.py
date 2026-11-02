@@ -3,9 +3,10 @@
 Jeder Wert nennt seine Herkunft, damit Skytech X gemessene Prozentwerte,
 beobachtete Erschöpfung und geschätzte Wartezeiten auseinanderhalten kann:
 
-* **Claude** — die CLI meldet in jedem Lauf ein ``rate_limit_event`` mit
-  Fünfstunden- und Wochenfenster. Der letzte Stand wird gespeichert
-  (``source: observed``). Ohne Lauf gibt es keinen neuen Wert.
+* **Claude** — die CLI meldet bei jeder Anfrage (Lauf, Einmal-Antwort,
+  ``/ask``) ein ``rate_limit_event`` mit Fünfstunden- und Wochenfenster
+  (D-034). Der letzte Stand wird gespeichert (``source: observed``). Ohne
+  Anfrage gibt es keinen neuen Wert.
 * **Codex** — der App-Server der CLI beantwortet ``account/rateLimits/read``
   ohne Modellaufruf (``source: measured``). Ergebnis kurz zwischengespeichert.
 * **Gemini (Web, AGY)** — nur der Zustand der Konten (erschöpft, eingeschränkt,

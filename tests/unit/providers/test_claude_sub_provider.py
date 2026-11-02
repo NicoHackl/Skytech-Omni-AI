@@ -1,10 +1,12 @@
 """Tests für den Claude-Provider. Die CLI selbst wird dabei nie aufgerufen."""
 
+import json
 import subprocess
 from types import SimpleNamespace
 
 import pytest
 
+import limits
 from providers import claude_sub_provider
 from providers.base_provider import DEFAULT_TOOL_ACCESS, TOOL_ACCESS_WEB, resolve_tool_access
 from providers.claude_sub_provider import WEB_TOOLS, ClaudeSubProvider
@@ -27,6 +29,86 @@ def test_returns_the_parsed_answer(provider, monkeypatch):
     )
 
     assert provider.execute("Test") == {"status": "ok"}
+
+
+def _stream(*events):
+    return "\n".join(json.dumps(event) for event in events) + "\n"
+
+
+RATE_LIMIT_EVENT = {
+    "type": "rate_limit_event",
+    "rate_limit_info": {
+        "status": "allowed",
+        "resetsAt": 1_900_000_000,
+        "unifiedWindows": {
+            "five_hour": {"utilization": 0.42, "resetsAt": 1_900_000_000},
+            "seven_day": {"utilization": 0.1, "resetsAt": 1_900_500_000},
+        },
+    },
+}
+
+
+def test_reads_the_answer_from_the_event_stream(provider, monkeypatch):
+    """Die Antwort steht im result-Ereignis, der Limitstand wird nebenbei gespeichert."""
+    aufrufe = []
+
+    def fake_run(command, **kwargs):
+        aufrufe.append(command)
+        return _result(
+            stdout=_stream(
+                {"type": "system", "subtype": "init"},
+                RATE_LIMIT_EVENT,
+                {"type": "result", "subtype": "success", "is_error": False, "result": '{"a": 1}'},
+            )
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert provider.execute("Test") == {"a": 1}
+    assert aufrufe[0][aufrufe[0].index("--output-format") + 1] == "stream-json"
+    eintrag = limits.claude_entry(True)
+    assert eintrag["state"] == "ok"
+    assert [(w["id"], w["usedPercent"]) for w in eintrag["windows"]] == [
+        ("five_hour", 42.0),
+        ("seven_day", 10.0),
+    ]
+
+
+def test_a_rejected_request_still_records_the_limit(provider, monkeypatch):
+    """Lehnt Claude wegen des Limits ab, ist genau dieser Stand gefragt."""
+    abgelehnt = {
+        "type": "rate_limit_event",
+        "rate_limit_info": {**RATE_LIMIT_EVENT["rate_limit_info"], "status": "rejected"},
+    }
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: _result(
+            returncode=1,
+            stdout=_stream(abgelehnt, {"type": "result", "is_error": True, "result": "limit"}),
+        ),
+    )
+
+    with pytest.raises(RuntimeError):
+        provider.execute("Test")
+
+    assert limits.claude_entry(True, now=1_800_000_000)["state"] == "exhausted"
+
+
+def test_an_error_result_is_not_taken_as_answer(provider, monkeypatch):
+    """Meldet das result-Ereignis einen Fehler, gibt es eine Meldung statt einer Antwort."""
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: _result(
+            stdout=_stream({"type": "result", "subtype": "error_max_turns", "is_error": True})
+        ),
+    )
+
+    with pytest.raises(RuntimeError) as fehler:
+        provider.execute("Test")
+
+    assert fehler.value.args[0] == claude_sub_provider.FEHLER_CLI_ABGEBROCHEN
 
 
 def test_passes_the_requested_model(provider, monkeypatch):
