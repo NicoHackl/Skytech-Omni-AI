@@ -54,7 +54,12 @@ function WindowRow({ window, extraBucket }: { window: LimitWindow; extraBucket: 
       <div className="limit-window-head">
         <span>{label}</span>
         <span className="muted">
-          {used === null ? 'Verbrauch unbekannt' : `${formatNumber(used)} % verbraucht`}
+          {used !== null
+            ? `${formatNumber(used)} % verbraucht`
+            : window.source === 'observed' && window.resetsAt
+              ? // Claude nennt einen Prozentwert erst ab seiner Warnschwelle (D-035).
+                'Unter der Warnschwelle'
+              : 'Verbrauch unbekannt'}
         </span>
       </div>
       {used === null ? null : (

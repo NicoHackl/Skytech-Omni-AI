@@ -4,9 +4,9 @@ Jeder Wert nennt seine Herkunft, damit Skytech X gemessene Prozentwerte,
 beobachtete Erschöpfung und geschätzte Wartezeiten auseinanderhalten kann:
 
 * **Claude** — die CLI meldet bei jeder Anfrage (Lauf, Einmal-Antwort,
-  ``/ask``) ein ``rate_limit_event`` mit Fünfstunden- und Wochenfenster
-  (D-034). Der letzte Stand wird gespeichert (``source: observed``). Ohne
-  Anfrage gibt es keinen neuen Wert.
+  ``/ask``) ein ``rate_limit_event`` für das engste Fenster mit Rücksetzzeit;
+  einen Prozentwert nur ab ihrer Warnschwelle (D-034, D-035). Der Stand wird
+  gespeichert (``source: observed``). Ohne Anfrage gibt es keinen neuen Wert.
 * **Codex** — der App-Server der CLI beantwortet ``account/rateLimits/read``
   ohne Modellaufruf (``source: measured``). Ergebnis kurz zwischengespeichert.
 * **Gemini (Web, AGY)** — nur der Zustand der Konten (erschöpft, eingeschränkt,
@@ -92,59 +92,97 @@ def _account(
 # --- Claude -------------------------------------------------------------------
 
 
+def _read_claude_record() -> dict | None:
+    try:
+        record = json.loads((limits_dir() / CLAUDE_FILE_NAME).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError):
+        log.warning("Gespeicherter Limitstand von Claude unlesbar")
+        return None
+    return record if isinstance(record, dict) else None
+
+
 def record_claude(info: dict | None, now: float | None = None) -> None:
-    """Speichert den Stand aus einem ``rate_limit_event`` der Claude-CLI."""
+    """Übernimmt ein ``rate_limit_event`` der Claude-CLI in den gespeicherten Stand.
+
+    Am 02.11.2026 mit der CLI 2.1.234 belegtes Format: je Anfrage **ein**
+    Ereignis für das Fenster, das gerade am engsten ist::
+
+        {"status": "allowed" | "allowed_warning" | "rejected",
+         "resetsAt": <Unix-Sekunden>, "rateLimitType": "five_hour" | "seven_day" | …,
+         "utilization": <0 bis 1, nur bei allowed_warning>, …}
+
+    Einen Prozentwert gibt es also nur ab der Warnschwelle der CLI, bei
+    ``rejected`` ist das Fenster voll. Sonst bleibt der Verbrauch unbekannt
+    (``null``, nie 0). Fenster aus früheren Ereignissen bleiben stehen, bis
+    sie zurückgesetzt sind.
+    """
     if not isinstance(info, dict):
         return
     now = time.time() if now is None else now
-    windows = []
-    for name, window in (info.get("unifiedWindows") or {}).items():
-        if not isinstance(window, dict):
-            continue
-        utilization = _number(window.get("utilization"))
-        windows.append(
-            {
-                "id": str(name)[:40],
+    status = info.get("status")
+    resets_at = _number(info.get("resetsAt"))
+    with _CLAUDE_LOCK:
+        previous = _read_claude_record() or {}
+        windows = {
+            w["id"]: w
+            for w in previous.get("windows", [])
+            if isinstance(w, dict) and isinstance(w.get("id"), str)
+        }
+        name = info.get("rateLimitType")
+        if isinstance(name, str) and name:
+            utilization = _number(info.get("utilization"))
+            if utilization is not None:
+                used = round(utilization * 100, 1)
+            elif status == "rejected":
+                used = 100.0
+            else:
+                used = None
+            windows[name[:40]] = {
+                "id": name[:40],
                 "limitId": None,
                 "durationMinutes": CLAUDE_WINDOW_MINUTES.get(name),
-                "usedPercent": None if utilization is None else round(utilization * 100, 1),
-                "resetsAt": iso(_number(window.get("resetsAt"))),
+                "usedPercent": used,
+                "resetsAt": iso(resets_at),
+                "resetsAtEpoch": resets_at,
                 "source": "observed",
                 "observedAt": iso(now),
             }
-        )
-    record = {
-        "observedAt": now,
-        "rejected": info.get("status") == "rejected",
-        "resetsAt": _number(info.get("resetsAt")),
-        "windows": windows,
-    }
-    try:
-        with _CLAUDE_LOCK:
+        record = {
+            "observedAt": now,
+            "rejected": status == "rejected",
+            "resetsAt": resets_at,
+            "windows": list(windows.values()),
+        }
+        try:
             write_json(limits_dir() / CLAUDE_FILE_NAME, record)
-    except OSError as error:
-        log.warning("Limitstand von Claude nicht gespeichert: %s", error)
+        except OSError as error:
+            log.warning("Limitstand von Claude nicht gespeichert: %s", error)
+
+
+def _current_window(window: dict, now: float) -> dict:
+    """Fenster für die Antwort; nach der Rücksetzzeit ist der alte Verbrauch überholt."""
+    shown = {key: value for key, value in window.items() if key != "resetsAtEpoch"}
+    reset = _number(window.get("resetsAtEpoch"))
+    if reset and reset <= now:
+        shown.update(usedPercent=None, resetsAt=None)
+    return shown
 
 
 def claude_entry(available: bool, now: float | None = None) -> dict:
     now = time.time() if now is None else now
     if not available:
         return _account("claude_sub", "unavailable")
-    try:
-        record = json.loads((limits_dir() / CLAUDE_FILE_NAME).read_text(encoding="utf-8"))
-        if not isinstance(record, dict):
-            raise ValueError
-    except FileNotFoundError:
-        return _account("claude_sub", "unknown")
-    except (OSError, ValueError):
-        log.warning("Gespeicherter Limitstand von Claude unlesbar")
+    record = _read_claude_record()
+    if record is None:
         return _account("claude_sub", "unknown")
     resets_at = _number(record.get("resetsAt"))
     state = "ok"
     retry_at = None
     if record.get("rejected"):
         # Nach der Rücksetzzeit ist der alte Ablehnungsgrund überholt, ein
-        # neuer Wert kommt aber erst mit dem nächsten Lauf.
+        # neuer Wert kommt aber erst mit der nächsten Anfrage.
         if resets_at and resets_at > now:
             state, retry_at = "exhausted", resets_at
         else:
@@ -152,7 +190,7 @@ def claude_entry(available: bool, now: float | None = None) -> dict:
     return _account(
         "claude_sub",
         state,
-        windows=[w for w in record.get("windows", []) if isinstance(w, dict)],
+        windows=[_current_window(w, now) for w in record.get("windows", []) if isinstance(w, dict)],
         retry_at=retry_at,
         retry_source="provider",
         observed_at=_number(record.get("observedAt")),

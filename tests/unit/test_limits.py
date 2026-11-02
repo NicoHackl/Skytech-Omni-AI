@@ -47,36 +47,82 @@ def test_claude_without_credentials_is_unavailable():
     assert limits.claude_entry(False, NOW)["state"] == "unavailable"
 
 
-def test_claude_event_becomes_observed_windows():
-    limits.record_claude(
-        {
-            "status": "allowed",
-            "unifiedWindows": {
-                "five_hour": {"utilization": 0.123, "resetsAt": NOW + 600},
-                "seven_day": {"utilization": 0.5, "resetsAt": NOW + 86400},
-                "something_new": {"utilization": "kaputt"},
-            },
-        },
-        now=NOW,
-    )
+# Echtes Ereignis der CLI 2.1.234 vom 02.11.2026 (ohne uuid/session_id).
+REAL_EVENT = {
+    "status": "allowed",
+    "resetsAt": NOW + 600,
+    "rateLimitType": "five_hour",
+    "overageStatus": "allowed",
+    "overageResetsAt": NOW + 86400 * 28,
+    "isUsingOverage": False,
+}
+
+
+def test_claude_real_event_gives_window_without_percent():
+    """Unter der Warnschwelle nennt Claude Fenster und Rücksetzzeit, keinen Prozentwert."""
+    limits.record_claude(REAL_EVENT, now=NOW)
     entry = limits.claude_entry(True, NOW + 10)
     assert entry["state"] == "ok"
     assert entry["accountRef"] == "default"
     assert entry["observedAt"] == limits.iso(NOW)
-    windows = {w["id"]: w for w in entry["windows"]}
-    assert windows["five_hour"]["usedPercent"] == 12.3
-    assert windows["five_hour"]["durationMinutes"] == 300
+    (window,) = entry["windows"]
+    assert window["id"] == "five_hour"
+    assert window["durationMinutes"] == 300
+    assert window["usedPercent"] is None
+    assert window["resetsAt"] == limits.iso(NOW + 600)
+    assert window["source"] == "observed"
+    assert "resetsAtEpoch" not in window
+
+
+def test_claude_warning_carries_percent_and_windows_accumulate():
+    """Ab der Warnschwelle kommt ``utilization``; frühere Fenster bleiben stehen."""
+    limits.record_claude(REAL_EVENT, now=NOW)
+    limits.record_claude(
+        {
+            "status": "allowed_warning",
+            "resetsAt": NOW + 86400,
+            "rateLimitType": "seven_day",
+            "utilization": 0.83,
+            "surpassedThreshold": 0.75,
+        },
+        now=NOW + 5,
+    )
+    windows = {w["id"]: w for w in limits.claude_entry(True, NOW + 10)["windows"]}
+    assert set(windows) == {"five_hour", "seven_day"}
+    assert windows["seven_day"]["usedPercent"] == 83.0
     assert windows["seven_day"]["durationMinutes"] == 10080
-    assert windows["seven_day"]["source"] == "observed"
-    # Unbekannter Name: Fenster bleibt, Länge und Verbrauch unbekannt.
-    assert windows["something_new"]["usedPercent"] is None
-    assert windows["something_new"]["durationMinutes"] is None
+    assert windows["five_hour"]["usedPercent"] is None
+
+
+def test_claude_window_after_reset_loses_its_old_value():
+    limits.record_claude(
+        {
+            "status": "allowed_warning",
+            "resetsAt": NOW + 600,
+            "rateLimitType": "five_hour",
+            "utilization": 0.9,
+        },
+        now=NOW,
+    )
+    (window,) = limits.claude_entry(True, NOW + 601)["windows"]
+    assert window["usedPercent"] is None
+    assert window["resetsAt"] is None
+
+
+def test_claude_unknown_window_name_is_kept_without_duration():
+    limits.record_claude({"status": "allowed", "rateLimitType": "something_new"}, now=NOW)
+    (window,) = limits.claude_entry(True, NOW)["windows"]
+    assert window["id"] == "something_new"
+    assert window["durationMinutes"] is None
 
 
 def test_claude_rejected_is_exhausted_until_reset_then_unknown():
-    limits.record_claude({"status": "rejected", "resetsAt": NOW + 600}, now=NOW)
+    limits.record_claude(
+        {"status": "rejected", "resetsAt": NOW + 600, "rateLimitType": "five_hour"}, now=NOW
+    )
     entry = limits.claude_entry(True, NOW + 1)
     assert entry["state"] == "exhausted"
+    assert entry["windows"][0]["usedPercent"] == 100.0
     assert entry["retryAt"] == limits.iso(NOW + 600)
     assert entry["retryAtSource"] == "provider"
     assert limits.claude_entry(True, NOW + 601)["state"] == "unknown"

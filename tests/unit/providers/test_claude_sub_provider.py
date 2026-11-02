@@ -38,12 +38,10 @@ def _stream(*events):
 RATE_LIMIT_EVENT = {
     "type": "rate_limit_event",
     "rate_limit_info": {
-        "status": "allowed",
+        "status": "allowed_warning",
         "resetsAt": 1_900_000_000,
-        "unifiedWindows": {
-            "five_hour": {"utilization": 0.42, "resetsAt": 1_900_000_000},
-            "seven_day": {"utilization": 0.1, "resetsAt": 1_900_500_000},
-        },
+        "rateLimitType": "five_hour",
+        "utilization": 0.42,
     },
 }
 
@@ -68,10 +66,7 @@ def test_reads_the_answer_from_the_event_stream(provider, monkeypatch):
     assert aufrufe[0][aufrufe[0].index("--output-format") + 1] == "stream-json"
     eintrag = limits.claude_entry(True)
     assert eintrag["state"] == "ok"
-    assert [(w["id"], w["usedPercent"]) for w in eintrag["windows"]] == [
-        ("five_hour", 42.0),
-        ("seven_day", 10.0),
-    ]
+    assert [(w["id"], w["usedPercent"]) for w in eintrag["windows"]] == [("five_hour", 42.0)]
 
 
 def test_a_rejected_request_still_records_the_limit(provider, monkeypatch):
