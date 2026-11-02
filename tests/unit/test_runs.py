@@ -553,8 +553,10 @@ def test_claude_rate_limit_event_is_stored_for_the_limits(tmp_path, fake_cli):
     event = {
         "type": "rate_limit_event",
         "rate_limit_info": {
-            "status": "allowed",
-            "unifiedWindows": {"five_hour": {"utilization": 0.25, "resetsAt": 1893456000}},
+            "status": "allowed_warning",
+            "resetsAt": 1893456000,
+            "rateLimitType": "five_hour",
+            "utilization": 0.25,
         },
     }
     fake_cli.play([RECORDED[0], event, *RECORDED[1:]])
