@@ -20,7 +20,8 @@ from waitress import serve
 from werkzeug.exceptions import NotFound
 
 import gemini_web_routes
-from api_v1 import api_v1
+import limits
+from api_v1 import api_v1, credentials_present
 from config_loader import OPTIONS_PATH, apply_options_to_env, load_options, read_addon_version
 from providers.base_provider import resolve_tool_access
 from providers.claude_sub_provider import CLAUDE_MODELS
@@ -216,6 +217,25 @@ def status():
             },
         }
     )
+
+
+FEHLER_LIMITS = "Die Kontingente sind gerade nicht abrufbar. Bitte später erneut versuchen."
+
+
+@app.route("/limits", methods=["GET"])
+def subscription_limits():
+    """Kontingente der Abos für die Oberfläche (D-033).
+
+    Dieselben Daten wie ``GET /v1/limits``, aber ohne Token, wie ``/status``:
+    die Oberfläche kennt das Token von Skytech X nicht. Die Antwort enthält
+    weder Zugangsdaten noch E-Mail-Adressen, nur Namen, die der Betreiber den
+    Konten gegeben hat.
+    """
+    try:
+        return jsonify(limits.report(credentials_present()))
+    except Exception:
+        log.exception("Unerwarteter Fehler in /limits")
+        return jsonify({"error": FEHLER_LIMITS}), 500
 
 
 def _from_ingress() -> bool:

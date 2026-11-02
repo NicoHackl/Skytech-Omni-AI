@@ -13,6 +13,7 @@
   [design-entscheidungen.md](design-entscheidungen.md).
 - **Keine Authentifizierung** auf dem offenen Port. Wer ihn erreicht, kann Anfragen stellen und
   damit Kontingent verbrauchen — siehe [sicherheit-datenschutz.md](sicherheit-datenschutz.md).
+  Das gilt auch für `GET /limits` (Verbrauch der Abos, ohne Zugangsdaten).
   **Ausnahme:** `PUT /settings` nimmt nur Aufrufe über den Ingress an (siehe unten).
 - Format: JSON, UTF-8.
 
@@ -153,6 +154,36 @@ davon und auch nicht seine Länge.
 `tool_access` ist die Stufe, die **tatsächlich gilt** — nicht der rohe Wert aus der Konfiguration.
 Ein unbekannter Eintrag erscheint hier als `web`, weil der Provider genauso darauf zurückfällt.
 Beides stammt aus derselben Funktion, damit Oberfläche und Provider nicht auseinanderlaufen.
+
+## `GET /limits`
+
+Kontingente der Abos je Anbieter und Konto, gedacht für die Karte „Kontingente“ auf der Übersicht
+(D-033). Antwort und Bedeutung der Felder sind **dieselben** wie bei `GET /v1/limits`
+(`SubscriptionLimits` im [Vertrag](../contract/contract_skytech_x_omniai/omniai-api-v1.yaml));
+anders ist nur, dass kein Token verlangt wird — wie bei `/status`. Die Antwort enthält keine
+Zugangsdaten und keine E-Mail-Adressen, nur die Namen, die der Betreiber den Konten gegeben hat.
+
+```json
+{
+  "measuredAt": "2026-11-02T17:53:58Z",
+  "accounts": [
+    {
+      "provider": "claude_sub", "accountRef": "default", "label": null, "state": "ok",
+      "retryAt": null, "retryAtSource": null, "observedAt": "2026-11-02T17:23:37Z",
+      "windows": [
+        { "id": "five_hour", "limitId": null, "durationMinutes": 300, "usedPercent": 83.4,
+          "resetsAt": "2026-11-02T19:53:37Z", "source": "observed", "observedAt": "2026-11-02T17:23:37Z" }
+      ]
+    },
+    { "provider": "gemini", "accountRef": "default", "label": null, "state": "ok",
+      "retryAt": null, "retryAtSource": null, "observedAt": null, "windows": [] }
+  ]
+}
+```
+
+- Jeder Abruf kann bei ChatGPT kurz `codex app-server` starten (höchstens einmal je Minute,
+  danach zwischengespeichert). Die Oberfläche lädt deshalb nur beim Öffnen und auf Knopfdruck.
+- Fehler: `500` mit `{"error": "Die Kontingente sind gerade nicht abrufbar. …"}`, Ursache im Log.
 
 ## `GET /settings`
 

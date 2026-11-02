@@ -124,3 +124,43 @@ export interface GeminiWebStatus {
   accounts: GeminiAccount[]
   signed_in: boolean
 }
+
+/** Zustand eines Kontos in `GET /limits`. Ein unbekannter Wert gilt wie `unknown`. */
+export type LimitState =
+  | 'ok'
+  | 'exhausted'
+  | 'restricted'
+  | 'login_required'
+  | 'unavailable'
+  | 'unknown'
+
+/** Ein Zeitfenster eines Kontingents. `usedPercent` = null heißt: unbekannt, nicht 0. */
+export interface LimitWindow {
+  id: string
+  limitId: string | null
+  durationMinutes: number | null
+  usedPercent: number | null
+  resetsAt: string | null
+  /** `measured` auf Abruf gemessen, `observed` aus dem letzten Lauf übernommen. */
+  source: 'measured' | 'observed'
+  observedAt: string | null
+}
+
+/** Ein Konto eines Anbieters mit seinem Kontingent. */
+export interface LimitAccount {
+  provider: string
+  accountRef: string
+  label: string | null
+  state: LimitState
+  retryAt: string | null
+  /** `provider` vom Anbieter gemeldet, `estimated` eigene Schätzung des Add-ons. */
+  retryAtSource: 'provider' | 'estimated' | null
+  observedAt: string | null
+  windows: LimitWindow[]
+}
+
+/** Antwort von `GET /limits` — dasselbe Modell wie `GET /v1/limits` im Vertrag. */
+export interface LimitsResponse {
+  measuredAt: string
+  accounts: LimitAccount[]
+}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { Icon } from '../components/Icon'
+import { LimitsCard } from '../components/LimitsCard'
 import { PageHeader } from '../components/Layout'
 import { useToast } from '../components/Toast'
 import { TOOL_ACCESS_FULL, providerLabel, toolAccessLabel } from '../provider'
@@ -145,6 +146,8 @@ export function Dashboard() {
                 </div>
               ))}
             </div>
+
+            <LimitsCard />
 
             <div className="card section-card">
               <div className="card-head">

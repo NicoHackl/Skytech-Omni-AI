@@ -4,6 +4,7 @@ import type {
   AskResponse,
   GeminiLoginStatus,
   GeminiWebStatus,
+  LimitsResponse,
   ModelsResponse,
   SettingsInput,
   SettingsResponse,
@@ -81,6 +82,8 @@ export const api = {
   /* Name und HA-Konfigurationsseite des Add-ons für den Sidebar-Fuß (D-018). */
   addon: () => request<AddonInfo>('addon'),
   models: () => request<ModelsResponse>('models'),
+  /* Kontingente der Abos je Anbieter und Konto (D-033). */
+  limits: () => request<LimitsResponse>('limits'),
   ask: (data: AskInput) =>
     request<AskResponse>('ask', { method: 'POST', body: JSON.stringify(data) }),
   settings: () => request<SettingsResponse>('settings'),
