@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.2.0] — 02.11.2026
+
+### Hinzugefügt
+
+- Skytech X kann abfragen, wie viel vom Kontingent der Abos (Claude, ChatGPT, Gemini) verbraucht ist und wann es wieder frei wird.
+
+### Behoben
+
+- Die Abfrage des ChatGPT-Kontingents meldet nicht mehr fälschlich „unbekannt“, wenn ChatGPT mehrere Antworten auf einmal schickt.
+
 ## [1.1.0] — 29.10.2026
 
 ### Hinzugefügt
