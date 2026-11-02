@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.3.0] — 02.11.2026
+
+### Hinzugefügt
+
+- Die Übersicht zeigt für jeden Anbieter, wie viel vom Kontingent des Abos verbraucht ist und ab wann wieder etwas frei ist.
+
 ## [1.2.0] — 02.11.2026
 
 ### Hinzugefügt
