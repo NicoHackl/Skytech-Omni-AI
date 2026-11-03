@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.6.0] — 03.11.2026
+
+### Hinzugefügt
+
+- Aufträge aus Skytech X können bei Unklarheiten nachfragen und warten bis zu 30 Minuten auf die Antwort, statt zu raten.
+
 ## [1.5.0] — 03.11.2026
 
 ### Hinzugefügt
