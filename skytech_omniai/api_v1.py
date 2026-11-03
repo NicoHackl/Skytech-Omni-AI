@@ -14,11 +14,14 @@ import json
 import logging
 import os
 import re
+import time
+import uuid
 
-from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask import Blueprint, Response, g, jsonify, request, stream_with_context
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
+import diagnostics
 import embeddings
 import limits
 import model_catalog
@@ -58,7 +61,10 @@ PROVIDERS = {
 }
 
 # Anbieter, die in Läufen Werkzeuge (MCP) aufrufen können.
-TOOL_PROVIDERS = {"claude_sub"}
+# Anbieter, deren Läufe MCP-Werkzeuge des Backends nutzen können; Codex seit dem MCP-Hub (D-038).
+TOOL_PROVIDERS = {"claude_sub", "codex_sub"}
+# Anbieter, deren Läufe Token-Verbrauch melden (Claude stream-json).
+USAGE_PROVIDERS = {"claude_sub"}
 MCP_PROTOCOL_VERSIONS = ["2025-11-25"]
 MAX_CONTEXT_LENGTH = 40_000
 SSE_PING_SECONDS = 15
@@ -113,7 +119,42 @@ def credentials_present() -> dict[str, bool]:
 
 
 def _error(status: int, code: str, message: str):
+    # Der Code (nie der Text) landet im Diagnosejournal (D-039).
+    g.error_code = code
     return jsonify({"error": message, "code": code}), status
+
+
+# Abrufe, die das Journal selbst oder die Erreichbarkeit betreffen, erzeugen keine Ereignisse.
+_NOT_JOURNALED = ("/v1/diagnostics", "/v1/health")
+
+
+@api_v1.before_request
+def start_diagnostics():
+    """Korrelation (D-039): ``X-Correlation-Id`` des Backends wird zur Trace-ID, sonst eine neue."""
+    supplied = request.headers.get("X-Correlation-Id", "")
+    diagnostics.trace_id.set(diagnostics.uuid_or_none(supplied) or str(uuid.uuid4()))
+    diagnostics.run_id.set(None)
+    g.diagnostics_started = time.perf_counter_ns()
+
+
+@api_v1.after_request
+def finish_diagnostics(response):
+    trace = diagnostics.trace_id.get()
+    if trace:
+        response.headers["X-Correlation-Id"] = trace
+    if not request.path.startswith(_NOT_JOURNALED):
+        rule = request.url_rule.rule if request.url_rule is not None else "unmapped"
+        started = g.get("diagnostics_started") or time.perf_counter_ns()
+        status = response.status_code
+        diagnostics.journal.record(
+            "HTTP_END",
+            f"{request.method} {rule}",
+            "SUCCESS" if status < 400 else ("ERROR" if status >= 500 else "REJECTED"),
+            (time.perf_counter_ns() - started) // 1000,
+            http_status=status,
+            error_code=g.get("error_code"),
+        )
+    return response
 
 
 @api_v1.before_request
@@ -159,7 +200,7 @@ def capabilities():
             "features": {
                 "tools": key in TOOL_PROVIDERS,
                 "structuredOutput": True,
-                "usage": key in TOOL_PROVIDERS,
+                "usage": key in USAGE_PROVIDERS,
             },
         }
         for key, meta in PROVIDERS.items()
@@ -167,6 +208,11 @@ def capabilities():
     return jsonify(
         {
             "providers": providers,
+            # Diagnosejournal für das Backend (D-039, Vertrag 1.5.0).
+            "diagnostics": {
+                "available": diagnostics.journal.enabled,
+                "schemaVersion": diagnostics.SCHEMA_VERSION,
+            },
             "limits": {
                 "maxPromptLength": MAX_INPUT_LENGTH,
                 "maxConcurrentRuns": MAX_CONCURRENT_RUNS,
@@ -283,12 +329,13 @@ def completions():
         output = None
         for attempt in (1, 2):
             try:
-                output = provider.execute(
-                    prompt,
-                    model=resolution.model,
-                    timeout=values["timeout"],
-                    effort=resolution.effort,
-                )
+                with diagnostics.journal.operation(f"provider.{values['provider']}.execute"):
+                    output = provider.execute(
+                        prompt,
+                        model=resolution.model,
+                        timeout=values["timeout"],
+                        effort=resolution.effort,
+                    )
             except NotJson:
                 problem = "the answer was not valid JSON"
             else:
@@ -488,7 +535,7 @@ def start_run():
             503, "PROVIDER_UNAVAILABLE", "Für diesen Anbieter sind keine Zugangsdaten hinterlegt."
         )
     try:
-        run, created = runs.start(values["runId"], values)
+        run, created = runs.start(values["runId"], values, trace_id=diagnostics.trace_id.get())
     except RunConflict as konflikt:
         return _error(409, konflikt.code, konflikt.message)
     if created:
@@ -551,6 +598,19 @@ def run_events(run_id: str):
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@api_v1.route("/diagnostics/events", methods=["GET"])
+def diagnostic_events():
+    """Ereignisse des Diagnosejournals nach ``after`` (seq), höchstens ``limit`` (D-039)."""
+    try:
+        after = int(request.args.get("after", "0"))
+        limit = int(request.args.get("limit", "200"))
+    except ValueError:
+        return _error(400, "VALIDATION_ERROR", FEHLER_EINGABE)
+    if after < 0 or not 1 <= limit <= diagnostics.MAX_PAGE:
+        return _error(400, "VALIDATION_ERROR", FEHLER_EINGABE)
+    return jsonify(diagnostics.journal.read(after, limit))
 
 
 @api_v1.route("/<path:rest>", methods=["GET", "POST", "PUT", "DELETE"])

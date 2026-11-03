@@ -36,6 +36,7 @@ Umsetzungsstand (Einzelheiten im Vertrag):
 | `POST /v1/runs`, `GET /v1/runs/{id}`, `…/events` (SSE), `…/cancel` | umgesetzt (D-021): `claude_sub` mit MCP-Werkzeugen des Backends; andere Anbieter nur ohne Werkzeuge als einzelne Anfrage. Höchstens 2 Läufe gleichzeitig, höchstens 120 Minuten, Übergabe am Ende jedes Laufs |
 
 | `GET /v1/limits` | umgesetzt (D-032): Kontingente je Anbieter und Konto mit Herkunft der Werte; Claude direkt auf Abruf mit Cache und Rückfall auf Anfragebeobachtungen ([D-037](adr/D-037-claude-verbrauchsabfrage.md)), Codex auf Abruf, Gemini Web/AGY nur Zustand und geschätzte Wartezeit, Gemini mit Schlüssel ohne Werte |
+| `GET /v1/diagnostics/events` | umgesetzt (D-039, Vertrag 1.5.0): Diagnosejournal des Add-ons für das Backend, Abruf nach `seq` (`after`, `limit` bis 500). Jede `/v1`-Anfrage übernimmt `X-Correlation-Id` (UUID) als `traceId` und gibt sie zurück |
 | `POST /v1/embeddings` | umgesetzt (D-023): Vektoren für die Suche nach Bedeutung im Wissen von Skytech X, ausschließlich `gemini-embedding-001` mit dem Gemini-Schlüssel, Vorgabe 768 Dimensionen, höchstens 100 Texte je Anfrage |
 
 Läufe liegen als Dateien unter `/data/runs` (Zustand und Ereignisse, ohne Lauf-Token) und werden
