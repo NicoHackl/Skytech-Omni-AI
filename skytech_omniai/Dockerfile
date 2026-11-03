@@ -82,6 +82,7 @@ COPY app.py ./app.py
 COPY gemini_web_routes.py ./gemini_web_routes.py
 COPY api_v1.py ./api_v1.py
 COPY runs.py ./runs.py
+COPY diagnostics.py ./diagnostics.py
 COPY embeddings.py ./embeddings.py
 COPY limits.py ./limits.py
 COPY model_catalog.py ./model_catalog.py

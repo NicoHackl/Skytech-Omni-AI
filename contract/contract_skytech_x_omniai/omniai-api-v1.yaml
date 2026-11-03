@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: Skytech OmniAI — Agent Runtime API
-  version: 1.4.0
+  version: 1.5.0
   description: >-
     Contract between the Skytech X backend (client) and Skytech OmniAI, the
     Home Assistant add-on that runs LLM work with several providers
@@ -70,6 +70,12 @@ info:
     `CompletionResponse.effort`, `RunState.model`/`effort` and
     `StatusData.model`; error code `UNSUPPORTED_EFFORT`. "-latest" model
     names are resolved per run (same model as agent-host-api-v1 1.3.0).
+
+
+    Changes: 1.5.0 (03.11.2026) — diagnostic journal of the add-on
+    (`GET /v1/diagnostics/events`, `Capabilities.diagnostics`,
+    `DiagnosticEvent`), `X-Correlation-Id` on every `/v1` request; `codex_sub`
+    reports `features.tools` and accepts MCP servers in runs.
 
 
     Compatibility: additive changes only within v1; both sides ignore unknown
@@ -237,6 +243,30 @@ paths:
               schema: { $ref: '#/components/schemas/RunEvent' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/diagnostics/events:
+    get:
+      summary: Diagnostic journal events (since 1.5.0)
+      description: >-
+        Structured diagnostic events of this instance in the same version-1 format as the backend
+        journal: machine identifiers, outcome, duration, stable error codes and causes as type plus
+        code locations. Never prompts, answers, tool arguments, tokens, exception messages or other
+        free text. Events are ordered by `seq`, which keeps increasing across restarts. The backend
+        polls with the last `next` as `after` and stores the events with `source: omniai`. Calls to
+        this endpoint and to `/v1/health` create no events. Every `/v1` request accepts
+        `X-Correlation-Id` (UUID); it becomes the `traceId` of the request and of a run started by it
+        and is echoed in the response.
+      parameters:
+        - { name: after, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 200 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DiagnosticPage' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /v1/runs/{runId}/cancel:
     post:
@@ -464,6 +494,46 @@ components:
         status: { type: string, enum: [UP, DEGRADED], example: UP }
         version: { type: string, example: 0.11.0 }
 
+    DiagnosticPage:
+      type: object
+      required: [instanceId, events, next, head]
+      properties:
+        instanceId: { type: string, format: uuid, description: changes with every restart of the add-on }
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/DiagnosticEvent' }
+        next: { type: integer, description: 'seq of the last event returned (or `after` when empty)' }
+        head: { type: integer, description: newest seq of this instance }
+        oldest: { type: integer, nullable: true, description: 'oldest seq still stored; older events were removed by retention' }
+        dropped: { type: integer, description: events that could not be stored since the start }
+    DiagnosticEvent:
+      type: object
+      required: [schemaVersion, seq, id, timestamp, kind, operation, outcome]
+      properties:
+        schemaVersion: { type: integer, example: 1 }
+        seq: { type: integer }
+        id: { type: string, format: uuid }
+        instanceId: { type: string, format: uuid }
+        serviceVersion: { type: string, example: 0.14.0 }
+        timestamp: { type: string, format: date-time }
+        kind: { type: string, enum: [HTTP_START, HTTP_END, OPERATION_START, OPERATION_END, FAILURE, LIFECYCLE] }
+        message: { type: string, description: fixed German text per kind }
+        traceId: { type: string, format: uuid, nullable: true }
+        runId: { type: string, nullable: true }
+        operation: { type: string, maxLength: 240, example: 'provider.codex_sub.execute' }
+        outcome: { type: string, enum: [STARTED, SUCCESS, REJECTED, ERROR, SLOW] }
+        durationMicros: { type: integer, minimum: 0 }
+        httpStatus: { type: integer, nullable: true }
+        errorCode: { type: string, nullable: true, pattern: '^[A-Z0-9_]{1,64}$', example: TOOLS_NOT_SUPPORTED }
+        failures:
+          type: array
+          maxItems: 4
+          items:
+            type: object
+            properties:
+              type: { type: string }
+              frames: { type: array, maxItems: 12, items: { type: string } }
+
     Capabilities:
       type: object
       required: [providers]
@@ -484,6 +554,12 @@ components:
             available: { type: boolean, description: false without Gemini API key }
             model: { type: string, example: gemini-embedding-001 }
             dimensions: { type: integer, example: 768 }
+        diagnostics:
+          type: object
+          description: Diagnostic journal (since 1.5.0), see GET /v1/diagnostics/events.
+          properties:
+            available: { type: boolean }
+            schemaVersion: { type: integer, example: 1 }
         mcp:
           type: object
           description: MCP client support of this instance (for runs with tools).

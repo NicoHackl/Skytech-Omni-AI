@@ -304,3 +304,13 @@ Anzeige bleiben gespeicherte Messungen und Meldungen aus Anfragen verfügbar.
 Abrufabstände, Ablage, Fehlersuche und die nach Installation auszuführende Handprüfung:
 [D-037](adr/D-037-claude-verbrauchsabfrage.md). Häufiges Neuladen und Neustarts verkürzen
 die Abfragepause nicht. Zugangsdaten für eine Diagnose niemals weitergeben.
+
+## Diagnosejournal (D-039)
+
+| Variable | Vorgabe | Bedeutung |
+|---|---|---|
+| `OMNIAI_DIAGNOSTICS_DIR` | `/data/diagnostics` | Ablage des Diagnosejournals (JSONL, Rechte 0600). Größe und Aufbewahrung sind fest: höchstens 64 MiB und 30 Tage |
+
+Das Journal enthält keine Inhalte von Anfragen oder Läufen. Abgeholt wird es vom Backend über
+`GET /v1/diagnostics/events` mit demselben `api_token` wie alle `/v1`-Aufrufe.
+

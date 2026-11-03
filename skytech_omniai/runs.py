@@ -38,6 +38,7 @@ from datetime import UTC, datetime, timedelta
 
 from jsonschema import Draft202012Validator
 
+import diagnostics
 import limits
 from providers.base_provider import NotJson, ProviderTimeout, UnknownModel
 
@@ -206,6 +207,9 @@ class Run:
         self.events: list[dict] = []
         self.cancel_requested = False
         self.process: subprocess.Popen | None = None
+        # Korrelation zum Backend (D-039); nicht Teil des Fingerabdrucks und nicht gespeichert.
+        self.trace_id: str | None = None
+        self._clock: int | None = None
 
     def state(self) -> dict:
         return {
@@ -240,7 +244,7 @@ class RunManager:
 
     # --- Annahme ----------------------------------------------------------
 
-    def start(self, run_id: str, request: dict) -> tuple[Run, bool]:
+    def start(self, run_id: str, request: dict, trace_id: str | None = None) -> tuple[Run, bool]:
         """Legt den Lauf an und startet ihn. Liefert (Lauf, neu angelegt).
 
         :raises RunConflict: Kennung bereits mit anderem Auftrag oder kein freier Platz.
@@ -259,6 +263,7 @@ class RunManager:
             if active >= MAX_CONCURRENT_RUNS:
                 raise RunConflict("BUSY", FEHLER_PARALLEL)
             run = Run(run_id, request, fingerprint)
+            run.trace_id = trace_id
             self.runs[run_id] = run
             # Sofort festhalten: ein Neustart soll den Lauf als gescheitert
             # melden können, auch wenn er noch kein Ereignis hatte.
@@ -353,6 +358,14 @@ class RunManager:
         self.emit(run, "status", data)
         self._write_state(run)
         log.info("Lauf %s beendet: %s", run.run_id, status)
+        diagnostics.journal.record(
+            "OPERATION_END",
+            f"run.{run.request.get('provider')}",
+            {"SUCCEEDED": "SUCCESS", "CANCELLED": "REJECTED"}.get(status, "ERROR"),
+            (time.perf_counter_ns() - run._clock) // 1000 if run._clock else 0,
+            error_code=run_error_code(error) if status == "FAILED" else None,
+            run=diagnostics.uuid_or_none(run.run_id),
+        )
 
     def events_after(self, run: Run, after_seq: int, wait_seconds: float) -> list[dict]:
         """Ereignisse nach ``after_seq``; wartet höchstens ``wait_seconds`` auf neue."""
@@ -368,6 +381,12 @@ class RunManager:
     # --- Ausführung -------------------------------------------------------
 
     def _execute(self, run: Run) -> None:
+        diagnostics.trace_id.set(run.trace_id)
+        diagnostics.run_id.set(diagnostics.uuid_or_none(run.run_id))
+        diagnostics.journal.record(
+            "OPERATION_START", f"run.{run.request.get('provider')}", "STARTED"
+        )
+        run._clock = time.perf_counter_ns()
         try:
             self.runner_factory(run.request).run(self, run)
         except Exception:
@@ -484,6 +503,23 @@ def _terminate(process: subprocess.Popen) -> None:
     except subprocess.TimeoutExpired:
         with contextlib.suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGKILL)
+
+
+# Stabile Codes für das Diagnosejournal statt der deutschen Sätze (D-039).
+RUN_ERROR_CODES = {
+    FEHLER_NEUSTART: "ADDON_RESTARTED",
+    FEHLER_ZEIT: "RUN_TIMEOUT",
+    FEHLER_WERKZEUGE_LIMIT: "TOOL_CALL_LIMIT",
+    FEHLER_ABGEBROCHEN: "MODEL_ABORTED",
+    FEHLER_ERGEBNIS: "INVALID_RESULT",
+    FEHLER_INTERN: "INTERNAL",
+    FEHLER_WERKZEUG_SERVER: "TOOL_SERVER_UNREACHABLE",
+}
+
+
+def run_error_code(error: str | None) -> str:
+    """Code zu einem Laufabbruch; übersetzte Sätze der Anbieter gelten als PROVIDER_ERROR."""
+    return RUN_ERROR_CODES.get(error, "PROVIDER_ERROR") if error else "RUN_FAILED"
 
 
 def limits_of(request: dict) -> tuple[int, int]:
@@ -683,7 +719,16 @@ class ClaudeRunner:
                         call_id = block.get("tool_use_id", "")
                         if call_id not in started:
                             continue
-                        duration = int((time.monotonic() - started.pop(call_id)) * 1000)
+                        elapsed = time.monotonic() - started.pop(call_id)
+                        duration = int(elapsed * 1000)
+                        tool_server, tool_name = self._tool_by_call(run, call_id)
+                        diagnostics.journal.record(
+                            "OPERATION_END",
+                            f"tool:{tool_server}.{tool_name}",
+                            "ERROR" if block.get("is_error") else "SUCCESS",
+                            int(elapsed * 1_000_000),
+                            error_code="TOOL_ERROR" if block.get("is_error") else None,
+                        )
                         manager.emit(
                             run,
                             "tool_call",
@@ -802,13 +847,14 @@ class SingleShotRunner:
             len(tools.get("mcpServers") or []) if extra else 0,
         )
         try:
-            answer = provider.execute(
-                prompt,
-                model=req.get("model"),
-                timeout=minutes * 60,
-                effort=req.get("effort"),
-                **extra,
-            )
+            with diagnostics.journal.operation(f"provider.{req.get('provider')}.execute"):
+                answer = provider.execute(
+                    prompt,
+                    model=req.get("model"),
+                    timeout=minutes * 60,
+                    effort=req.get("effort"),
+                    **extra,
+                )
             manager.report_model(run, provider.last_model)
         except ProviderTimeout:
             return manager.finish(run, "FAILED", error=FEHLER_ZEIT)

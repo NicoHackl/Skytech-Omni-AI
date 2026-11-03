@@ -36,3 +36,7 @@ def clean_env(monkeypatch, tmp_path):
 
     monkeypatch.setenv("OMNIAI_GEMINI_WEB_HOME", str(tmp_path / "gemini-web-home"))
     monkeypatch.setenv("OMNIAI_LIMITS_DIR", str(tmp_path / "limits"))
+    # Diagnosejournal (D-039) nie unter /data, je Test frisch.
+    import diagnostics
+
+    monkeypatch.setattr(diagnostics, "journal", diagnostics.Journal(str(tmp_path / "diagnostics")))

@@ -165,6 +165,9 @@ Läufe (D-021) folgen **nicht** der Stufe `tool_access`, sondern sind enger:
 - Werkzeuge kommen ausschließlich vom Backend über MCP. Das Lauf-Token des Backends steht nur in
   einer Datei mit Rechten `600` im Arbeitsverzeichnis des Laufs, nie in der Befehlszeile, im Log
   oder in den gespeicherten Laufdaten; Datei und Verzeichnis werden nach dem Lauf gelöscht.
+- Das Diagnosejournal (D-039) enthält nur Maschinenkennungen, Ausgang, Dauer, Fehlercodes und
+  Codestellen — keine Prompts, Antworten, Werkzeugargumente, Tokens oder Meldungstexte. Es liegt
+  mit Rechten 0600 unter `/data/diagnostics` und ist nur mit dem `api_token` abrufbar.
 - Codex-Läufe mit Werkzeugen (D-038) bekommen das Lauf-Token nur über eine Umgebungsvariable des
   CLI-Prozesses (`bearer_token_env_var`), nie über die Befehlszeile. Die Sandbox ist in solchen
   Läufen immer `read-only`, auch bei `tool_access: full`. Die CLI darf die Gateway-Werkzeuge ohne
