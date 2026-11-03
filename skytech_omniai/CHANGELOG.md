@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an Skytech OmniAI.
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.5.0] — 03.11.2026
+
+### Hinzugefügt
+
+- Skytech X kann Aufträge mit Werkzeugen (etwa Home Assistant) jetzt auch an ChatGPT (Codex) geben, nicht nur an Claude.
+- Skytech X kann das Verhalten des Add-ons (Anfragen, Anbieter, Läufe, Werkzeugaufrufe, Fehlercodes) in seiner eigenen Diagnose nachvollziehen, ohne Inhalte der Anfragen zu sehen.
+
 ## [1.4.0] — 02.11.2026
 
 ### Hinzugefügt
