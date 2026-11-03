@@ -386,6 +386,8 @@ def test_tool_servers_reach_codex_without_the_token_in_the_command(provider, mon
     command, env = aufrufe[0]
     assert 'mcp_servers.skytech.url="http://192.168.10.18:8090/mcp"' in command
     assert 'mcp_servers.skytech.default_tools_approval_mode="approve"' in command
+    # Rückfragen warten bis zu 30 Minuten (D-040).
+    assert "mcp_servers.skytech.tool_timeout_sec=2100" in command
     assert 'mcp_servers.skytech.enabled_tools=["ha.ha_get_state", "knowledge.search"]' in command
     assert 'mcp_servers.skytech.bearer_token_env_var="OMNIAI_MCP_TOKEN_SKYTECH"' in command
     assert env["OMNIAI_MCP_TOKEN_SKYTECH"] == "lauf-token-geheim"
