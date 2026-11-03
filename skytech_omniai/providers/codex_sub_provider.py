@@ -328,6 +328,8 @@ class CodexSubProvider(BaseProvider):
             prefix = f"mcp_servers.{name}"
             args += ["-c", f"{prefix}.url={json.dumps(server['url'])}"]
             args += ["-c", f'{prefix}.default_tools_approval_mode="approve"']
+            # Rückfragen (user.ask) warten bis zu 30 Minuten auf den Nutzer (D-040).
+            args += ["-c", f"{prefix}.tool_timeout_sec={35 * 60}"]
             if allowed:
                 args += ["-c", f"{prefix}.enabled_tools={json.dumps(allowed)}"]
             for header, value in (server.get("headers") or {}).items():

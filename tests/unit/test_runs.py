@@ -20,9 +20,11 @@ from runs import (
     FEHLER_ERGEBNIS,
     FEHLER_NEUSTART,
     FEHLER_ZEIT,
+    TOOL_TIMEOUT_SEKUNDEN,
     ClaudeRunner,
     RunManager,
     SingleShotRunner,
+    Watchdog,
     build_task,
     clean_handover,
     cli_tool_name,
@@ -94,6 +96,7 @@ FAKE_CLI = """#!{python}
 import json, os, sys, time
 with open(os.environ["FAKE_CLAUDE_ARGS"], "w") as f:
     json.dump({{"argv": sys.argv[1:], "cwd": os.getcwd(),
+               "timeout": os.environ.get("MCP_TOOL_TIMEOUT"),
                "mcp": open(sys.argv[sys.argv.index("--mcp-config") + 1]).read()
                if "--mcp-config" in sys.argv else None,
                "mode": oct(os.stat(sys.argv[sys.argv.index("--mcp-config") + 1]).st_mode & 0o777)
@@ -129,6 +132,9 @@ def fake_cli(tmp_path, monkeypatch):
 
         def args(self):
             return json.loads(args_file.read_text())
+
+        def environment(self):
+            return {"MCP_TOOL_TIMEOUT": self.args()["timeout"]}
 
         def leftovers(self):
             return list(work.iterdir())
@@ -619,3 +625,93 @@ def test_run_state_reports_model_and_effort(tmp_path):
     manager.report_model(run, "claude-opus-5-5")
     assert run.state()["model"] == "claude-opus-5-5"
     assert run.events[-1]["data"] == {"status": "QUEUED", "model": "claude-opus-5-5"}
+
+
+# --- Rückfragen an den Nutzer (D-040) -------------------------------------------
+
+
+def test_watchdog_rests_while_the_owner_is_asked():
+    fired = []
+    watchdog = Watchdog(0.3, lambda: fired.append(True))
+    watchdog.start()
+    watchdog.pause("frage-1")
+    time.sleep(0.6)
+    assert fired == []
+    watchdog.resume("unbekannt")
+    assert fired == []
+    watchdog.resume("frage-1")
+    time.sleep(0.6)
+    assert fired == [True]
+    watchdog.cancel()
+
+
+def test_ask_tool_pauses_the_time_limit_until_its_result(tmp_path):
+    class Spy:
+        def __init__(self):
+            self.calls = []
+
+        def pause(self, call_id):
+            self.calls.append(("pause", call_id))
+
+        def resume(self, call_id):
+            self.calls.append(("resume", call_id))
+
+    request = claude_request()
+    request["tools"]["allowedTools"] = ["skytech.test_data_list", "user.ask"]
+    runner = ClaudeRunner(request)
+    ask = cli_tool_name("skytech", "user.ask")
+    lines = [
+        {
+            "type": "assistant",
+            "message": {"content": [{"type": "tool_use", "id": "a1", "name": ask}]},
+        },
+        {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "a1"}]}},
+        RECORDED[2],
+        RECORDED[3],
+    ]
+
+    class Process:
+        stdout = iter(json.dumps(line) + "\n" for line in lines)
+
+    class Run:
+        events: ClassVar[list] = []
+
+    run = Run()
+    spy = Spy()
+
+    class Manager:
+        def emit(self, target, kind, data):
+            target.events.append({"type": kind, "data": data})
+
+    runner._read(Manager(), run, Process(), 10, spy)
+    # Nur die Rückfrage hält die Zeit an; das Ende eines anderen Werkzeugs zählt nicht.
+    assert spy.calls == [("pause", "a1"), ("resume", "a1"), ("resume", "toolu_1")]
+
+
+def test_claude_gets_a_tool_timeout_longer_than_the_question_wait(tmp_path, fake_cli):
+    fake_cli.play(RECORDED)
+    manager = RunManager(str(tmp_path / "runs"))
+    run, _ = manager.start("run-1", claude_request())
+    wait_until_done(run)
+    assert fake_cli.environment()["MCP_TOOL_TIMEOUT"] == str(TOOL_TIMEOUT_SEKUNDEN * 1000)
+
+
+def test_codex_run_with_questions_gets_time_for_one_answer(tmp_path, monkeypatch):
+    FakeProvider.answers = [{"output": {"value": 1}, "handover": {"summary": "Gelesen."}}]
+    FakeProvider.prompts = []
+    timeouts = []
+
+    class Timed(FakeToolProvider):
+        def execute(self, prompt, model=None, timeout=None, effort=None, mcp=None):
+            timeouts.append(timeout)
+            return super().execute(prompt, model=model, timeout=timeout, effort=effort, mcp=mcp)
+
+    monkeypatch.setattr(
+        "providers.factory.ProviderFactory.create", staticmethod(lambda name=None: Timed())
+    )
+    request = claude_request(provider="codex_sub")
+    request["tools"]["allowedTools"] = ["skytech.test_data_list", "user.ask"]
+    manager = RunManager(str(tmp_path / "runs"), runner_factory=SingleShotRunner)
+    run, _ = manager.start("run-4", request)
+    wait_until_done(run)
+    assert timeouts == [5 * 60 + TOOL_TIMEOUT_SEKUNDEN]
