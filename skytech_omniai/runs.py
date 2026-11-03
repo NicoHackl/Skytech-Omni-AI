@@ -13,8 +13,9 @@ Aufbau:
 * ``ClaudeRunner`` führt einen Lauf mit der Claude-CLI aus (``stream-json``,
   MCP-Konfiguration, strukturierte Ausgabe) und übersetzt deren Ausgabe in
   Ereignisse des Vertrags.
-* ``SingleShotRunner`` führt Läufe ohne Werkzeuge mit jedem anderen Anbieter
-  als eine einzige Anfrage aus.
+* ``SingleShotRunner`` führt Läufe mit jedem anderen Anbieter als eine einzige
+  Anfrage aus. Codex bekommt dabei die Werkzeug-Server des Laufs (D-038); die
+  Werkzeugaufrufe erledigt die CLI innerhalb dieser einen Anfrage.
 
 Jeder Lauf endet mit einer Übergabe (Zusammenfassung, Entscheidungen, offene
 Punkte, Ergebnisse), damit ein späterer Lauf — auch mit einem anderen Modell —
@@ -765,7 +766,7 @@ class ClaudeRunner:
 
 
 class SingleShotRunner:
-    """Lauf ohne Werkzeuge mit einem beliebigen Anbieter: eine einzige Anfrage."""
+    """Lauf mit einem beliebigen Anbieter als eine einzige Anfrage; Codex mit Werkzeugen (D-038)."""
 
     def __init__(self, request: dict):
         self.request = request
@@ -784,10 +785,29 @@ class SingleShotRunner:
             "with the result of the task in `output` and a hand-over for the next run in "
             "`handover`:\n" + json.dumps(run_schema(req.get("outputSchema")))
         )
+        tools = req.get("tools") or {}
+        extra = {}
+        if tools.get("mcpServers") and getattr(provider, "supports_mcp", False):
+            extra["mcp"] = tools
+            prompt += (
+                "\n\nUse the tools of the MCP server(s) "
+                + ", ".join(s["name"] for s in tools["mcpServers"])
+                + " whenever the task needs live data or actions; never guess such data."
+            )
         manager.set_running(run)
+        log.info(
+            "Lauf %s gestartet mit %s, %s Werkzeug-Server",
+            run.run_id,
+            req.get("provider"),
+            len(tools.get("mcpServers") or []) if extra else 0,
+        )
         try:
             answer = provider.execute(
-                prompt, model=req.get("model"), timeout=minutes * 60, effort=req.get("effort")
+                prompt,
+                model=req.get("model"),
+                timeout=minutes * 60,
+                effort=req.get("effort"),
+                **extra,
             )
             manager.report_model(run, provider.last_model)
         except ProviderTimeout:

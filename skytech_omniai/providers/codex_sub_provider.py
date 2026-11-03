@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -231,7 +232,7 @@ class CodexSubProvider(BaseProvider):
 
     # --- Aufruf ------------------------------------------------------------
 
-    def _tool_access_args(self) -> list:
+    def _tool_access_args(self, run: bool = False) -> list:
         """Übersetzt die Werkzeugstufe in Argumente für die CLI.
 
         Anders als bei Claude gibt es keine Liste einzeln freigegebener
@@ -244,6 +245,12 @@ class CodexSubProvider(BaseProvider):
         „unexpected argument“ ab.
         """
         level = resolve_tool_access()
+        if run:
+            # Läufe für Skytech X sind enger als Gespräche (D-021, D-038): nie Schreibzugriff
+            # im Container, auch bei „full“; Werkzeuge kommen nur vom Backend über MCP.
+            if level == TOOL_ACCESS_OFF:
+                return ["--sandbox", "read-only", "-c", 'web_search="disabled"']
+            return ["--sandbox", "read-only", "--search"]
         if level == TOOL_ACCESS_FULL:
             return ["--sandbox", "danger-full-access", "--search"]
         if level == TOOL_ACCESS_OFF:
@@ -300,6 +307,40 @@ class CodexSubProvider(BaseProvider):
             return FEHLER_ANMELDUNG_ABGELAUFEN
         return FEHLER_CLI_ABGEBROCHEN
 
+    # Läufe können die Werkzeug-Server des Backends nutzen (D-038).
+    supports_mcp = True
+
+    @staticmethod
+    def _mcp_args(mcp: dict | None) -> tuple[list, dict]:
+        """Werkzeug-Server eines Laufs als Konfiguration für ``codex exec``.
+
+        Das Lauf-Token geht nur über die Umgebung an die CLI, nie in die Befehlszeile.
+        ``default_tools_approval_mode="approve"`` lässt die Aufrufe trotz nur-lesender
+        Sandbox zu; die eigentliche Freigabe entscheidet das Backend-Gateway.
+        ``enabled_tools`` begrenzt das Angebot auf die erlaubten Werkzeuge. Belegt am
+        03.11.2026 mit Codex 0.148.0.
+        """
+        args: list = []
+        env: dict = {}
+        allowed = list((mcp or {}).get("allowedTools") or [])
+        for server in (mcp or {}).get("mcpServers") or []:
+            name = server["name"]
+            prefix = f"mcp_servers.{name}"
+            args += ["-c", f"{prefix}.url={json.dumps(server['url'])}"]
+            args += ["-c", f'{prefix}.default_tools_approval_mode="approve"']
+            if allowed:
+                args += ["-c", f"{prefix}.enabled_tools={json.dumps(allowed)}"]
+            for header, value in (server.get("headers") or {}).items():
+                if header.lower() == "authorization" and value.startswith("Bearer "):
+                    variable = "OMNIAI_MCP_TOKEN_" + re.sub(r"[^A-Z0-9]", "_", name.upper())
+                    env[variable] = value.removeprefix("Bearer ")
+                    args += ["-c", f'{prefix}.bearer_token_env_var="{variable}"']
+                else:
+                    log.warning(
+                        "Header für Werkzeug-Server %s wird an Codex nicht weitergegeben", name
+                    )
+        return args, env
+
     def execute(
         self,
         prompt: str,
@@ -307,17 +348,20 @@ class CodexSubProvider(BaseProvider):
         timeout: int | None = None,
         attachments: list[Attachment] | None = None,
         effort: str | None = None,
+        mcp: dict | None = None,
     ) -> dict:
         self.reject_attachments(attachments)
         chosen_model = self._resolve_model(model)
         env = self._build_env()
+        mcp_args, mcp_env = self._mcp_args(mcp)
+        env.update(mcp_env)
         full_prompt = SYSTEM_PROMPT + "\n\n" + prompt + JSON_INSTRUCTION
 
         command = [
             "codex",
             # Werkzeug-Freigabe zuerst: diese Schalter kennt nur der
             # Hauptbefehl, nicht der Unterbefehl "exec".
-            *self._tool_access_args(),
+            *self._tool_access_args(run=mcp is not None),
             "exec",
             # /data ist kein Git-Repo; ohne diesen Schalter bricht die CLI ab.
             "--skip-git-repo-check",
@@ -336,6 +380,7 @@ class CodexSubProvider(BaseProvider):
             command += ["--model", chosen_model]
         if effort:
             command += ["-c", f"model_reasoning_effort={effort}"]
+        command += mcp_args
         # „-“ heißt: der Prompt kommt über die Standardeingabe. Als Argument
         # stünde er in der Prozessliste.
         command.append("-")

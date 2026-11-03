@@ -356,3 +356,63 @@ def test_effort_goes_to_the_cli_as_config(provider, monkeypatch):
 
     assert aufrufe[0][aufrufe[0].index("-c") + 1] == "model_reasoning_effort=high"
     assert provider.last_model == "gpt-5.6-luna"
+
+
+def test_tool_servers_reach_codex_without_the_token_in_the_command(provider, monkeypatch):
+    """Werkzeug-Server eines Laufs (D-038): Adresse, Freigabe, erlaubte Werkzeuge.
+
+    Das Token steht nur in der Umgebung, nie in der Befehlszeile.
+    """
+    aufrufe = []
+
+    def fake_run(command, **kwargs):
+        aufrufe.append((command, kwargs.get("env", {})))
+        return _result(stdout="{}")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    provider.execute(
+        "Test",
+        mcp={
+            "mcpServers": [
+                {
+                    "name": "skytech",
+                    "url": "http://192.168.10.18:8090/mcp",
+                    "headers": {"Authorization": "Bearer lauf-token-geheim"},
+                }
+            ],
+            "allowedTools": ["ha.ha_get_state", "knowledge.search"],
+        },
+    )
+    command, env = aufrufe[0]
+    assert 'mcp_servers.skytech.url="http://192.168.10.18:8090/mcp"' in command
+    assert 'mcp_servers.skytech.default_tools_approval_mode="approve"' in command
+    assert 'mcp_servers.skytech.enabled_tools=["ha.ha_get_state", "knowledge.search"]' in command
+    assert 'mcp_servers.skytech.bearer_token_env_var="OMNIAI_MCP_TOKEN_SKYTECH"' in command
+    assert env["OMNIAI_MCP_TOKEN_SKYTECH"] == "lauf-token-geheim"
+    assert not any("lauf-token-geheim" in part for part in command)
+    assert command[-1] == "-"
+
+
+def test_without_tool_servers_nothing_changes(provider, monkeypatch):
+    command, env, _ = _captured(provider, monkeypatch)
+    assert not any("mcp_servers" in part for part in command)
+    assert not any(key.startswith("OMNIAI_MCP_TOKEN") for key in env)
+
+
+def test_runs_with_tools_never_get_write_access(provider, monkeypatch):
+    """Auch bei der Werkzeugstufe „full“ bleibt ein Lauf mit Werkzeugen nur lesend (D-038)."""
+    monkeypatch.setattr(codex_sub_provider, "resolve_tool_access", lambda: "full")
+    aufrufe = []
+
+    def fake_run(command, **kwargs):
+        aufrufe.append(command)
+        return _result(stdout="{}")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    provider.execute(
+        "Test", mcp={"mcpServers": [{"name": "skytech", "url": "http://a/mcp", "headers": {}}]}
+    )
+    provider.execute("Test")
+    mit, ohne = aufrufe
+    assert mit[mit.index("--sandbox") + 1] == "read-only"
+    assert ohne[ohne.index("--sandbox") + 1] == "danger-full-access"

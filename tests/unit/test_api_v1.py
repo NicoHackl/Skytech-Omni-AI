@@ -116,6 +116,9 @@ def test_capabilities_report_availability_without_secrets(client, monkeypatch):
     assert by_id["gemini"]["defaultModel"] == "gemini-flash-latest"
     assert by_id["gemini"]["features"] == {"tools": False, "structuredOutput": True, "usage": False}
     assert by_id["claude_sub"]["features"]["tools"] is True
+    # Codex nutzt seit D-038 die Werkzeuge des Backends, meldet aber keinen Verbrauch.
+    assert by_id["codex_sub"]["features"]["tools"] is True
+    assert by_id["codex_sub"]["features"]["usage"] is False
     assert daten["mcp"]["protocolVersions"] == ["2025-11-25"]
     assert daten["limits"]["maxPromptLength"] == 100_000
     assert "geheimer-schluessel" not in json.dumps(daten)

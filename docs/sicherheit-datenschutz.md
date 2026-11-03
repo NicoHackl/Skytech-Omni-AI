@@ -165,6 +165,11 @@ Läufe (D-021) folgen **nicht** der Stufe `tool_access`, sondern sind enger:
 - Werkzeuge kommen ausschließlich vom Backend über MCP. Das Lauf-Token des Backends steht nur in
   einer Datei mit Rechten `600` im Arbeitsverzeichnis des Laufs, nie in der Befehlszeile, im Log
   oder in den gespeicherten Laufdaten; Datei und Verzeichnis werden nach dem Lauf gelöscht.
+- Codex-Läufe mit Werkzeugen (D-038) bekommen das Lauf-Token nur über eine Umgebungsvariable des
+  CLI-Prozesses (`bearer_token_env_var`), nie über die Befehlszeile. Die Sandbox ist in solchen
+  Läufen immer `read-only`, auch bei `tool_access: full`. Die CLI darf die Gateway-Werkzeuge ohne
+  eigene Rückfrage aufrufen (`default_tools_approval_mode="approve"`); Freigaben entscheidet das
+  Backend-Gateway. `enabled_tools` beschränkt das Angebot auf die erlaubten Werkzeuge des Laufs.
 - Einstellungen, Hooks und `CLAUDE.md` von außen werden nicht geladen, Sitzungen nicht
   gespeichert.
 - In Ereignissen stehen Name, Dauer und Ausgang eines Werkzeugaufrufs, nie Argumente oder

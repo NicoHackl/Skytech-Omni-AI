@@ -393,6 +393,35 @@ def test_single_shot_provider_error_is_passed_on(tmp_path, fake_provider):
     assert run.error == "Für Gemini ist kein Zugang hinterlegt."
 
 
+class FakeToolProvider(FakeProvider):
+    """Anbieter mit Werkzeug-Servern (wie Codex seit D-038)."""
+
+    supports_mcp = True
+    mcp: ClassVar[list] = []
+
+    def execute(self, prompt, model=None, timeout=None, effort=None, mcp=None):
+        FakeToolProvider.mcp.append(mcp)
+        return super().execute(prompt, model=model, timeout=timeout, effort=effort)
+
+
+def test_single_shot_passes_tool_servers_only_to_providers_with_mcp(tmp_path, monkeypatch):
+    FakeProvider.answers = [{"output": {"value": 1}, "handover": {"summary": "Gelesen."}}]
+    FakeProvider.prompts = []
+    FakeToolProvider.mcp = []
+    monkeypatch.setattr(
+        "providers.factory.ProviderFactory.create",
+        staticmethod(lambda name=None: FakeToolProvider()),
+    )
+    manager = RunManager(str(tmp_path / "runs"), runner_factory=SingleShotRunner)
+    run, _ = manager.start("run-3", claude_request(provider="codex_sub"))
+    wait_until_done(run)
+
+    assert run.status == "SUCCEEDED"
+    assert FakeToolProvider.mcp[0]["mcpServers"][0]["name"] == "skytech"
+    assert FakeToolProvider.mcp[0]["allowedTools"] == ["skytech.test_data_list"]
+    assert "skytech" in FakeProvider.prompts[0]
+
+
 # --- Verwaltung ---------------------------------------------------------------
 
 
@@ -505,7 +534,7 @@ def test_start_state_cancel_over_http(client):
     assert RUN_TOKEN not in json.dumps(zustand.get_json())
 
 
-def test_tools_only_for_claude_and_credentials_required(client, monkeypatch):
+def test_tools_only_for_tool_providers_and_credentials_required(client, monkeypatch):
     gemini = client.post("/v1/runs", headers=AUTH, json=claude_request(provider="gemini"))
     unbekannt = client.post("/v1/runs", headers=AUTH, json=claude_request(provider="mistral"))
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN")

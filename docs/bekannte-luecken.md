@@ -10,7 +10,7 @@ wo nicht.
 |---|---|---|---|
 | API-Pfade | [frontend.md](frontend.md) beschreibt `/api/…` als Präfix | Die Endpunkte heißen `/ask`, `/models`, `/status`, `/health` ohne Präfix | Bewusst so, D-010. Beim Anlegen eines neuen Endpunkts kein `/api` voranstellen |
 | Auslieferung | [frontend.md](frontend.md) nennt einen Webserver mit SPA-Fallback | Flask liefert das Bündel selbst aus | Bewusst so, D-009. Kein nginx im Bild |
-| Vertrag v1 | [contract/contract_skytech_x_omniai/omniai-api-v1.yaml](../contract/contract_skytech_x_omniai/omniai-api-v1.yaml) beschreibt `/v1/…` inklusive Agent-Läufen und Nutzungsdaten | Werkzeuge in Läufen nur mit `claude_sub`; `codex_sub` und `gemini` laufen ohne Werkzeuge als einzelne Anfrage. `/v1/completions` liefert keine Nutzungsdaten (M5) | Die Datei ist eine Kopie — geändert wird zuerst im Repo Skytech-X-Backend |
+| Vertrag v1 | [contract/contract_skytech_x_omniai/omniai-api-v1.yaml](../contract/contract_skytech_x_omniai/omniai-api-v1.yaml) beschreibt `/v1/…` inklusive Agent-Läufen und Nutzungsdaten | Werkzeuge in Läufen mit `claude_sub` und seit D-038 mit `codex_sub` (eine einzige CLI-Anfrage: keine `tool_call`-Ereignisse, `maxToolCalls` und Verbrauch nicht erfasst, die Aufrufe protokolliert das Backend-Gateway); `gemini` läuft ohne Werkzeuge als einzelne Anfrage. `/v1/completions` liefert keine Nutzungsdaten (M5) | Die Datei ist eine Kopie — geändert wird zuerst im Repo Skytech-X-Backend |
 | Abbruch eines Laufs ohne Werkzeuge | Abbrechen beendet den Lauf | Eine laufende Einzelanfrage (`codex_sub`, `gemini`) lässt sich nicht unterbrechen; der Lauf endet erst mit ihrer Antwort und wird dann als abgebrochen gemeldet | Für lange Aufgaben `claude_sub` nehmen |
 
 ## Stolpersteine

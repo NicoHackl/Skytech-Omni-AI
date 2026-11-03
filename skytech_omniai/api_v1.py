@@ -58,7 +58,10 @@ PROVIDERS = {
 }
 
 # Anbieter, die in Läufen Werkzeuge (MCP) aufrufen können.
-TOOL_PROVIDERS = {"claude_sub"}
+# Anbieter, deren Läufe MCP-Werkzeuge des Backends nutzen können; Codex seit dem MCP-Hub (D-038).
+TOOL_PROVIDERS = {"claude_sub", "codex_sub"}
+# Anbieter, deren Läufe Token-Verbrauch melden (Claude stream-json).
+USAGE_PROVIDERS = {"claude_sub"}
 MCP_PROTOCOL_VERSIONS = ["2025-11-25"]
 MAX_CONTEXT_LENGTH = 40_000
 SSE_PING_SECONDS = 15
@@ -159,7 +162,7 @@ def capabilities():
             "features": {
                 "tools": key in TOOL_PROVIDERS,
                 "structuredOutput": True,
-                "usage": key in TOOL_PROVIDERS,
+                "usage": key in USAGE_PROVIDERS,
             },
         }
         for key, meta in PROVIDERS.items()
