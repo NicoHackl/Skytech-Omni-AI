@@ -16,7 +16,7 @@ gemini-webapi==2.1.1
 curl-cffi==0.17.0
 loguru==0.8.0
 orjson==3.13.0
-pydantic==2.14.3
+pydantic==2.14.4
 pydantic-core==2.50.4
 cffi==2.1.1
 certifi==2026.10.23
